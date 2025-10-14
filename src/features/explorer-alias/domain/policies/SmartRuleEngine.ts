@@ -100,6 +100,7 @@ const NounMap: Record<string, string> = {
     hierarchy: '层级',
     tree: '树',
     node: '节点',
+    element: '元素',  // 新增：元素/DOM元素/数组元素
     parent: '父级',
     child: '子级',
     root: '根',

@@ -1,0 +1,17 @@
+{
+  "words": {
+    "element": { "alias": "元素", "confidence": 1.0 },
+    "hierarchy": { "alias": "层级", "confidence": 1.0 },
+    "analyze": { "alias": "分析", "confidence": 1.0 },
+    "simple": { "alias": "简版", "confidence": 1.0 },
+    "script": { "alias": "脚本", "confidence": 1.0 },
+    "universal": { "alias": "通用", "confidence": 1.0 },
+    "ui": { "alias": "UI", "confidence": 1.0 },
+    "api": { "alias": "API", "confidence": 1.0 },
+    "contact": { "alias": "联系人", "confidence": 1.0 },
+    "module": { "alias": "模块", "confidence": 1.0 }
+  },
+  "phrases": {
+    "element hierarchy": { "alias": "元素_层级", "confidence": 1.0 }
+  }
+}

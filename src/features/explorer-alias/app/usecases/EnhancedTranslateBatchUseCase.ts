@@ -2,7 +2,11 @@
 // [module: explorer-alias] [tags: UseCase, Translation, Dictionary, AI, Smart]
 /**
  * 增强批量翻译用例
- * 智能翻译链路：词典优先 → 智能规则 → AI 翻译 → 学习词典更新
+ * 智能翻译链路：词典优先 → 智能规则/直译 → AI 翻译 → 覆盖度守卫 → 学习词典更新
+ * 
+ * 翻译风格：
+ * - natural（默认）：自然中文，重组语序，可读性优先
+ * - literal：直译，逐词翻译，保持原顺序，不丢词
  */
 
 import { Logger } from '../../../../core/logging/Logger';
@@ -10,13 +14,20 @@ import { MultiProviderAIClient } from '../../../../core/ai/MultiProviderAIClient
 import { KVCache } from '../../../../core/cache/KVCache';
 import { DictionaryManager } from '../../core/DictionaryManager';
 import { SmartRuleEngine } from '../../domain/policies/SmartRuleEngine';
+import { buildLiteralAlias } from '../../domain/policies/LiteralAliasBuilder';
+import { LiteralAliasBuilderPro } from '../../domain/policies/LiteralAliasBuilderPro';
+import { DictionaryResolver } from '../../../../shared/naming/DictionaryResolver';
+import { isCoverageSufficient } from '../../domain/policies/CoverageGuard';
 import { FileNode, TranslationResult } from '../../../../shared/types';
+import * as vscode from 'vscode';
 
 interface TranslationStats {
     totalFiles: number;
     dictionaryHits: number;
     ruleHits: number;
+    literalHits: number;  // 新增：直译命中数
     aiTranslations: number;
+    coverageGuardTriggered: number;  // 新增：覆盖度守卫触发次数
     cached: number;
     failed: number;
     processingTime: number;
@@ -26,6 +37,8 @@ export class EnhancedTranslateBatchUseCase {
     private readonly MODULE_ID = 'enhanced-translation';
     private readonly CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7天
     private readonly smartRuleEngine: SmartRuleEngine;
+    private dictionaryResolver: DictionaryResolver | null = null;
+    private literalBuilderPro: LiteralAliasBuilderPro | null = null;
 
     constructor(
         private logger: Logger,
@@ -34,6 +47,42 @@ export class EnhancedTranslateBatchUseCase {
         private dictionary: DictionaryManager
     ) {
         this.smartRuleEngine = new SmartRuleEngine();
+        
+        // 异步初始化 Pro 版直译构建器
+        this.initializeProBuilder();
+    }
+
+    /**
+     * 初始化 Pro 版直译构建器
+     */
+    private async initializeProBuilder(): Promise<void> {
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
+                this.logger.warn('未找到工作区，Pro 版直译构建器初始化失败');
+                return;
+            }
+
+            const workspaceRoot = workspaceFolders[0].uri.fsPath;
+            
+            this.dictionaryResolver = new DictionaryResolver();
+            await this.dictionaryResolver.loadDictionaries(workspaceRoot);
+            
+            this.literalBuilderPro = new LiteralAliasBuilderPro(this.dictionaryResolver);
+            
+            // 从配置读取连接符和扩展名后缀选项
+            const config = vscode.workspace.getConfiguration('aiExplorer.alias');
+            const joiner = config.get<string>('literalJoiner', '');
+            const appendExtSuffix = config.get<boolean>('appendExtSuffix', true);
+            
+            this.literalBuilderPro.setJoiner(joiner);
+            this.literalBuilderPro.setAppendExtSuffix(appendExtSuffix);
+            
+            const stats = this.dictionaryResolver.getStats();
+            this.logger.info(`Pro 版直译构建器初始化成功: ${stats.wordCount} 个单词, ${stats.phraseCount} 个短语`);
+        } catch (error) {
+            this.logger.error(`Pro 版直译构建器初始化失败: ${error}`);
+        }
     }
 
     /**
@@ -49,7 +98,9 @@ export class EnhancedTranslateBatchUseCase {
             totalFiles: files.length,
             dictionaryHits: 0,
             ruleHits: 0,
+            literalHits: 0,
             aiTranslations: 0,
+            coverageGuardTriggered: 0,
             cached: 0,
             failed: 0,
             processingTime: 0
@@ -90,27 +141,70 @@ export class EnhancedTranslateBatchUseCase {
                     continue;
                 }
 
-                // 3. 智能规则引擎（新增：支持中文语序重组）
-                const smartRuleResult = this.smartRuleEngine.translate(file.name);
-                if (smartRuleResult && smartRuleResult.confidence >= 0.6) {
-                    const result: TranslationResult = {
-                        original: file.name,
-                        translated: smartRuleResult.alias,
-                        confidence: smartRuleResult.confidence,
-                        source: 'rule',
-                        timestamp: Date.now()
-                    };
-                    
-                    results.set(file, result);
-                    await this.cacheTranslation(file.name, result);
-                    stats.ruleHits++;
-                    
-                    // 调试信息
-                    if (smartRuleResult.debug) {
-                        this.logger.debug(`智能规则匹配: ${file.name} -> ${smartRuleResult.alias} (${smartRuleResult.debug})`);
+                // 3. 智能规则引擎或直译（根据配置选择风格）
+                const config = vscode.workspace.getConfiguration('aiExplorer');
+                const style = config.get<'natural' | 'literal'>('alias.style', 'natural');
+                
+                if (style === 'literal') {
+                    // 直译风格：优先使用 Pro 版，回退到基础版
+                    if (this.literalBuilderPro) {
+                        // Pro 版：支持短语匹配、形态归一
+                        const literalResult = this.literalBuilderPro.buildLiteralAlias(file.name);
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: literalResult.alias,
+                            confidence: literalResult.confidence,
+                            source: 'rule',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.literalHits++;
+                        
+                        this.logger.debug(`直译Pro模式: ${file.name} -> ${literalResult.alias} (${literalResult.debug})`);
+                        continue;
+                    } else {
+                        // 基础版：简单逐词翻译
+                        const literalResult = buildLiteralAlias(file.name);
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: literalResult.alias,
+                            confidence: literalResult.confidence,
+                            source: 'rule',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.literalHits++;
+                        
+                        this.logger.debug(`直译基础模式: ${file.name} -> ${literalResult.alias} (${literalResult.debug})`);
+                        continue;
                     }
-                    
-                    continue;
+                } else {
+                    // 自然中文风格：语序重组
+                    const smartRuleResult = this.smartRuleEngine.translate(file.name);
+                    if (smartRuleResult && smartRuleResult.confidence >= 0.6) {
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: smartRuleResult.alias,
+                            confidence: smartRuleResult.confidence,
+                            source: 'rule',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.ruleHits++;
+                        
+                        // 调试信息
+                        if (smartRuleResult.debug) {
+                            this.logger.debug(`智能规则匹配: ${file.name} -> ${smartRuleResult.alias} (${smartRuleResult.debug})`);
+                        }
+                        
+                        continue;
+                    }
                 }
 
                 // 4. 需要 AI 翻译
@@ -191,11 +285,26 @@ export class EnhancedTranslateBatchUseCase {
                 const translated = aiResults.get(file.name);
                 
                 if (translated && translated !== file.name) {
-                    // AI 翻译成功且有变化
+                    // 覆盖度守卫：检查 AI 翻译是否漏词
+                    const isCoverageSufficient_ = isCoverageSufficient(file.name, translated, 0);
+                    
+                    let finalTranslated = translated;
+                    let finalConfidence = 0.9;
+                    
+                    if (!isCoverageSufficient_) {
+                        // AI 翻译漏词，回退到直译
+                        this.logger.warn(`AI 翻译覆盖度不足: ${file.name} -> ${translated}，回退到直译`);
+                        const literalResult = buildLiteralAlias(file.name);
+                        finalTranslated = literalResult.alias;
+                        finalConfidence = literalResult.confidence;
+                        stats.coverageGuardTriggered++;
+                    }
+                    
+                    // AI 翻译成功且覆盖度充分（或已回退到直译）
                     const result: TranslationResult = {
                         original: file.name,
-                        translated,
-                        confidence: 0.9,
+                        translated: finalTranslated,
+                        confidence: finalConfidence,
                         source: 'ai',
                         timestamp: Date.now()
                     };
@@ -205,11 +314,11 @@ export class EnhancedTranslateBatchUseCase {
                     
                     // 学习词典更新
                     if (options?.enableLearning !== false) {
-                        await this.dictionary.addLearnedEntry(file.name, translated, 'learned');
+                        await this.dictionary.addLearnedEntry(file.name, finalTranslated, 'learned');
                     }
                     
                     stats.aiTranslations++;
-                    this.logger.info(`AI 翻译成功: ${file.name} -> ${translated}`);
+                    this.logger.info(`AI 翻译成功: ${file.name} -> ${finalTranslated}`);
                 } else {
                     // AI 翻译失败或返回原名
                     this.logger.warn(`AI 翻译失败或无变化: ${file.name}, 返回值: ${translated || 'undefined'}`);
@@ -359,11 +468,12 @@ export class EnhancedTranslateBatchUseCase {
     }
 
     private logTranslationStats(stats: TranslationStats): void {
-        const hitRate = ((stats.dictionaryHits + stats.ruleHits + stats.cached) / stats.totalFiles * 100).toFixed(1);
+        const hitRate = ((stats.dictionaryHits + stats.ruleHits + stats.literalHits + stats.cached) / stats.totalFiles * 100).toFixed(1);
         
         this.logger.info(`翻译完成 - 总计: ${stats.totalFiles}, ` +
             `缓存: ${stats.cached}, 词典: ${stats.dictionaryHits}, ` +
-            `规则: ${stats.ruleHits}, AI: ${stats.aiTranslations}, ` +
+            `智能规则: ${stats.ruleHits}, 直译: ${stats.literalHits}, ` +
+            `AI: ${stats.aiTranslations}, 覆盖度守卫: ${stats.coverageGuardTriggered}, ` +
             `失败: ${stats.failed}, 命中率: ${hitRate}%, ` +
             `耗时: ${stats.processingTime}ms`);
     }

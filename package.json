@@ -265,6 +265,33 @@
           "default": true,
           "description": "启用学习型词典"
         },
+        "aiExplorer.alias.style": {
+          "type": "string",
+          "enum": ["natural", "literal"],
+          "default": "natural",
+          "description": "别名翻译风格：natural=自然中文（重组语序、可读性优先），literal=直译（逐词翻译、保持原顺序）"
+        },
+        "aiExplorer.alias.appendExtSuffix": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否根据扩展名追加后缀（如 .cjs → 脚本, .ts → 模块, .tsx → 组件）"
+        },
+        "aiExplorer.alias.literalJoiner": {
+          "type": "string",
+          "default": "",
+          "description": "直译风格下的连接符（默认为空，可设置为 _ 或 ·）"
+        },
+        "aiExplorer.alias.literalDictPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".ai/.ai-literal.dict.json",
+            ".ai/.ai-glossary.literal.learned.json"
+          ],
+          "description": "直译词典文件路径（相对于工作区根目录，按优先级从高到低排列）"
+        },
         "umlCanvas.layout": {
           "type": "string",
           "default": "hierarchical",
