@@ -497,8 +497,11 @@ export class EnhancedTranslateBatchUseCase {
                 this.logger.debug(`[强制AI] ${file.name} - 分词结果: ${literalResult.debug}`);
                 this.logger.debug(`[强制AI] ${file.name} - 未知词: ${literalResult.unknownWords.join(', ')}`);
                 
-                // 2. 让 AI 翻译未知词
+                // 2. 🔧 强制 AI 模式下的逻辑
                 if (literalResult.unknownWords.length > 0) {
+                    // 有未知词：让 AI 翻译未知词
+                    this.logger.info(`[强制AI] ${file.name} - 有 ${literalResult.unknownWords.length} 个未知词，调用 AI`);
+                    
                     const aiMappings = await this.literalAIFallback.suggestLiteralTranslations(
                         file.name,
                         literalResult.unknownWords
@@ -520,7 +523,7 @@ export class EnhancedTranslateBatchUseCase {
                             original: file.name,
                             translated: updatedResult.alias,
                             confidence: updatedResult.confidence,
-                            source: 'ai',
+                            source: 'ai',  // ✅ 标记为 AI
                             timestamp: Date.now()
                         };
                         
@@ -528,36 +531,36 @@ export class EnhancedTranslateBatchUseCase {
                         await this.cacheTranslation(file.name, result);
                         stats.aiTranslations++;
                     } else {
-                        // AI 返回空，使用原始直译结果
+                        // AI 返回空，使用原始直译结果（但仍标记为尝试过 AI）
                         this.logger.warn(`[强制AI] ${file.name} - AI 返回空映射，使用现有词典翻译`);
                         
                         const result: TranslationResult = {
                             original: file.name,
                             translated: literalResult.alias,
                             confidence: literalResult.confidence,
-                            source: 'rule',
+                            source: 'ai',  // ✅ 改为 'ai'（虽然用的是词典结果，但尝试过 AI）
                             timestamp: Date.now()
                         };
                         
                         results.set(file, result);
                         await this.cacheTranslation(file.name, result);
-                        stats.literalHits++;
+                        stats.aiTranslations++;  // ✅ 改为 aiTranslations
                     }
                 } else {
-                    // 所有词都已知，直接使用词典翻译结果
-                    this.logger.info(`[强制AI] ${file.name} - 所有词已知，使用词典: ${literalResult.alias}`);
+                    // 无法提取词（罕见情况），使用直译结果
+                    this.logger.warn(`[强制AI] ${file.name} - 无法提取词进行翻译，使用现有结果`);
                     
                     const result: TranslationResult = {
                         original: file.name,
                         translated: literalResult.alias,
                         confidence: literalResult.confidence,
-                        source: 'dictionary',
+                        source: 'ai',  // ✅ 改为 'ai'
                         timestamp: Date.now()
                     };
                     
                     results.set(file, result);
                     await this.cacheTranslation(file.name, result);
-                    stats.dictionaryHits++;
+                    stats.aiTranslations++;  // ✅ 改为 aiTranslations
                 }
             } catch (error) {
                 this.logger.error(`[强制AI] ${file.name} 翻译失败`, error);
