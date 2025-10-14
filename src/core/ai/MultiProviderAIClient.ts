@@ -87,20 +87,30 @@ export class MultiProviderAIClient {
         const results = new Map<string, string>();
         const batchSize = 10; // 每批处理10个
         
+        this.logger.debug(`开始批量翻译 ${texts.length} 个文本，批次大小: ${batchSize}`);
+        
         for (let i = 0; i < texts.length; i += batchSize) {
             const batch = texts.slice(i, i + batchSize);
             const batchPrompt = this.createBatchTranslationPrompt(batch);
             
             try {
+                this.logger.debug(`翻译批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(texts.length / batchSize)}: ${batch.join(', ')}`);
+                
                 const response = await this.sendRequest({
                     prompt: batchPrompt,
                     maxTokens: 1000,
                     temperature: 0.3
                 });
 
+                this.logger.debug(`批次翻译响应: ${response.content.substring(0, 200)}...`);
+
                 const translations = this.parseBatchTranslationResponse(response.content, batch);
+                
+                this.logger.debug(`解析得到 ${translations.size} 个翻译结果`);
+                
                 for (const [original, translated] of translations) {
                     results.set(original, translated);
+                    this.logger.debug(`  ${original} -> ${translated}`);
                 }
 
                 // 批量之间添加延迟
@@ -110,23 +120,36 @@ export class MultiProviderAIClient {
             } catch (error) {
                 this.logger.error(`批量翻译失败 (batch ${Math.floor(i / batchSize) + 1})`, error);
                 
+                // 记录详细错误信息
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.logger.error(`错误详情: ${errorMessage}`, {
+                    batch,
+                    batchIndex: Math.floor(i / batchSize) + 1,
+                    errorStack: error instanceof Error ? error.stack : undefined
+                });
+                
                 // 单个翻译作为备选
                 for (const text of batch) {
                     try {
+                        this.logger.debug(`尝试单个翻译: ${text}`);
                         const response = await this.sendRequest({
                             prompt: `将以下英文翻译成中文，只返回翻译结果：${text}`,
                             maxTokens: 100,
                             temperature: 0.3
                         });
                         results.set(text, response.content.trim());
+                        this.logger.info(`单个翻译成功: ${text} -> ${response.content.trim()}`);
                         await this.delay(500); // 单个请求间隔
                     } catch (singleError) {
                         this.logger.warn(`单个翻译失败: ${text}`, singleError);
+                        const singleErrorMsg = singleError instanceof Error ? singleError.message : String(singleError);
+                        this.logger.error(`单个翻译错误详情: ${singleErrorMsg}`);
                     }
                 }
             }
         }
 
+        this.logger.info(`批量翻译完成，成功 ${results.size}/${texts.length} 个`);
         return results;
     }
 

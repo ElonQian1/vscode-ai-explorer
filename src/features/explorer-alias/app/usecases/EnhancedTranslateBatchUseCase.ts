@@ -16,7 +16,9 @@ import { DictionaryManager } from '../../core/DictionaryManager';
 import { SmartRuleEngine } from '../../domain/policies/SmartRuleEngine';
 import { buildLiteralAlias } from '../../domain/policies/LiteralAliasBuilder';
 import { LiteralAliasBuilderPro } from '../../domain/policies/LiteralAliasBuilderPro';
+import { LiteralAliasBuilderV2 } from '../../domain/policies/LiteralAliasBuilderV2';
 import { DictionaryResolver } from '../../../../shared/naming/DictionaryResolver';
+import { LiteralAIFallback } from '../../infra/translators/LiteralAIFallback';
 import { isCoverageSufficient } from '../../domain/policies/CoverageGuard';
 import { FileNode, TranslationResult } from '../../../../shared/types';
 import * as vscode from 'vscode';
@@ -27,6 +29,7 @@ interface TranslationStats {
     ruleHits: number;
     literalHits: number;  // 新增：直译命中数
     aiTranslations: number;
+    aiFallbackHits: number;  // 新增：AI兜底补缺词次数
     coverageGuardTriggered: number;  // 新增：覆盖度守卫触发次数
     cached: number;
     failed: number;
@@ -39,6 +42,8 @@ export class EnhancedTranslateBatchUseCase {
     private readonly smartRuleEngine: SmartRuleEngine;
     private dictionaryResolver: DictionaryResolver | null = null;
     private literalBuilderPro: LiteralAliasBuilderPro | null = null;
+    private literalBuilderV2: LiteralAliasBuilderV2 | null = null;  // 新增：V2版本（保留分隔符）
+    private literalAIFallback: LiteralAIFallback | null = null;  // 新增：AI兜底
 
     constructor(
         private logger: Logger,
@@ -53,7 +58,7 @@ export class EnhancedTranslateBatchUseCase {
     }
 
     /**
-     * 初始化 Pro 版直译构建器
+     * 初始化 Pro 版直译构建器（包括 V2 和 AI 兜底）
      */
     private async initializeProBuilder(): Promise<void> {
         try {
@@ -69,6 +74,8 @@ export class EnhancedTranslateBatchUseCase {
             await this.dictionaryResolver.loadDictionaries(workspaceRoot);
             
             this.literalBuilderPro = new LiteralAliasBuilderPro(this.dictionaryResolver);
+            this.literalBuilderV2 = new LiteralAliasBuilderV2(this.dictionaryResolver);  // V2版本
+            this.literalAIFallback = new LiteralAIFallback(this.aiClient);  // AI兜底
             
             // 从配置读取连接符和扩展名后缀选项
             const config = vscode.workspace.getConfiguration('aiExplorer.alias');
@@ -77,6 +84,7 @@ export class EnhancedTranslateBatchUseCase {
             
             this.literalBuilderPro.setJoiner(joiner);
             this.literalBuilderPro.setAppendExtSuffix(appendExtSuffix);
+            this.literalBuilderV2.setKeepExtension(appendExtSuffix);
             
             const stats = this.dictionaryResolver.getStats();
             this.logger.info(`Pro 版直译构建器初始化成功: ${stats.wordCount} 个单词, ${stats.phraseCount} 个短语`);
@@ -100,6 +108,7 @@ export class EnhancedTranslateBatchUseCase {
             ruleHits: 0,
             literalHits: 0,
             aiTranslations: 0,
+            aiFallbackHits: 0,
             coverageGuardTriggered: 0,
             cached: 0,
             failed: 0,
@@ -146,9 +155,67 @@ export class EnhancedTranslateBatchUseCase {
                 const style = config.get<'natural' | 'literal'>('alias.style', 'natural');
                 
                 if (style === 'literal') {
-                    // 直译风格：优先使用 Pro 版，回退到基础版
-                    if (this.literalBuilderPro) {
-                        // Pro 版：支持短语匹配、形态归一
+                    // 直译风格：V2版本（保留分隔符） + AI兜底
+                    if (this.literalBuilderV2 && this.literalAIFallback && this.dictionaryResolver) {
+                        // V2版本：保留分隔符，返回未知词
+                        const literalResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                        
+                        // 如果有未知词，使用 AI 兜底
+                        if (literalResult.unknownWords.length > 0) {
+                            this.logger.debug(`${file.name} 有 ${literalResult.unknownWords.length} 个未知词，触发 AI 兜底`);
+                            
+                            try {
+                                // AI 只翻译未知词
+                                const aiMappings = await this.literalAIFallback.suggestLiteralTranslations(
+                                    file.name,
+                                    literalResult.unknownWords
+                                );
+                                
+                                // 写回学习词典
+                                if (Object.keys(aiMappings).length > 0) {
+                                    await this.dictionaryResolver.writeBatchLearning(aiMappings);
+                                    stats.aiFallbackHits++;
+                                    
+                                    // 重新翻译（使用更新后的词典）
+                                    const updatedResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                                    const result: TranslationResult = {
+                                        original: file.name,
+                                        translated: updatedResult.alias,
+                                        confidence: updatedResult.confidence,
+                                        source: 'ai',  // 标记为 AI 增强
+                                        timestamp: Date.now()
+                                    };
+                                    
+                                    results.set(file, result);
+                                    await this.cacheTranslation(file.name, result);
+                                    stats.literalHits++;
+                                    
+                                    this.logger.debug(`直译V2+AI: ${file.name} -> ${updatedResult.alias} (覆盖率${(updatedResult.coverage*100).toFixed(0)}%)`);
+                                    continue;
+                                }
+                            } catch (error) {
+                                this.logger.warn(`AI 兜底失败: ${error}`);
+                                // 继续使用原始翻译结果
+                            }
+                        }
+                        
+                        // 无未知词或 AI 兜底失败，使用原始结果
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: literalResult.alias,
+                            confidence: literalResult.confidence,
+                            source: 'rule',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.literalHits++;
+                        
+                        this.logger.debug(`直译V2模式: ${file.name} -> ${literalResult.alias} (${literalResult.debug})`);
+                        continue;
+                    } else if (this.literalBuilderPro) {
+                        // 回退到 Pro 版：支持短语匹配、形态归一
                         const literalResult = this.literalBuilderPro.buildLiteralAlias(file.name);
                         const result: TranslationResult = {
                             original: file.name,
@@ -280,6 +347,8 @@ export class EnhancedTranslateBatchUseCase {
             // 批量调用 AI
             const aiResults = await this.aiClient.translateBatch(fileNames);
             
+            this.logger.debug(`AI 批量翻译返回 ${aiResults.size} 个结果`);
+            
             // 处理结果
             for (const file of files) {
                 const translated = aiResults.get(file.name);
@@ -322,6 +391,21 @@ export class EnhancedTranslateBatchUseCase {
                 } else {
                     // AI 翻译失败或返回原名
                     this.logger.warn(`AI 翻译失败或无变化: ${file.name}, 返回值: ${translated || 'undefined'}`);
+                    
+                    // 🔧 增强错误诊断：检查 AI 客户端状态
+                    const providerStatus = this.aiClient.getProviderStatus();
+                    const config = vscode.workspace.getConfiguration('aiExplorer');
+                    const primaryProvider = config.get<string>('provider.primary', 'openai');
+                    
+                    this.logger.error('AI 翻译详细诊断', {
+                        fileName: file.name,
+                        translatedResult: translated,
+                        primaryProvider,
+                        providerStatus,
+                        aiResultsSize: aiResults.size,
+                        allResults: Array.from(aiResults.entries())
+                    });
+                    
                     const result: TranslationResult = {
                         original: file.name,
                         translated: file.name,
@@ -473,7 +557,8 @@ export class EnhancedTranslateBatchUseCase {
         this.logger.info(`翻译完成 - 总计: ${stats.totalFiles}, ` +
             `缓存: ${stats.cached}, 词典: ${stats.dictionaryHits}, ` +
             `智能规则: ${stats.ruleHits}, 直译: ${stats.literalHits}, ` +
-            `AI: ${stats.aiTranslations}, 覆盖度守卫: ${stats.coverageGuardTriggered}, ` +
+            `AI完整: ${stats.aiTranslations}, AI补缺词: ${stats.aiFallbackHits}, ` +
+            `覆盖度守卫: ${stats.coverageGuardTriggered}, ` +
             `失败: ${stats.failed}, 命中率: ${hitRate}%, ` +
             `耗时: ${stats.processingTime}ms`);
     }

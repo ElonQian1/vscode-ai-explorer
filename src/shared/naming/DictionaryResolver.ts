@@ -336,4 +336,85 @@ export class DictionaryResolver {
       phraseCount
     };
   }
+
+  /**
+   * 写入学习词典（项目级别）
+   * @param word 英文单词或短语（小写）
+   * @param alias 中文翻译
+   */
+  async writeProjectLearning(word: string, alias: string): Promise<void> {
+    try {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        return;
+      }
+
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      const config = vscode.workspace.getConfiguration('aiExplorer.alias');
+      const dictPaths: string[] = config.get('literalDictPaths') || [
+        '.ai/.ai-literal.dict.json',
+        '.ai/.ai-glossary.literal.learned.json'
+      ];
+
+      // 写入第二个词典（学习词典）
+      const learnedDictPath = dictPaths[1] || '.ai/.ai-glossary.literal.learned.json';
+      const absPath = path.join(workspaceRoot, learnedDictPath);
+      const uri = vscode.Uri.file(absPath);
+
+      // 读取现有词典
+      let dict: Dictionary = { words: {}, phrases: {} };
+      try {
+        const content = await vscode.workspace.fs.readFile(uri);
+        dict = JSON.parse(content.toString());
+        if (!dict.words) dict.words = {};
+        if (!dict.phrases) dict.phrases = {};
+      } catch {
+        // 文件不存在，使用空词典
+      }
+
+      // 判断是单词还是短语
+      const key = word.toLowerCase();
+      if (key.includes(' ')) {
+        // 短语
+        dict.phrases[key] = { alias, confidence: 1.0 };
+      } else {
+        // 单词
+        dict.words[key] = { alias, confidence: 1.0 };
+      }
+
+      // 确保目录存在
+      const dirUri = vscode.Uri.file(path.dirname(absPath));
+      try {
+        await vscode.workspace.fs.createDirectory(dirUri);
+      } catch {
+        // 目录已存在
+      }
+
+      // 写入文件
+      const jsonContent = JSON.stringify(dict, null, 2);
+      await vscode.workspace.fs.writeFile(uri, Buffer.from(jsonContent, 'utf-8'));
+
+      console.log(`[DictionaryResolver] 已写入学习词典: ${word} → ${alias}`);
+    } catch (error) {
+      console.error(`[DictionaryResolver] 写入学习词典失败:`, error);
+    }
+  }
+
+  /**
+   * 批量写入学习词典
+   * @param mappings 单词/短语 → 中文翻译的映射
+   */
+  async writeBatchLearning(mappings: Record<string, string>): Promise<void> {
+    for (const [word, alias] of Object.entries(mappings)) {
+      if (alias && alias.trim()) {
+        await this.writeProjectLearning(word, alias.trim());
+      }
+    }
+    // 重新加载词典
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      await this.loadDictionaries(workspaceFolders[0].uri.fsPath);
+    }
+  }
 }
+

@@ -436,19 +436,51 @@ export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {
                     this.logger.warn(`翻译结果与原文相同: ${itemName}, 来源: ${result.source}`);
                     
                     if (result.source === 'fallback' || result.source === 'error') {
-                        // AI 翻译失败
+                        // AI 翻译失败 - 显示更详细的错误信息
+                        const config = vscode.workspace.getConfiguration('aiExplorer');
+                        const primaryProvider = config.get<string>('provider.primary', 'openai');
+                        const hasOpenAIKey = !!config.get<string>('openaiApiKey');
+                        const hasHunyuanKey = !!config.get<string>('hunyuanApiKey');
+                        
+                        let diagnosisMessage = `❌ ${itemTypeText} ${itemName} AI 翻译失败（来源：${sourceName}）\n\n`;
+                        diagnosisMessage += `📊 当前配置：\n`;
+                        diagnosisMessage += `  - 主提供商: ${primaryProvider}\n`;
+                        diagnosisMessage += `  - OpenAI Key: ${hasOpenAIKey ? '✅ 已配置' : '❌ 未配置'}\n`;
+                        diagnosisMessage += `  - 腾讯混元 Key: ${hasHunyuanKey ? '✅ 已配置' : '❌ 未配置'}\n\n`;
+                        diagnosisMessage += `🔍 可能原因：\n`;
+                        diagnosisMessage += `  1. AI 服务响应为空或格式错误\n`;
+                        diagnosisMessage += `  2. API Key 无效或已过期\n`;
+                        diagnosisMessage += `  3. 网络连接问题或请求超时\n`;
+                        diagnosisMessage += `  4. API 配额已用完\n\n`;
+                        diagnosisMessage += `💡 建议：查看输出面板（AI Explorer）的详细日志`;
+                        
+                        this.logger.error('AI翻译失败详细诊断', {
+                            itemName,
+                            result,
+                            primaryProvider,
+                            hasOpenAIKey,
+                            hasHunyuanKey
+                        });
+                        
                         vscode.window.showWarningMessage(
-                            `⚠️ ${itemTypeText} ${itemName} 翻译失败（来源：${sourceName}）\n可能原因：AI 服务未配置或不可用`,
+                            diagnosisMessage,
+                            '查看日志',
                             '检查AI状态',
                             '强制AI翻译',
                             '设置API Key'
                         ).then(action => {
-                            if (action === '检查AI状态') {
+                            if (action === '查看日志') {
+                                vscode.commands.executeCommand('workbench.action.output.toggleOutput');
+                            } else if (action === '检查AI状态') {
                                 vscode.commands.executeCommand('aiExplorer.checkAIStatus');
                             } else if (action === '强制AI翻译') {
                                 vscode.commands.executeCommand('aiExplorer.forceAITranslate', input);
                             } else if (action === '设置API Key') {
-                                vscode.commands.executeCommand('aiExplorer.setOpenAIKey');
+                                if (primaryProvider === 'hunyuan') {
+                                    vscode.commands.executeCommand('aiExplorer.setHunyuanKey');
+                                } else {
+                                    vscode.commands.executeCommand('aiExplorer.setOpenAIKey');
+                                }
                             }
                         });
                     } else {
