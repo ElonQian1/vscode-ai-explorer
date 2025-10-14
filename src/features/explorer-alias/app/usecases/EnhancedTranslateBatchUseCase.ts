@@ -95,9 +95,17 @@ export class EnhancedTranslateBatchUseCase {
 
     /**
      * 智能批量翻译文件
+     * 
+     * @param files 要翻译的文件列表
+     * @param options 翻译选项
+     *   - forceRefresh: 是否强制刷新（跳过缓存，但仍然使用词典）
+     *   - forceAI: 是否强制使用 AI（跳过缓存和词典，直接用 AI 翻译所有词）
+     *   - enableLearning: 是否启用学习词典
+     *   - batchSize: 批量大小
      */
     async translateFiles(files: FileNode[], options?: {
         forceRefresh?: boolean;
+        forceAI?: boolean;
         enableLearning?: boolean;
         batchSize?: number;
     }): Promise<Map<FileNode, TranslationResult>> {
@@ -123,6 +131,13 @@ export class EnhancedTranslateBatchUseCase {
         // 第一阶段：缓存和词典查找
         for (const file of files) {
             try {
+                // 🔧 强制 AI 模式：跳过缓存和词典，直接走 AI 翻译
+                if (options?.forceAI) {
+                    this.logger.info(`[强制AI模式] ${file.name} - 跳过缓存和词典，直接使用 AI`);
+                    needsAITranslation.push(file);
+                    continue;
+                }
+                
                 // 1. 检查缓存（除非强制刷新）
                 if (!options?.forceRefresh) {
                     const cached = await this.getCachedTranslation(file.name);
@@ -284,7 +299,12 @@ export class EnhancedTranslateBatchUseCase {
 
         // 第二阶段：AI 批量翻译
         if (needsAITranslation.length > 0) {
-            await this.processAITranslations(needsAITranslation, results, stats, options);
+            // 🔧 区分强制 AI 模式和普通 AI 模式
+            if (options?.forceAI) {
+                await this.processForceAITranslations(needsAITranslation, results, stats, options);
+            } else {
+                await this.processAITranslations(needsAITranslation, results, stats, options);
+            }
         }
 
         // 统计和日志
@@ -299,6 +319,7 @@ export class EnhancedTranslateBatchUseCase {
      */
     async translateSingle(fileName: string, options?: {
         forceRefresh?: boolean;
+        forceAI?: boolean;
         enableLearning?: boolean;
     }): Promise<TranslationResult> {
         const fileNode: FileNode = {
@@ -435,6 +456,97 @@ export class EnhancedTranslateBatchUseCase {
                     results.set(file, result);
                     stats.failed++;
                 }
+            }
+        }
+    }
+
+    /**
+     * 🆕 强制 AI 翻译模式（仍保持直译样式）
+     * 
+     * 与普通 AI 翻译的区别：
+     * 1. 跳过词典和缓存查找
+     * 2. 使用 AI 翻译所有 tokens（不只是未知词）
+     * 3. 保持直译样式（保留分隔符、扩展名）
+     * 4. 写回学习词典
+     */
+    private async processForceAITranslations(
+        files: FileNode[],
+        results: Map<FileNode, TranslationResult>,
+        stats: TranslationStats,
+        options?: any
+    ): Promise<void> {
+        this.logger.info(`[强制AI模式] 开始翻译 ${files.length} 个文件（保持直译样式）`);
+        
+        const config = vscode.workspace.getConfiguration('aiExplorer');
+        const style = config.get<'natural' | 'literal'>('alias.style', 'natural');
+        
+        for (const file of files) {
+            try {
+                // 🔧 强制 AI 模式：即使有词典，也用 AI 重新翻译所有词
+                if (style === 'literal' && this.literalBuilderV2 && this.literalAIFallback && this.dictionaryResolver) {
+                    // 先分词，获取所有 tokens（不查词典）
+                    const literalResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                    
+                    // 把所有词（包括已知词和未知词）都发给 AI 重新翻译
+                    this.logger.debug(`[强制AI] ${file.name} - 让 AI 翻译所有 ${literalResult.unknownWords.length} 个未知词`);
+                    
+                    const aiMappings = await this.literalAIFallback.suggestLiteralTranslations(
+                        file.name,
+                        literalResult.unknownWords.length > 0 ? literalResult.unknownWords : [file.name]
+                    );
+                    
+                    // 写回学习词典
+                    if (Object.keys(aiMappings).length > 0) {
+                        await this.dictionaryResolver.writeBatchLearning(aiMappings);
+                        stats.aiFallbackHits++;
+                        
+                        // 重新构建（使用更新后的词典）
+                        const updatedResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: updatedResult.alias,
+                            confidence: updatedResult.confidence,
+                            source: 'ai',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.aiTranslations++;
+                        
+                        this.logger.info(`[强制AI] ${file.name} -> ${updatedResult.alias} (覆盖率${(updatedResult.coverage*100).toFixed(0)}%)`);
+                    } else {
+                        // AI 返回空，使用原始直译结果
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: literalResult.alias,
+                            confidence: literalResult.confidence,
+                            source: 'rule',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.literalHits++;
+                        
+                        this.logger.warn(`[强制AI] ${file.name} - AI 返回空，使用直译: ${literalResult.alias}`);
+                    }
+                } else {
+                    // 非直译模式或组件未初始化，回退到普通 AI 翻译
+                    this.logger.warn(`[强制AI] ${file.name} - 直译组件未初始化，回退到普通 AI 翻译`);
+                    await this.processAITranslations([file], results, stats, options);
+                }
+            } catch (error) {
+                this.logger.error(`[强制AI] ${file.name} 翻译失败`, error);
+                const result: TranslationResult = {
+                    original: file.name,
+                    translated: file.name,
+                    confidence: 0.0,
+                    source: 'error',
+                    timestamp: Date.now()
+                };
+                results.set(file, result);
+                stats.failed++;
             }
         }
     }

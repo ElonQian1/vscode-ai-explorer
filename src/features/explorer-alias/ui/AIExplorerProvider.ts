@@ -564,9 +564,10 @@ export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {
 
                 progress.report({ increment: 20, message: '调用 AI 服务...' });
 
-                // 强制刷新翻译（跳过缓存）
+                // 🔧 强制 AI 翻译（跳过缓存和词典，但保持直译样式）
                 const result = await this.translateUseCase.translateSingle(itemName, {
                     forceRefresh: true,  // 强制刷新，跳过缓存
+                    forceAI: true,       // 🆕 强制 AI，跳过词典
                     enableLearning: true  // 保存到学习词典
                 });
 

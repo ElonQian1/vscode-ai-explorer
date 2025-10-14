@@ -52,18 +52,60 @@ export class MultiProviderAIClient {
     }
 
     /**
-     * 发送 AI 请求（带降级机制）
+     * 发送 AI 请求（带降级机制和智能提供商选择）
      */
     async sendRequest(request: AIRequest): Promise<AIResponse> {
         const config = vscode.workspace.getConfiguration('aiExplorer');
-        const primaryProvider = config.get<string>('provider.primary', 'openai');
+        let primaryProvider = config.get<string>('provider.primary', 'openai');
         const fallbackProvider = config.get<string>('provider.fallback', 'none');
+
+        // 🔧 智能提供商选择：如果主提供商未配置，自动切换到已配置的提供商
+        const openaiKey = config.get<string>('openaiApiKey');
+        const hunyuanKey = config.get<string>('hunyuanApiKey');
+        
+        if (!this.providers.has(primaryProvider) || !this.providers.get(primaryProvider)?.isAvailable) {
+            this.logger.warn(`主提供商 ${primaryProvider} 未配置或不可用`);
+            
+            // 自动选择已配置的提供商
+            if (primaryProvider === 'openai' && !openaiKey && hunyuanKey) {
+                this.logger.info('🔄 OpenAI 未配置，自动切换到腾讯混元');
+                primaryProvider = 'hunyuan';
+                
+                // 更新配置（仅本次会话）
+                await config.update('provider.primary', 'hunyuan', vscode.ConfigurationTarget.Global);
+                
+                vscode.window.showInformationMessage(
+                    '✅ 已自动切换到腾讯混元（检测到未配置 OpenAI）',
+                    '查看配置'
+                ).then(action => {
+                    if (action === '查看配置') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'aiExplorer.provider.primary');
+                    }
+                });
+            } else if (primaryProvider === 'hunyuan' && !hunyuanKey && openaiKey) {
+                this.logger.info('🔄 腾讯混元未配置，自动切换到 OpenAI');
+                primaryProvider = 'openai';
+                
+                await config.update('provider.primary', 'openai', vscode.ConfigurationTarget.Global);
+                
+                vscode.window.showInformationMessage(
+                    '✅ 已自动切换到 OpenAI（检测到未配置腾讯混元）',
+                    '查看配置'
+                ).then(action => {
+                    if (action === '查看配置') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'aiExplorer.provider.primary');
+                    }
+                });
+            }
+        }
 
         try {
             // 尝试主提供商
+            this.logger.debug(`使用主提供商: ${primaryProvider}`);
             return await this.sendToProvider(primaryProvider, request);
         } catch (primaryError) {
-            this.logger.warn(`主提供商 ${primaryProvider} 请求失败`, primaryError);
+            const errorMsg = primaryError instanceof Error ? primaryError.message : String(primaryError);
+            this.logger.error(`主提供商 ${primaryProvider} 请求失败: ${errorMsg}`, primaryError);
 
             // 尝试备用提供商
             if (fallbackProvider && fallbackProvider !== 'none' && fallbackProvider !== primaryProvider) {
@@ -71,12 +113,23 @@ export class MultiProviderAIClient {
                     this.logger.info(`尝试备用提供商: ${fallbackProvider}`);
                     return await this.sendToProvider(fallbackProvider, request);
                 } catch (fallbackError) {
-                    this.logger.error(`备用提供商 ${fallbackProvider} 也失败`, fallbackError);
+                    const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+                    this.logger.error(`备用提供商 ${fallbackProvider} 也失败: ${fallbackErrorMsg}`, fallbackError);
                 }
             }
 
-            // 所有提供商都失败
-            throw new Error(`所有 AI 提供商都不可用: ${primaryError}`);
+            // 所有提供商都失败 - 提供详细的错误信息
+            const detailedError = new Error(
+                `❌ AI 翻译失败\n\n` +
+                `主提供商: ${primaryProvider} ${!this.providers.has(primaryProvider) ? '(未配置)' : '(请求失败)'}\n` +
+                `错误信息: ${errorMsg}\n\n` +
+                `💡 解决方案:\n` +
+                `1. 检查 API Key 是否正确配置\n` +
+                `2. 检查网络连接是否正常\n` +
+                `3. 尝试切换提供商（设置 > AI Explorer > Provider: Primary）`
+            );
+            
+            throw detailedError;
         }
     }
 
@@ -307,7 +360,47 @@ export class MultiProviderAIClient {
         }
 
         if (this.providers.size === 0) {
-            this.logger.warn('没有配置任何 AI 提供商');
+            this.logger.warn('❌ 没有配置任何 AI 提供商');
+            
+            // 显示友好的提示
+            vscode.window.showWarningMessage(
+                '⚠️ 未配置任何 AI 提供商，翻译功能将不可用\n\n请配置 OpenAI 或腾讯混元 API Key',
+                '配置 OpenAI',
+                '配置腾讯混元',
+                '查看文档'
+            ).then(action => {
+                if (action === '配置 OpenAI') {
+                    vscode.commands.executeCommand('aiExplorer.setOpenAIKey');
+                } else if (action === '配置腾讯混元') {
+                    vscode.commands.executeCommand('aiExplorer.setHunyuanKey');
+                } else if (action === '查看文档') {
+                    vscode.env.openExternal(vscode.Uri.parse('https://github.com/ElonQian1/vscode-ai-explorer#配置-ai-服务'));
+                }
+            });
+        } else {
+            // 显示已配置的提供商
+            const configuredProviders = Array.from(this.providers.keys()).join(', ');
+            this.logger.info(`✅ 已配置提供商: ${configuredProviders}`);
+            
+            // 检查主提供商是否已配置
+            const primaryProvider = config.get<string>('provider.primary', 'openai');
+            if (!this.providers.has(primaryProvider)) {
+                this.logger.warn(`⚠️ 主提供商 ${primaryProvider} 未配置，可能导致翻译失败`);
+                
+                // 自动切换到已配置的提供商
+                const availableProvider = Array.from(this.providers.keys())[0];
+                this.logger.info(`🔄 自动切换主提供商为: ${availableProvider}`);
+                await config.update('provider.primary', availableProvider, vscode.ConfigurationTarget.Global);
+                
+                vscode.window.showInformationMessage(
+                    `✅ 已自动设置主提供商为 ${availableProvider}`,
+                    '查看配置'
+                ).then(action => {
+                    if (action === '查看配置') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'aiExplorer.provider');
+                    }
+                });
+            }
         }
     }
 
