@@ -1,0 +1,98 @@
+name: Feature Request
+description: 建议新功能
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢提交功能请求！请详细描述你希望添加的功能。
+
+  - type: input
+    id: feature-title
+    attributes:
+      label: 功能标题
+      description: 简洁描述这个功能
+      placeholder: "例如：支持更多编程语言的 UML 生成"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: 功能类别
+      description: 这个功能属于哪个模块？
+      options:
+        - AI 资源管理器 (explorer-alias)
+        - UML 图表生成 (uml-canvas)
+        - 核心功能 (core)
+        - 新模块
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 这个功能要解决什么问题？
+      placeholder: 描述当前存在的问题或不便...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 解决方案
+      description: 你希望如何解决这个问题？
+      placeholder: 详细描述希望的功能实现...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: 使用场景
+      description: 这个功能在什么场景下会被使用？
+      placeholder: |
+        1. 当开发者...
+        2. 在项目中...
+        3. 希望能够...
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案
+      description: 你考虑过哪些替代解决方案？
+      placeholder: 描述其他可能的实现方式...
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: 实现意愿
+      description: 你是否愿意帮助实现这个功能？
+      options:
+        - label: 我愿意提交 Pull Request 实现这个功能
+        - label: 我可以提供技术指导或 review
+        - label: 我可以帮助测试这个功能
+        - label: 我只是提出建议，不参与实现
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      description: 你认为这个功能的优先级如何？
+      options:
+        - 低 (nice to have)
+        - 中 (would be helpful)
+        - 高 (important)
+        - 紧急 (critical)
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 附加信息
+      description: 其他相关信息、参考资料或截图
+      placeholder: 提供更多上下文信息...

@@ -1,0 +1,61 @@
+name: Question
+description: 提问或寻求帮助
+title: "[QUESTION] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        有问题？我们来帮助你！请提供足够的信息以便我们理解你的问题。
+
+  - type: dropdown
+    id: question-type
+    attributes:
+      label: 问题类型
+      description: 你的问题是关于什么的？
+      options:
+        - 使用方法
+        - 配置问题
+        - API 集成
+        - 开发相关
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题描述
+      description: 详细描述你的问题
+      placeholder: 详细描述你遇到的问题或需要帮助的地方...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 上下文信息
+      description: 提供相关的背景信息
+      placeholder: |
+        - 你在做什么？
+        - 使用了哪些功能？
+        - 配置了什么设置？
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: 已尝试的解决方案
+      description: 你已经尝试了什么来解决这个问题？
+      placeholder: 描述你已经尝试的方法...
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 你的开发环境信息
+      placeholder: |
+        - 操作系统：
+        - VS Code 版本：
+        - 插件版本：
+        - Node.js 版本：
+      render: markdown

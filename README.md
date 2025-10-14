@@ -3,6 +3,10 @@
 [![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?logo=visual-studio-code)](https://code.visualstudio.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.1-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-API-green?logo=openai)](https://openai.com/)
+[![CI/CD](https://github.com/ElonQian1/vscode-ai-explorer/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/ElonQian1/vscode-ai-explorer/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Issues](https://img.shields.io/github/issues/ElonQian1/vscode-ai-explorer)](https://github.com/ElonQian1/vscode-ai-explorer/issues)
+[![Stars](https://img.shields.io/github/stars/ElonQian1/vscode-ai-explorer)](https://github.com/ElonQian1/vscode-ai-explorer/stargazers)
 
 > 🚀 AI 驱动的 VS Code 插件，提供智能文件翻译和 UML 图表生成功能
 
@@ -219,9 +223,9 @@ MIT License - 查看 [LICENSE](LICENSE) 文件了解详情
 
 ## 📞 支持
 
-- 📧 邮件：[your-email@example.com]
-- 🐛 问题反馈：[GitHub Issues](https://github.com/your-username/ai-explorer/issues)
-- 💬 讨论：[GitHub Discussions](https://github.com/your-username/ai-explorer/discussions)
+-  问题反馈：[GitHub Issues](https://github.com/ElonQian1/vscode-ai-explorer/issues)
+- 💬 讨论：[GitHub Discussions](https://github.com/ElonQian1/vscode-ai-explorer/discussions)
+- ⭐ 如果喜欢请给个 Star：[GitHub Repository](https://github.com/ElonQian1/vscode-ai-explorer)
 
 ---
 
