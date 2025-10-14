@@ -236,12 +236,18 @@
         "aiExplorer.hunyuanApiKey": {
           "type": "string",
           "default": "",
-          "description": "腾讯混元 API 密钥"
+          "description": "腾讯云混元 API Key（从控制台获取，非 SecretId/SecretKey）"
         },
         "aiExplorer.hunyuanBaseUrl": {
           "type": "string", 
-          "default": "https://hunyuan.tencentcloudapi.com",
-          "description": "腾讯混元 API 基础URL"
+          "default": "https://api.hunyuan.cloud.tencent.com/v1",
+          "description": "腾讯云混元 OpenAI 兼容接口地址（官方端点，无需修改）"
+        },
+        "aiExplorer.hunyuanModel": {
+          "type": "string",
+          "enum": ["hunyuan-turbo", "hunyuan-lite", "hunyuan-pro", "hunyuan-standard"],
+          "default": "hunyuan-turbo",
+          "description": "腾讯云混元模型选择（推荐 hunyuan-turbo）"
         },
         "aiExplorer.enableDictionary": {
           "type": "boolean",

@@ -2,7 +2,13 @@
 // [module: core] [tags: AI, MultiProvider, OpenAI, Hunyuan, Fallback]
 /**
  * 多提供商 AI 客户端
- * 支持 OpenAI、腾讯混元等多个 AI 提供商，具备降级和故障转移能力
+ * 支持 OpenAI、腾讯云混元 OpenAI 兼容接口等多个 AI 提供商
+ * 
+ * 架构说明：
+ * - 使用统一的 OpenAI SDK (openai npm 包)
+ * - 通过切换 baseURL 和 apiKey 实现提供商切换
+ * - 腾讯云混元使用官方 OpenAI 兼容接口 (https://api.hunyuan.cloud.tencent.com/v1)
+ * - 具备降级和故障转移能力
  */
 
 import { OpenAI } from 'openai';
@@ -178,8 +184,11 @@ export class MultiProviderAIClient {
         
         for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
             try {
+                const model = this.getModelForProvider(providerName);
+                this.logger.debug(`[${providerName}] 发送请求: model=${model}, maxTokens=${request.maxTokens}`);
+                
                 const response = await provider.client.chat.completions.create({
-                    model: this.getModelForProvider(providerName),
+                    model: model,
                     messages: [{ role: 'user', content: request.prompt }],
                     max_tokens: request.maxTokens,
                     temperature: request.temperature || 0.7
@@ -190,6 +199,8 @@ export class MultiProviderAIClient {
                     throw new Error('AI 响应为空');
                 }
 
+                this.logger.debug(`[${providerName}] 请求成功: tokens=${response.usage?.total_tokens || 0}`);
+                
                 return {
                     content: content.trim(),
                     model: response.model,
@@ -201,7 +212,11 @@ export class MultiProviderAIClient {
                 };
             } catch (error) {
                 lastError = error instanceof Error ? error : new Error(String(error));
-                this.logger.warn(`提供商 ${providerName} 请求失败 (尝试 ${attempt}/${this.MAX_RETRIES})`, error);
+                const errorMsg = lastError.message || String(error);
+                this.logger.warn(
+                    `[${providerName}] 请求失败 (尝试 ${attempt}/${this.MAX_RETRIES}): ${errorMsg}`,
+                    error
+                );
                 
                 if (attempt < this.MAX_RETRIES) {
                     await this.delay(Math.pow(2, attempt) * 1000); // 指数退避
@@ -240,15 +255,20 @@ export class MultiProviderAIClient {
             }
         }
 
-        // 腾讯混元配置
+        // 腾讯云混元配置（OpenAI 兼容接口）
+        // 参考文档：https://cloud.tencent.com/document/product/1729/111007
         const hunyuanKey = config.get<string>('hunyuanApiKey');
-        const hunyuanBaseUrl = config.get<string>('hunyuanBaseUrl', 'https://hunyuan.tencentcloudapi.com');
+        const hunyuanBaseUrl = config.get<string>('hunyuanBaseUrl', 'https://api.hunyuan.cloud.tencent.com/v1');
         
         if (hunyuanKey) {
             try {
+                // 使用标准 OpenAI SDK，仅切换 baseURL 和 apiKey
                 const client = new OpenAI({
-                    apiKey: hunyuanKey,
-                    baseURL: hunyuanBaseUrl
+                    apiKey: hunyuanKey,  // 腾讯云混元专用 API Key（非 SecretId/SecretKey）
+                    baseURL: hunyuanBaseUrl,  // OpenAI 兼容接口端点
+                    defaultHeaders: {
+                        'Content-Type': 'application/json'
+                    }
                 });
 
                 this.providers.set('hunyuan', {
@@ -257,9 +277,9 @@ export class MultiProviderAIClient {
                     isAvailable: true,
                     lastHealthCheck: 0
                 });
-                this.logger.debug('腾讯混元提供商配置完成');
+                this.logger.debug('腾讯云混元 OpenAI 兼容接口配置完成');
             } catch (error) {
-                this.logger.error('腾讯混元提供商配置失败', error);
+                this.logger.error('腾讯云混元配置失败', error);
             }
         }
 
@@ -275,7 +295,12 @@ export class MultiProviderAIClient {
             case 'openai':
                 return config.get<string>('model', 'gpt-3.5-turbo');
             case 'hunyuan':
-                return 'hunyuan-lite'; // 腾讯混元模型名
+                // 腾讯云混元可用模型（参考官方文档）
+                // - hunyuan-turbo: 通用版，推荐使用
+                // - hunyuan-lite: 轻量版，速度快
+                // - hunyuan-pro: 专业版，高质量
+                // - hunyuan-standard: 标准版
+                return config.get<string>('hunyuanModel', 'hunyuan-turbo');
             default:
                 return 'gpt-3.5-turbo';
         }
