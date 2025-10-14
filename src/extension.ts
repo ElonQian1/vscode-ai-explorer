@@ -26,6 +26,14 @@ export async function activate(context: vscode.ExtensionContext) {
         const logger = container.get<Logger>('logger');
         logger.info('AI Explorer 插件正在激活...');
         
+        // 检查工作区状态
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            logger.warn('没有打开的工作区，插件功能将受限');
+        } else {
+            logger.info(`检测到 ${workspaceFolders.length} 个工作区文件夹`);
+        }
+        
         // 激活各个功能模块
         const explorerModule = new ExplorerAliasModule(container);
         const umlModule = new UMLCanvasModule(container);
@@ -34,10 +42,13 @@ export async function activate(context: vscode.ExtensionContext) {
         await umlModule.activate(context);
         
         logger.info('AI Explorer 插件激活完成');
+        vscode.window.showInformationMessage('AI Explorer 插件已启动');
         
     } catch (error) {
         console.error('AI Explorer 插件激活失败:', error);
-        vscode.window.showErrorMessage(`AI Explorer 插件启动失败: ${error}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`AI Explorer 插件启动失败: ${errorMessage}`);
+        throw error; // 重新抛出错误以便 VS Code 能够正确处理
     }
 }
 

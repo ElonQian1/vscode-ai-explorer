@@ -28,7 +28,8 @@
         {
           "id": "aiExplorer",
           "name": "AI 资源管理器",
-          "when": "workspaceFolderCount > 0"
+          "when": "workspaceFolderCount > 0",
+          "icon": "$(folder-library)"
         }
       ]
     },

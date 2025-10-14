@@ -28,7 +28,7 @@ export class ExplorerAliasModule extends BaseModule {
         this.registerServices(context);
 
         // 创建树视图提供者
-        await this.createTreeProvider();
+        await this.createTreeProvider(context);
 
         // 注册命令处理器
         this.registerCommands(context);
@@ -59,25 +59,40 @@ export class ExplorerAliasModule extends BaseModule {
         this.logger.debug('Explorer-Alias 模块服务注册完成');
     }
 
-    private async createTreeProvider(): Promise<void> {
+    private async createTreeProvider(context: vscode.ExtensionContext): Promise<void> {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-            this.logger.warn('没有打开的工作区文件夹');
+            this.logger.warn('没有打开的工作区文件夹，跳过创建树视图');
+            vscode.window.showWarningMessage('请先打开一个工作区文件夹才能使用 AI 资源管理器');
             return;
         }
 
-        // 使用第一个工作区文件夹
-        const workspaceFolder = workspaceFolders[0];
-        this.treeProvider = new AIExplorerProvider(this.logger, workspaceFolder);
+        try {
+            // 使用第一个工作区文件夹
+            const workspaceFolder = workspaceFolders[0];
+            this.logger.info(`正在为工作区创建 AI 资源管理器: ${workspaceFolder.uri.fsPath}`);
+            
+            this.treeProvider = new AIExplorerProvider(this.logger, workspaceFolder);
 
-        // 注册树视图
-        const treeView = vscode.window.createTreeView('aiExplorer', {
-            treeDataProvider: this.treeProvider,
-            showCollapseAll: true,
-            canSelectMany: false
-        });
+            // 注册树视图到 VS Code
+            const treeView = vscode.window.createTreeView('aiExplorer', {
+                treeDataProvider: this.treeProvider,
+                showCollapseAll: true,
+                canSelectMany: false
+            });
 
-        this.logger.debug('AI 资源管理器树视图创建完成');
+            // 将树视图添加到 VS Code 扩展上下文中
+            context.subscriptions.push(treeView);
+            
+            // 将树视图添加到容器中供其他地方使用
+            this.container.registerSingleton('aiExplorerTreeView', () => treeView);
+
+            this.logger.info('AI 资源管理器树视图创建成功');
+            
+        } catch (error) {
+            this.logger.error('创建 AI 资源管理器树视图失败', error);
+            vscode.window.showErrorMessage(`AI 资源管理器初始化失败: ${error}`);
+        }
     }
 
     private registerCommands(context: vscode.ExtensionContext): void {
