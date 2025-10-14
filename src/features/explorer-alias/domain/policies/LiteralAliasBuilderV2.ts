@@ -8,12 +8,14 @@
  * 2. 支持短语匹配和形态归一化
  * 3. 返回未知词列表，用于 AI 兜底
  * 4. 支持覆盖率计算
+ * 5. 读取配置项（keepOriginalDelimiters、appendExtSuffix、literalJoiner）
  * 
  * 示例：
  * analyze_element_hierarchy.cjs
  * → 分析_元素_层级.cjs  (保留下划线和扩展名)
  */
 
+import * as vscode from 'vscode';
 import { DictionaryResolver } from '../../../../shared/naming/DictionaryResolver';
 import { splitWithDelimiters, rebuildWithDelimiters, TokenPiece } from '../../../../shared/naming/SplitWithDelimiters';
 
@@ -115,8 +117,37 @@ export class LiteralAliasBuilderV2 {
             }
         }
 
-        // 3. 重建别名（保留分隔符）
-        const alias = rebuildWithDelimiters(mapped, mappedDelims, ext, this.keepExtension);
+        // 3. 重建别名（读取配置）
+        const config = vscode.workspace.getConfiguration('aiExplorer');
+        const keepOriginalDelimiters = config.get<boolean>('alias.keepOriginalDelimiters', true);
+        const appendExtSuffix = config.get<boolean>('alias.appendExtSuffix', false);
+        const literalJoiner = config.get<string>('alias.literalJoiner', '_');
+        
+        let finalDelims = mappedDelims;
+        let finalExt = ext;
+        
+        // 如果不保留原始分隔符，统一使用 literalJoiner
+        if (!keepOriginalDelimiters) {
+            finalDelims = mapped.map(() => literalJoiner);
+        }
+        
+        // 如果不保留扩展名，或者启用了扩展名后缀，则处理扩展名
+        if (appendExtSuffix) {
+            // 添加中文后缀（脚本、模块、组件等）
+            const extSuffix = this.getExtensionSuffix(ext);
+            if (extSuffix) {
+                // 在最后一个词后添加后缀
+                if (mapped.length > 0) {
+                    mapped[mapped.length - 1] += extSuffix;
+                }
+                finalExt = '';  // 不保留原扩展名
+            }
+        } else {
+            // 保留原扩展名
+            finalExt = ext;
+        }
+        
+        const alias = rebuildWithDelimiters(mapped, finalDelims, finalExt, this.keepExtension);
 
         // 4. 计算覆盖率和置信度
         const coverage = translatedCount / tokens.length;
@@ -146,5 +177,49 @@ export class LiteralAliasBuilderV2 {
      */
     getDictionaryStats(): { wordCount: number; phraseCount: number } {
         return this.resolver.getStats();
+    }
+
+    /**
+     * 根据扩展名获取中文后缀
+     */
+    private getExtensionSuffix(ext: string): string {
+        const suffixMap: Record<string, string> = {
+            // JavaScript/TypeScript
+            'js': '脚本',
+            'cjs': '脚本',
+            'mjs': '模块',
+            'ts': '模块',
+            'tsx': '组件',
+            'jsx': '组件',
+            
+            // 样式
+            'css': '样式',
+            'scss': '样式',
+            'less': '样式',
+            'sass': '样式',
+            
+            // 配置
+            'json': '配置',
+            'yaml': '配置',
+            'yml': '配置',
+            'toml': '配置',
+            'ini': '配置',
+            
+            // 文档
+            'md': '文档',
+            'txt': '文本',
+            'html': '页面',
+            
+            // 其他
+            'vue': '组件',
+            'svelte': '组件',
+            'py': '脚本',
+            'rb': '脚本',
+            'sh': '脚本',
+            'bat': '脚本',
+            'cmd': '脚本'
+        };
+        
+        return suffixMap[ext.toLowerCase()] || '';
     }
 }

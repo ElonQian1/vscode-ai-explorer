@@ -268,13 +268,18 @@
         "aiExplorer.alias.style": {
           "type": "string",
           "enum": ["natural", "literal"],
-          "default": "natural",
-          "description": "别名翻译风格：natural=自然中文（重组语序、可读性优先），literal=直译（逐词翻译、保持原顺序）"
+          "default": "literal",
+          "description": "别名翻译风格：natural=自然中文（重组语序、可读性优先），literal=直译（逐词翻译、保持原顺序、保留分隔符）"
+        },
+        "aiExplorer.alias.keepOriginalDelimiters": {
+          "type": "boolean",
+          "default": true,
+          "description": "直译模式下是否保留原始分隔符（- _ . 驼峰等），false 则使用 literalJoiner 连接"
         },
         "aiExplorer.alias.appendExtSuffix": {
           "type": "boolean",
-          "default": true,
-          "description": "是否根据扩展名追加后缀（如 .cjs → 脚本, .ts → 模块, .tsx → 组件）"
+          "default": false,
+          "description": "是否根据扩展名追加中文后缀（如 .js → 脚本, .ts → 模块, .tsx → 组件）。默认 false，保留原扩展名"
         },
         "aiExplorer.alias.literalJoiner": {
           "type": "string",
