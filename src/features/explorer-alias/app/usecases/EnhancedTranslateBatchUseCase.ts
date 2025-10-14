@@ -2,13 +2,14 @@
 // [module: explorer-alias] [tags: UseCase, Translation, Dictionary, AI, Smart]
 /**
  * 增强批量翻译用例
- * 智能翻译链路：词典优先 → 规则匹配 → AI 翻译 → 学习词典更新
+ * 智能翻译链路：词典优先 → 智能规则 → AI 翻译 → 学习词典更新
  */
 
 import { Logger } from '../../../../core/logging/Logger';
 import { MultiProviderAIClient } from '../../../../core/ai/MultiProviderAIClient';
 import { KVCache } from '../../../../core/cache/KVCache';
 import { DictionaryManager } from '../../core/DictionaryManager';
+import { SmartRuleEngine } from '../../domain/policies/SmartRuleEngine';
 import { FileNode, TranslationResult } from '../../../../shared/types';
 
 interface TranslationStats {
@@ -24,13 +25,16 @@ interface TranslationStats {
 export class EnhancedTranslateBatchUseCase {
     private readonly MODULE_ID = 'enhanced-translation';
     private readonly CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7天
+    private readonly smartRuleEngine: SmartRuleEngine;
 
     constructor(
         private logger: Logger,
         private aiClient: MultiProviderAIClient,
         private cache: KVCache,
         private dictionary: DictionaryManager
-    ) {}
+    ) {
+        this.smartRuleEngine = new SmartRuleEngine();
+    }
 
     /**
      * 智能批量翻译文件
@@ -69,7 +73,7 @@ export class EnhancedTranslateBatchUseCase {
                     }
                 }
 
-                // 2. 词典查找
+                // 2. 词典查找（优先级最高）
                 const dictionaryResult = this.dictionary.translate(file.name);
                 if (dictionaryResult) {
                     const result: TranslationResult = {
@@ -86,13 +90,13 @@ export class EnhancedTranslateBatchUseCase {
                     continue;
                 }
 
-                // 3. 规则匹配
-                const ruleResult = this.applyTranslationRules(file.name);
-                if (ruleResult) {
+                // 3. 智能规则引擎（新增：支持中文语序重组）
+                const smartRuleResult = this.smartRuleEngine.translate(file.name);
+                if (smartRuleResult && smartRuleResult.confidence >= 0.6) {
                     const result: TranslationResult = {
                         original: file.name,
-                        translated: ruleResult,
-                        confidence: 0.8,
+                        translated: smartRuleResult.alias,
+                        confidence: smartRuleResult.confidence,
                         source: 'rule',
                         timestamp: Date.now()
                     };
@@ -100,6 +104,12 @@ export class EnhancedTranslateBatchUseCase {
                     results.set(file, result);
                     await this.cacheTranslation(file.name, result);
                     stats.ruleHits++;
+                    
+                    // 调试信息
+                    if (smartRuleResult.debug) {
+                        this.logger.debug(`智能规则匹配: ${file.name} -> ${smartRuleResult.alias} (${smartRuleResult.debug})`);
+                    }
+                    
                     continue;
                 }
 
@@ -180,7 +190,8 @@ export class EnhancedTranslateBatchUseCase {
             for (const file of files) {
                 const translated = aiResults.get(file.name);
                 
-                if (translated) {
+                if (translated && translated !== file.name) {
+                    // AI 翻译成功且有变化
                     const result: TranslationResult = {
                         original: file.name,
                         translated,
@@ -198,8 +209,10 @@ export class EnhancedTranslateBatchUseCase {
                     }
                     
                     stats.aiTranslations++;
+                    this.logger.info(`AI 翻译成功: ${file.name} -> ${translated}`);
                 } else {
-                    // AI 翻译失败，使用原名
+                    // AI 翻译失败或返回原名
+                    this.logger.warn(`AI 翻译失败或无变化: ${file.name}, 返回值: ${translated || 'undefined'}`);
                     const result: TranslationResult = {
                         original: file.name,
                         translated: file.name,

@@ -32,7 +32,10 @@ export class ExplorerTreeItem extends vscode.TreeItem {
         }
 
         // 设置上下文值（用于右键菜单）
-        this.contextValue = this.node.type === 'file' ? 'fileItem' : 'directoryItem';
+        const hasAlias = Boolean(this.node.alias && this.node.alias !== this.node.name);
+        this.contextValue = this.node.type === 'file'
+            ? (hasAlias ? 'fileHasAlias' : 'file')
+            : (hasAlias ? 'folderHasAlias' : 'folder');
 
         // 设置工具提示
         this.tooltip = this.buildTooltip();

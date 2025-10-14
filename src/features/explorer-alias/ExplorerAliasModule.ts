@@ -94,7 +94,19 @@ export class ExplorerAliasModule extends BaseModule {
             const workspaceFolder = workspaceFolders[0];
             this.logger.info(`正在为工作区创建 AI 资源管理器: ${workspaceFolder.uri.fsPath}`);
             
-            this.treeProvider = new AIExplorerProvider(this.logger, workspaceFolder);
+            // 获取缓存和字典管理器实例
+            const cache = this.container.get<KVCache>('kvCache');
+            const dictionaryManager = this.container.get<DictionaryManager>('dictionaryManager');
+            const translateUseCase = this.container.get<EnhancedTranslateBatchUseCase>('translateUseCase');
+            
+            // 创建树视图提供者
+            this.treeProvider = new AIExplorerProvider(
+                this.logger,
+                workspaceFolder,
+                cache,
+                dictionaryManager,
+                translateUseCase // 传入翻译用例
+            );
 
             // 注册树视图到 VS Code
             const treeView = vscode.window.createTreeView('aiExplorer', {
@@ -123,15 +135,27 @@ export class ExplorerAliasModule extends BaseModule {
         this.translateUseCase = this.container.get<EnhancedTranslateBatchUseCase>('translateUseCase');
 
         // 刷新命令
-        this.registerCommand(context, 'aiExplorer.refresh', () => {
+        this.registerCommand(context, 'aiExplorer.refresh', async () => {
             this.logger.info('刷新 AI 资源管理器');
-            this.treeProvider?.refresh();
+            await this.treeProvider?.refresh();
             vscode.window.showInformationMessage('AI 资源管理器已刷新');
         });
 
         // 翻译命令（单个文件）
         this.registerCommand(context, 'aiExplorer.translate', async (item) => {
             await this.handleTranslateCommand(item);
+        });
+
+        // 翻译单个文件（仅此文件，不递归）
+        this.registerCommand(context, 'aiExplorer.translateThisFile', async (item) => {
+            this.logger.info('执行单文件翻译命令');
+            await this.treeProvider?.translateThisFile(item);
+        });
+
+        // 强制用 AI 翻译（绕过缓存/词典/规则）
+        this.registerCommand(context, 'aiExplorer.forceAITranslate', async (item) => {
+            this.logger.info('执行强制 AI 翻译命令');
+            await this.treeProvider?.forceAITranslate(item);
         });
 
         // 翻译整个工作区
@@ -144,6 +168,36 @@ export class ExplorerAliasModule extends BaseModule {
             this.logger.info('切换别名显示');
             this.treeProvider?.toggleAliasDisplay();
             vscode.window.showInformationMessage('已切换别名显示模式');
+        });
+
+        // 强制重新加载别名（调试用）
+        this.registerCommand(context, 'aiExplorer.reloadAliases', async () => {
+            this.logger.info('强制重新加载别名');
+            await this.treeProvider?.refresh();
+            vscode.window.showInformationMessage('已重新加载所有别名');
+        });
+
+        // AI状态检查命令（调试用）
+        this.registerCommand(context, 'aiExplorer.checkAIStatus', async () => {
+            await this.handleCheckAIStatusCommand();
+        });
+
+        // 测试AI翻译单个词汇
+        this.registerCommand(context, 'aiExplorer.testAITranslation', async () => {
+            await this.handleTestAITranslationCommand();
+        });
+
+        // 右键菜单命令
+        this.registerCommand(context, 'aiExplorer.renameToAlias', async (item) => {
+            await this.treeProvider?.renameToAlias(item);
+        });
+
+        this.registerCommand(context, 'aiExplorer.copyAlias', async (item) => {
+            await this.treeProvider?.copyAlias(item);
+        });
+
+        this.registerCommand(context, 'aiExplorer.clearCacheForNode', async (item) => {
+            await this.treeProvider?.clearCacheForNode(item);
         });
 
         // API Key 管理命令
@@ -209,7 +263,7 @@ export class ExplorerAliasModule extends BaseModule {
                 progress.report({ increment: 100, message: '翻译完成' });
 
                 // 刷新树视图
-                this.treeProvider!.refresh();
+                await this.treeProvider!.refresh();
 
                 const statsMessage = `翻译完成：成功 ${successCount} 个，共处理 ${results.size} 个文件`;
                 vscode.window.showInformationMessage(statsMessage);
@@ -284,7 +338,7 @@ export class ExplorerAliasModule extends BaseModule {
                 progress.report({ increment: 100, message: '翻译完成' });
 
                 // 刷新树视图
-                this.treeProvider!.refresh();
+                await this.treeProvider!.refresh();
 
                 // 显示详细统计信息
                 const statsMessage = `批量翻译完成！\n` +
@@ -301,6 +355,96 @@ export class ExplorerAliasModule extends BaseModule {
             this.logger.error('批量翻译命令执行失败', error);
             vscode.window.showErrorMessage(
                 `批量翻译失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    private async handleCheckAIStatusCommand(): Promise<void> {
+        try {
+            if (!this.translateUseCase) {
+                vscode.window.showErrorMessage('翻译服务未初始化');
+                return;
+            }
+
+            // 获取AI客户端状态
+            const aiClient = this.container.get<MultiProviderAIClient>('aiClient');
+            const stats = await this.translateUseCase.getTranslationStats();
+            
+            // 检查API Key配置
+            let hasOpenAIKey = false;
+            let hasHunyuanKey = false;
+            try {
+                // 尝试获取AI客户端状态来判断API Key是否配置
+                const providerStatus = stats.aiStats;
+                hasOpenAIKey = providerStatus && providerStatus.openai !== undefined;
+                hasHunyuanKey = providerStatus && providerStatus.hunyuan !== undefined;
+            } catch (error) {
+                this.logger.warn('无法检查API Key状态', error);
+            }
+            
+            const statusMessage = `🔍 AI服务状态检查\n\n` +
+                `📊 缓存统计: ${JSON.stringify(stats.cacheStats, null, 2)}\n\n` +
+                `📚 词典统计: ${JSON.stringify(stats.dictionaryStats, null, 2)}\n\n` +
+                `🤖 AI状态: ${JSON.stringify(stats.aiStats, null, 2)}\n\n` +
+                `🔑 API Keys:\n` +
+                `  - OpenAI: ${hasOpenAIKey ? '✅ 已配置' : '❌ 未配置'}\n` +
+                `  - 腾讯混元: ${hasHunyuanKey ? '✅ 已配置' : '❌ 未配置'}`;
+
+            await vscode.window.showInformationMessage(statusMessage, { modal: true });
+            this.logger.info('AI状态检查完成', { stats, hasOpenAIKey, hasHunyuanKey });
+
+        } catch (error) {
+            this.logger.error('AI状态检查失败', error);
+            vscode.window.showErrorMessage(`AI状态检查失败: ${error}`);
+        }
+    }
+
+    private async handleTestAITranslationCommand(): Promise<void> {
+        try {
+            if (!this.translateUseCase) {
+                vscode.window.showErrorMessage('翻译服务未初始化');
+                return;
+            }
+
+            // 请用户输入要测试的单词
+            const testWord = await vscode.window.showInputBox({
+                prompt: '输入要测试翻译的英文单词或文件名',
+                placeHolder: '例如: components, utils, README.md',
+                value: 'components'
+            });
+
+            if (!testWord) {
+                return;
+            }
+
+            // 显示进度
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `正在测试翻译: ${testWord}`,
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 0, message: '开始翻译测试...' });
+
+                const result = await this.translateUseCase!.translateSingle(testWord, {
+                    forceRefresh: true, // 强制刷新以测试AI
+                    enableLearning: false // 测试时不学习
+                });
+
+                progress.report({ increment: 100, message: '测试完成' });
+
+                const resultMessage = `🧪 翻译测试结果\n\n` +
+                    `📝 原文: ${result.original}\n` +
+                    `🈸 译文: ${result.translated}\n` +
+                    `📊 置信度: ${result.confidence ? (result.confidence * 100).toFixed(1) : '未知'}%\n` +
+                    `🔧 来源: ${result.source}\n` +
+                    `⏰ 时间: ${result.timestamp ? new Date(result.timestamp).toLocaleString() : '未知'}`;
+
+                vscode.window.showInformationMessage(resultMessage, { modal: true });
+                this.logger.info('AI翻译测试完成', result);
+            });
+
+        } catch (error) {
+            this.logger.error('AI翻译测试失败', error);
+            vscode.window.showErrorMessage(`AI翻译测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
 }

@@ -74,6 +74,43 @@
       {
         "command": "aiExplorer.translateAll",
         "title": "翻译整个工作区"
+      },
+      {
+        "command": "aiExplorer.reloadAliases",
+        "title": "重新加载别名"
+      },
+      {
+        "command": "aiExplorer.checkAIStatus",
+        "title": "检查AI状态"
+      },
+      {
+        "command": "aiExplorer.testAITranslation",
+        "title": "测试AI翻译"
+      },
+      {
+        "command": "aiExplorer.renameToAlias",
+        "title": "用别名重命名文件",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "aiExplorer.copyAlias",
+        "title": "复制别名",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "aiExplorer.clearCacheForNode",
+        "title": "清除节点缓存",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "aiExplorer.translateThisFile",
+        "title": "AI 资源管理器：翻译此文件（仅此文件）",
+        "icon": "$(symbol-text)"
+      },
+      {
+        "command": "aiExplorer.forceAITranslate",
+        "title": "AI 资源管理器：强制用 AI 翻译此文件",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
@@ -97,11 +134,46 @@
       "view/item/context": [
         {
           "command": "aiExplorer.translate",
+          "when": "view == aiExplorer && (viewItem == file || viewItem == folder)",
+          "group": "navigation@10"
+        },
+        {
+          "command": "aiExplorer.renameToAlias",
+          "when": "view == aiExplorer && (viewItem == fileHasAlias || viewItem == folderHasAlias)",
+          "group": "inline@10"
+        },
+        {
+          "command": "aiExplorer.copyAlias",
+          "when": "view == aiExplorer && (viewItem == fileHasAlias || viewItem == folderHasAlias)",
+          "group": "navigation@20"
+        },
+        {
+          "command": "aiExplorer.clearCacheForNode",
           "when": "view == aiExplorer",
-          "group": "inline@1"
+          "group": "z_cleanup@99"
+        },
+        {
+          "command": "aiExplorer.translateThisFile",
+          "when": "view == aiExplorer && (viewItem == file || viewItem == fileHasAlias)",
+          "group": "navigation@15"
+        },
+        {
+          "command": "aiExplorer.forceAITranslate",
+          "when": "view == aiExplorer && (viewItem == file || viewItem == fileHasAlias)",
+          "group": "navigation@16"
         }
       ],
       "explorer/context": [
+        {
+          "command": "aiExplorer.translateThisFile",
+          "when": "resourceScheme == file",
+          "group": "navigation@915"
+        },
+        {
+          "command": "aiExplorer.forceAITranslate",
+          "when": "resourceScheme == file",
+          "group": "navigation@916"
+        },
         {
           "command": "umlCanvas.generateFromFile",
           "when": "resourceExtname =~ /\\.(ts|js|py|java|cs|cpp|c|h)$/",
