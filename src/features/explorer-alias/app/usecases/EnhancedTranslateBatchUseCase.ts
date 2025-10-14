@@ -461,13 +461,15 @@ export class EnhancedTranslateBatchUseCase {
     }
 
     /**
-     * 🆕 强制 AI 翻译模式（仍保持直译样式）
+     * 🆕 强制 AI 翻译模式（总是使用直译样式，不管全局配置）
      * 
      * 与普通 AI 翻译的区别：
      * 1. 跳过词典和缓存查找
      * 2. 使用 AI 翻译所有 tokens（不只是未知词）
-     * 3. 保持直译样式（保留分隔符、扩展名）
+     * 3. 总是保持直译样式（保留分隔符、扩展名）
      * 4. 写回学习词典
+     * 
+     * ⚠️ 注意：强制 AI 模式总是使用直译样式，忽略 alias.style 配置
      */
     private async processForceAITranslations(
         files: FileNode[],
@@ -475,33 +477,45 @@ export class EnhancedTranslateBatchUseCase {
         stats: TranslationStats,
         options?: any
     ): Promise<void> {
-        this.logger.info(`[强制AI模式] 开始翻译 ${files.length} 个文件（保持直译样式）`);
+        this.logger.info(`[强制AI模式] 开始翻译 ${files.length} 个文件（总是使用直译样式）`);
         
-        const config = vscode.workspace.getConfiguration('aiExplorer');
-        const style = config.get<'natural' | 'literal'>('alias.style', 'natural');
+        // 🔧 强制使用直译模式，忽略全局配置
+        // 原因：强制 AI 的目的是校正翻译，应该保持原有的分隔符结构
         
         for (const file of files) {
             try {
-                // 🔧 强制 AI 模式：即使有词典，也用 AI 重新翻译所有词
-                if (style === 'literal' && this.literalBuilderV2 && this.literalAIFallback && this.dictionaryResolver) {
-                    // 先分词，获取所有 tokens（不查词典）
-                    const literalResult = this.literalBuilderV2.buildLiteralAlias(file.name);
-                    
-                    // 把所有词（包括已知词和未知词）都发给 AI 重新翻译
-                    this.logger.debug(`[强制AI] ${file.name} - 让 AI 翻译所有 ${literalResult.unknownWords.length} 个未知词`);
-                    
+                // 检查是否有 V2 直译构建器
+                if (!this.literalBuilderV2 || !this.literalAIFallback || !this.dictionaryResolver) {
+                    this.logger.warn(`[强制AI] ${file.name} - 直译组件未初始化，回退到普通 AI 翻译`);
+                    await this.processAITranslations([file], results, stats, options);
+                    continue;
+                }
+                
+                // 1. 先分词，获取所有 tokens（不查词典）
+                const literalResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                
+                this.logger.debug(`[强制AI] ${file.name} - 分词结果: ${literalResult.debug}`);
+                this.logger.debug(`[强制AI] ${file.name} - 未知词: ${literalResult.unknownWords.join(', ')}`);
+                
+                // 2. 让 AI 翻译未知词
+                if (literalResult.unknownWords.length > 0) {
                     const aiMappings = await this.literalAIFallback.suggestLiteralTranslations(
                         file.name,
-                        literalResult.unknownWords.length > 0 ? literalResult.unknownWords : [file.name]
+                        literalResult.unknownWords
                     );
                     
-                    // 写回学习词典
+                    this.logger.debug(`[强制AI] ${file.name} - AI 返回映射: ${JSON.stringify(aiMappings)}`);
+                    
+                    // 3. 写回学习词典
                     if (Object.keys(aiMappings).length > 0) {
                         await this.dictionaryResolver.writeBatchLearning(aiMappings);
                         stats.aiFallbackHits++;
                         
-                        // 重新构建（使用更新后的词典）
+                        // 4. 重新构建（使用更新后的词典）
                         const updatedResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                        
+                        this.logger.info(`[强制AI] ${file.name} -> ${updatedResult.alias} (覆盖率${(updatedResult.coverage*100).toFixed(0)}%, 保留了分隔符)`);
+                        
                         const result: TranslationResult = {
                             original: file.name,
                             translated: updatedResult.alias,
@@ -513,10 +527,10 @@ export class EnhancedTranslateBatchUseCase {
                         results.set(file, result);
                         await this.cacheTranslation(file.name, result);
                         stats.aiTranslations++;
-                        
-                        this.logger.info(`[强制AI] ${file.name} -> ${updatedResult.alias} (覆盖率${(updatedResult.coverage*100).toFixed(0)}%)`);
                     } else {
                         // AI 返回空，使用原始直译结果
+                        this.logger.warn(`[强制AI] ${file.name} - AI 返回空映射，使用现有词典翻译`);
+                        
                         const result: TranslationResult = {
                             original: file.name,
                             translated: literalResult.alias,
@@ -528,13 +542,22 @@ export class EnhancedTranslateBatchUseCase {
                         results.set(file, result);
                         await this.cacheTranslation(file.name, result);
                         stats.literalHits++;
-                        
-                        this.logger.warn(`[强制AI] ${file.name} - AI 返回空，使用直译: ${literalResult.alias}`);
                     }
                 } else {
-                    // 非直译模式或组件未初始化，回退到普通 AI 翻译
-                    this.logger.warn(`[强制AI] ${file.name} - 直译组件未初始化，回退到普通 AI 翻译`);
-                    await this.processAITranslations([file], results, stats, options);
+                    // 所有词都已知，直接使用词典翻译结果
+                    this.logger.info(`[强制AI] ${file.name} - 所有词已知，使用词典: ${literalResult.alias}`);
+                    
+                    const result: TranslationResult = {
+                        original: file.name,
+                        translated: literalResult.alias,
+                        confidence: literalResult.confidence,
+                        source: 'dictionary',
+                        timestamp: Date.now()
+                    };
+                    
+                    results.set(file, result);
+                    await this.cacheTranslation(file.name, result);
+                    stats.dictionaryHits++;
                 }
             } catch (error) {
                 this.logger.error(`[强制AI] ${file.name} 翻译失败`, error);
