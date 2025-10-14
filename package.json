@@ -1,0 +1,176 @@
+{
+  "name": "ai-explorer",
+  "displayName": "AI Explorer - 智能资源管理器",
+  "description": "AI驱动的文件翻译和UML图表生成插件",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "ai",
+    "translation",
+    "uml",
+    "explorer",
+    "chinese",
+    "diagram"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "aiExplorer",
+          "name": "AI 资源管理器",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "aiExplorer.refresh",
+        "title": "刷新",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "aiExplorer.translate",
+        "title": "翻译为中文",
+        "icon": "$(symbol-text)"
+      },
+      {
+        "command": "aiExplorer.toggleAlias",
+        "title": "切换别名显示",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "umlCanvas.generateFromFile",
+        "title": "生成 UML 图表",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "umlCanvas.openCanvas",
+        "title": "打开 UML 画布",
+        "icon": "$(preview)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "aiExplorer.refresh",
+          "when": "view == aiExplorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aiExplorer.toggleAlias",
+          "when": "view == aiExplorer",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "aiExplorer.translate",
+          "when": "view == aiExplorer && viewItem == fileItem",
+          "group": "inline@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "umlCanvas.generateFromFile",
+          "when": "resourceExtname =~ /\\.(ts|js|py|java|cs|cpp|c|h)$/",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "umlCanvas.generateFromFile",
+          "when": "resourceExtname =~ /\\.(ts|js|py|java|cs|cpp|c|h)$/",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AI Explorer",
+      "properties": {
+        "aiExplorer.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API密钥"
+        },
+        "aiExplorer.openaiBaseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "OpenAI API基础URL"
+        },
+        "aiExplorer.model": {
+          "type": "string",
+          "default": "gpt-3.5-turbo",
+          "enum": [
+            "gpt-3.5-turbo",
+            "gpt-4",
+            "gpt-4-turbo-preview"
+          ],
+          "description": "使用的AI模型"
+        },
+        "aiExplorer.cacheEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用翻译缓存"
+        },
+        "aiExplorer.autoTranslate": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否自动翻译新文件"
+        },
+        "umlCanvas.layout": {
+          "type": "string",
+          "default": "hierarchical",
+          "enum": [
+            "hierarchical",
+            "force",
+            "grid"
+          ],
+          "description": "UML图表布局算法"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "compile:watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "test": "node ./out/test/runTest.js",
+    "build:explorer": "tsc -b src/features/explorer-alias",
+    "build:uml": "tsc -b src/features/uml-canvas",
+    "build:core": "tsc -b src/core",
+    "dev": "npm run compile:watch",
+    "grep:alias": "npx rg -t ts 'explorer-alias|别名|资源管理器' src/features/explorer-alias",
+    "grep:uml": "npx rg -t ts 'uml-canvas|UML|图表' src/features/uml-canvas"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "eslint": "^8.47.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-boundaries": "^4.0.0",
+    "typescript": "^5.1.6",
+    "@vscode/test-electron": "^2.3.4",
+    "rimraf": "^5.0.1"
+  },
+  "dependencies": {
+    "openai": "^4.20.1",
+    "d3-force": "^3.0.0",
+    "d3-selection": "^3.0.0",
+    "vis-network": "^9.1.6"
+  }
+}

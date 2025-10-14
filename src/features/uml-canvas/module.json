@@ -1,0 +1,15 @@
+{
+  "moduleId": "uml-canvas",
+  "name": "UML 图表生成器（世界画布）",
+  "scope": ["ast", "uml", "webview", "canvas", "diagram"],
+  "entry": ["UMLCanvasModule.ts", "app/usecases/GenerateUMLUseCase.ts"],
+  "searchTags": ["UML", "图表", "画布", "AST", "代码分析", "可视化"],
+  "dependencies": ["@core/ai", "@core/cache", "@core/logging"],
+  "commands": [
+    "umlCanvas.generateFromFile",
+    "umlCanvas.openCanvas"
+  ],
+  "webviews": [
+    "umlCanvas"
+  ]
+}

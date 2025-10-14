@@ -1,0 +1,27 @@
+{
+  "files.exclude": {
+    "**/out": true,
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/*.map": true,
+    "**/.DS_Store": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/out": true,
+    "**/*.map": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "eslint.workingDirectories": [
+    "src"
+  ],
+  "eslint.format.enable": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "debug.node.autoAttach": "on",
+  "terminal.integrated.defaultProfile.windows": "PowerShell"
+}

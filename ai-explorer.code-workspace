@@ -1,0 +1,45 @@
+{
+  "folders": [
+    {
+      "name": "🏠 项目根目录",
+      "path": "."
+    },
+    {
+      "name": "🌟 Explorer-Alias (资源管理器)",
+      "path": "src/features/explorer-alias"
+    },
+    {
+      "name": "🎨 UML-Canvas (图表生成)",
+      "path": "src/features/uml-canvas"
+    },
+    {
+      "name": "⚙️ Core (核心服务)",
+      "path": "src/core"
+    },
+    {
+      "name": "📚 Shared (共享组件)",
+      "path": "src/shared"
+    }
+  ],
+  "settings": {
+    "search.useIgnoreFiles": true,
+    "search.followSymlinks": false,
+    "typescript.preferences.includePackageJsonAutoImports": "auto",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "files.associations": {
+      "*.json": "jsonc"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-typescript-next",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "ms-vscode.vscode-json"
+    ]
+  }
+}

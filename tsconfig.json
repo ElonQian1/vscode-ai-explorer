@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "commonjs",
+    "baseUrl": "src",
+    "paths": {
+      "@core/*": ["core/*"],
+      "@feat/explorer/*": ["features/explorer-alias/*"],
+      "@feat/uml/*": ["features/uml-canvas/*"],
+      "@shared/*": ["shared/*"]
+    },
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "out",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "out",
+    "**/*.test.ts"
+  ]
+}

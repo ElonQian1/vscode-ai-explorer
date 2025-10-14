@@ -1,0 +1,88 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "compile",
+      "group": "build",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "silent",
+        "clear": true
+      },
+      "label": "compile",
+      "detail": "编译整个项目"
+    },
+    {
+      "type": "npm",
+      "script": "compile:watch",
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "never"
+      },
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch",
+      "label": "watch",
+      "detail": "监听模式编译"
+    },
+    {
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build:explorer"],
+      "group": "build",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "silent"
+      },
+      "label": "build:explorer",
+      "detail": "编译 Explorer-Alias 模块"
+    },
+    {
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build:uml"],
+      "group": "build",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "silent"
+      },
+      "label": "build:uml",
+      "detail": "编译 UML-Canvas 模块"
+    },
+    {
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build:core"],
+      "group": "build",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "silent"
+      },
+      "label": "build:core",
+      "detail": "编译 Core 模块"
+    },
+    {
+      "type": "npm",
+      "script": "lint",
+      "group": "test",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "label": "lint",
+      "detail": "代码质量检查"
+    },
+    {
+      "type": "npm",
+      "script": "pretest",
+      "group": "test",
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "label": "pretest",
+      "detail": "测试前准备"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "moduleId": "explorer-alias",
+  "name": "AI 资源管理器（中文别名）",
+  "scope": ["treeview", "translation", "cache"],
+  "entry": ["ExplorerAliasModule.ts", "ui/AIExplorerProvider.ts"],
+  "searchTags": ["别名", "资源管理器", "中文", "TreeView", "translate", "cache"],
+  "dependencies": ["@core/ai", "@core/cache", "@core/logging"],
+  "commands": [
+    "aiExplorer.refresh",
+    "aiExplorer.translate", 
+    "aiExplorer.toggleAlias"
+  ],
+  "views": [
+    "aiExplorer"
+  ]
+}
