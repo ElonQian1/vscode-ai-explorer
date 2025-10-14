@@ -245,9 +245,15 @@
         },
         "aiExplorer.hunyuanModel": {
           "type": "string",
-          "enum": ["hunyuan-turbo", "hunyuan-lite", "hunyuan-pro", "hunyuan-standard"],
+          "enum": [
+            "hunyuan-turbo", 
+            "hunyuan-turbos-longtext", 
+            "hunyuan-lite", 
+            "hunyuan-pro", 
+            "hunyuan-standard"
+          ],
           "default": "hunyuan-turbo",
-          "description": "腾讯云混元模型选择（推荐 hunyuan-turbo）"
+          "description": "腾讯云混元模型选择（推荐 hunyuan-turbo 或 hunyuan-turbos-longtext 长文本版）"
         },
         "aiExplorer.enableDictionary": {
           "type": "boolean",

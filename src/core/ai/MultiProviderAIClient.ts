@@ -297,6 +297,7 @@ export class MultiProviderAIClient {
             case 'hunyuan':
                 // 腾讯云混元可用模型（参考官方文档）
                 // - hunyuan-turbo: 通用版，推荐使用
+                // - hunyuan-turbos-longtext: 长文本版，支持更大上下文
                 // - hunyuan-lite: 轻量版，速度快
                 // - hunyuan-pro: 专业版，高质量
                 // - hunyuan-standard: 标准版
