@@ -22,6 +22,7 @@ export interface AIRequest {
 
 export interface AIResponse {
     content: string;
+    model?: string;
     usage?: {
         promptTokens: number;
         completionTokens: number;
@@ -40,7 +41,9 @@ export interface TranslationResult {
     original: string;
     translated: string;
     confidence?: number;
-    cached: boolean;
+    cached?: boolean;
+    source?: 'dictionary' | 'rule' | 'ai' | 'cache' | 'fallback' | 'error';
+    timestamp?: number;
 }
 
 export interface FileNode {

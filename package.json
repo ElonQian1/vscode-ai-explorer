@@ -58,6 +58,22 @@
         "command": "umlCanvas.openCanvas",
         "title": "打开 UML 画布",
         "icon": "$(preview)"
+      },
+      {
+        "command": "aiExplorer.setOpenAIKey",
+        "title": "设置 OpenAI API Key"
+      },
+      {
+        "command": "aiExplorer.setHunyuanKey", 
+        "title": "设置腾讯混元 API Key"
+      },
+      {
+        "command": "aiExplorer.chooseProvider",
+        "title": "选择 AI 提供商"
+      },
+      {
+        "command": "aiExplorer.translateAll",
+        "title": "翻译整个工作区"
       }
     ],
     "menus": {
@@ -68,15 +84,20 @@
           "group": "navigation@1"
         },
         {
-          "command": "aiExplorer.toggleAlias",
+          "command": "aiExplorer.translateAll",
           "when": "view == aiExplorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "aiExplorer.toggleAlias",
+          "when": "view == aiExplorer",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
         {
           "command": "aiExplorer.translate",
-          "when": "view == aiExplorer && viewItem == fileItem",
+          "when": "view == aiExplorer",
           "group": "inline@1"
         }
       ],
@@ -127,6 +148,38 @@
           "type": "boolean",
           "default": false,
           "description": "是否自动翻译新文件"
+        },
+        "aiExplorer.provider.primary": {
+          "type": "string",
+          "enum": ["openai", "hunyuan"],
+          "default": "openai",
+          "description": "主用 AI 提供商"
+        },
+        "aiExplorer.provider.fallback": {
+          "type": "string",
+          "enum": ["none", "openai", "hunyuan"],
+          "default": "none",
+          "description": "备用 AI 提供商"
+        },
+        "aiExplorer.hunyuanApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "腾讯混元 API 密钥"
+        },
+        "aiExplorer.hunyuanBaseUrl": {
+          "type": "string", 
+          "default": "https://hunyuan.tencentcloudapi.com",
+          "description": "腾讯混元 API 基础URL"
+        },
+        "aiExplorer.enableDictionary": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用内置词典"
+        },
+        "aiExplorer.enableLearning": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用学习型词典"
         },
         "umlCanvas.layout": {
           "type": "string",
