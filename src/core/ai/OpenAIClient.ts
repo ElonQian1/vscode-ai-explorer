@@ -7,8 +7,8 @@
 
 import { OpenAI } from 'openai';
 import * as vscode from 'vscode';
-import { Logger } from '@core/logging/Logger';
-import { AIRequest, AIResponse } from '@shared/types';
+import { Logger } from '../logging/Logger';
+import { AIRequest, AIResponse } from '../../shared/types';
 
 export class OpenAIClient {
     private client: OpenAI | null = null;

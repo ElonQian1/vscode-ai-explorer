@@ -7,10 +7,10 @@
  */
 
 import * as vscode from 'vscode';
-import { DIContainer } from '@core/di/Container';
-import { Logger } from '@core/logging/Logger';
-import { ExplorerAliasModule } from '@feat/explorer/ExplorerAliasModule';
-import { UMLCanvasModule } from '@feat/uml/UMLCanvasModule';
+import { DIContainer } from './core/di/Container';
+import { Logger } from './core/logging/Logger';
+import { ExplorerAliasModule } from './features/explorer-alias/ExplorerAliasModule';
+import { UMLCanvasModule } from './features/uml-canvas/UMLCanvasModule';
 
 let container: DIContainer;
 

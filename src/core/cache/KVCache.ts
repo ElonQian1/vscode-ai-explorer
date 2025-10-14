@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { Logger } from '@core/logging/Logger';
+import { Logger } from '../logging/Logger';
 
 interface CacheEntry<T> {
     value: T;

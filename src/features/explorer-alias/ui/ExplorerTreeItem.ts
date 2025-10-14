@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { FileNode } from '@shared/types';
+import { FileNode } from '../../../shared/types';
 
 export class ExplorerTreeItem extends vscode.TreeItem {
     constructor(

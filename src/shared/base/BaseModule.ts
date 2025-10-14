@@ -6,8 +6,8 @@
  */
 
 import * as vscode from 'vscode';
-import { DIContainer } from '@core/di/Container';
-import { Logger } from '@core/logging/Logger';
+import { DIContainer } from '../../core/di/Container';
+import { Logger } from '../../core/logging/Logger';
 
 export abstract class BaseModule {
     protected logger: Logger;

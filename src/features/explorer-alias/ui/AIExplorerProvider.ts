@@ -7,8 +7,8 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { FileNode } from '@shared/types';
-import { Logger } from '@core/logging/Logger';
+import { FileNode } from '../../../shared/types';
+import { Logger } from '../../../core/logging/Logger';
 import { ExplorerTreeItem } from './ExplorerTreeItem';
 
 export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {

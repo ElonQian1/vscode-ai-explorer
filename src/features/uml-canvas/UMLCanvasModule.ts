@@ -6,10 +6,10 @@
  */
 
 import * as vscode from 'vscode';
-import { BaseModule } from '@shared/base/BaseModule';
-import { DIContainer } from '@core/di/Container';
-import { OpenAIClient } from '@core/ai/OpenAIClient';
-import { KVCache } from '@core/cache/KVCache';
+import { BaseModule } from '../../shared/base/BaseModule';
+import { DIContainer } from '../../core/di/Container';
+import { OpenAIClient } from '../../core/ai/OpenAIClient';
+import { KVCache } from '../../core/cache/KVCache';
 import { GenerateUMLUseCase } from './app/usecases/GenerateUMLUseCase';
 import { UMLCanvasPanel } from './panel/UMLCanvasPanel';
 

@@ -7,11 +7,11 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Logger } from '@core/logging/Logger';
-import { OpenAIClient } from '@core/ai/OpenAIClient';
-import { KVCache } from '@core/cache/KVCache';
-import { PromptProfiles } from '@core/ai/PromptProfiles';
-import { UMLGraph, UMLNode, UMLEdge } from '@shared/types';
+import { Logger } from '../../../../core/logging/Logger';
+import { OpenAIClient } from '../../../../core/ai/OpenAIClient';
+import { KVCache } from '../../../../core/cache/KVCache';
+import { PromptProfiles } from '../../../../core/ai/PromptProfiles';
+import { UMLGraph, UMLNode, UMLEdge } from '../../../../shared/types';
 
 export interface CodeAnalysisResult {
     filePath: string;

@@ -5,11 +5,11 @@
  * 处理文件名的批量翻译逻辑
  */
 
-import { Logger } from '@core/logging/Logger';
-import { OpenAIClient } from '@core/ai/OpenAIClient';
-import { KVCache } from '@core/cache/KVCache';
-import { PromptProfiles } from '@core/ai/PromptProfiles';
-import { FileNode, TranslationResult } from '@shared/types';
+import { Logger } from '../../../../core/logging/Logger';
+import { OpenAIClient } from '../../../../core/ai/OpenAIClient';
+import { KVCache } from '../../../../core/cache/KVCache';
+import { PromptProfiles } from '../../../../core/ai/PromptProfiles';
+import { FileNode, TranslationResult } from '../../../../shared/types';
 
 export class TranslateBatchUseCase {
     private readonly MODULE_ID = 'explorer-alias';

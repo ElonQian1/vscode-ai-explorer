@@ -7,8 +7,8 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Logger } from '@core/logging/Logger';
-import { UMLGraph } from '@shared/types';
+import { Logger } from '../../../core/logging/Logger';
+import { UMLGraph } from '../../../shared/types';
 
 export class UMLCanvasPanel {
     public static currentPanel: UMLCanvasPanel | undefined;

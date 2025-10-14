@@ -161,17 +161,18 @@
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^6.4.0",
     "@typescript-eslint/parser": "^6.4.0",
-    "eslint": "^8.47.0",
-    "eslint-plugin-import": "^2.28.1",
-    "eslint-plugin-boundaries": "^4.0.0",
-    "typescript": "^5.1.6",
     "@vscode/test-electron": "^2.3.4",
-    "rimraf": "^5.0.1"
+    "eslint": "^8.47.0",
+    "eslint-plugin-boundaries": "^4.0.0",
+    "eslint-plugin-import": "^2.28.1",
+    "rimraf": "^5.0.1",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.1.6"
   },
   "dependencies": {
-    "openai": "^4.20.1",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
+    "openai": "^4.20.1",
     "vis-network": "^9.1.6"
   }
 }

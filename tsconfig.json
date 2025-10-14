@@ -3,14 +3,6 @@
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
     "module": "commonjs",
-    "baseUrl": "src",
-    "paths": {
-      "@core/*": ["core/*"],
-      "@feat/explorer/*": ["features/explorer-alias/*"],
-      "@feat/uml/*": ["features/uml-canvas/*"],
-      "@shared/*": ["shared/*"]
-    },
-    "composite": true,
     "rootDir": "src",
     "outDir": "out",
     "strict": true,
@@ -23,7 +15,8 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "ignoreDeprecations": "5.0"
   },
   "include": [
     "src/**/*"
