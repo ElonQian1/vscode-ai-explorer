@@ -250,10 +250,12 @@ svg .edge-label {
     padding-top: 80px;
     z-index: 1000;
     backdrop-filter: blur(2px);
+    pointer-events: none; /* ✅ 隐藏时不接收事件，避免干扰双击 */
 }
 
 .help-overlay.show {
     display: flex;
+    pointer-events: auto; /* ✅ 显示时才接收事件 */
 }
 
 .help-card {

@@ -560,6 +560,56 @@
         }
     });
 
+    // ===== 调试工具：Ctrl+Shift+D 开启事件诊断 =====
+    let debugEvents = false;
+
+    window.addEventListener('keydown', (e) => {
+        // Ctrl+Shift+D 切换调试模式
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+            debugEvents = !debugEvents;
+            console.log(`🔍 事件诊断: ${debugEvents ? '开启' : '关闭'}`);
+            
+            if (debugEvents) {
+                // 诊断信息
+                console.log('📊 当前图表状态:', {
+                    graphType: graph?.metadata?.graphType,
+                    nodeCount: graph?.nodes?.length,
+                    folderNodes: graph?.nodes?.filter(n => n.type === 'folder').length,
+                    rootNode: graph?.nodes?.find(n => n.data?.isRoot)
+                });
+                
+                // 检查文件夹节点数据
+                console.log('📁 文件夹节点详情:');
+                graph?.nodes?.filter(n => n.type === 'folder').forEach(n => {
+                    console.log(`  - ${n.label}:`, {
+                        hasPath: !!n.data?.path,
+                        path: n.data?.path,
+                        isRoot: n.data?.isRoot,
+                        position: n.position
+                    });
+                });
+                
+                console.log('💡 提示：双击文件夹节点查看事件路径');
+            }
+            e.preventDefault();
+        }
+    });
+
+    // 监听所有双击事件（用于诊断）
+    document.addEventListener('dblclick', (e) => {
+        if (!debugEvents) return;
+        
+        const path = e.composedPath().map(el => {
+            if (el.nodeType !== 1) return null;
+            return el.className || el.id || el.tagName;
+        }).filter(Boolean).slice(0, 8);
+        
+        console.log('🖱️ 双击事件路径:', path.join(' > '));
+        console.log('🎯 目标元素:', e.target);
+        console.log('📍 目标类名:', e.target.className);
+        console.log('📦 目标数据:', e.target.dataset);
+    }, true);
+
     // 启动
     init();
 })();
