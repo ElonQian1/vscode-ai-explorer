@@ -27,21 +27,40 @@ export interface ResolvedTarget {
 export async function resolveTargetToFileUri(
     raw?: unknown
 ): Promise<ResolvedTarget | undefined> {
+    // 🔍 调试日志：查看接收到的参数类型
+    console.log('[resolveTargetToFileUri] 接收参数类型:', typeof raw);
+    console.log('[resolveTargetToFileUri] 参数详情:', raw);
+    if ((raw as any)?.resourceUri) {
+        console.log('[resolveTargetToFileUri] resourceUri:', (raw as any).resourceUri.toString());
+    }
+
     // 1) 优先从原始参数解析 URI
     let uri: vscode.Uri | undefined;
 
-    if (Array.isArray(raw) && raw.length > 0) {
-        // 多选场景，取第一个
-        const first = raw[0];
-        uri = (first as any).resourceUri ?? (first as vscode.Uri);
-    } else if ((raw as any)?.resourceUri) {
-        // 右键菜单传入的对象
+    // 优先检查 resourceUri（TreeItem 对象）
+    if ((raw as any)?.resourceUri instanceof vscode.Uri) {
         uri = (raw as any).resourceUri as vscode.Uri;
-    } else if (raw instanceof vscode.Uri) {
-        // 直接传入 URI
+        console.log('[resolveTargetToFileUri] 从 resourceUri 提取:', uri.toString());
+    } 
+    // 多选场景，取第一个
+    else if (Array.isArray(raw) && raw.length > 0) {
+        const first = raw[0];
+        if ((first as any)?.resourceUri instanceof vscode.Uri) {
+            uri = (first as any).resourceUri as vscode.Uri;
+            console.log('[resolveTargetToFileUri] 从数组第一项的 resourceUri 提取:', uri.toString());
+        } else if (first instanceof vscode.Uri) {
+            uri = first;
+            console.log('[resolveTargetToFileUri] 从数组第一项提取 Uri:', uri.toString());
+        }
+    } 
+    // 直接传入 URI
+    else if (raw instanceof vscode.Uri) {
         uri = raw;
-    } else {
-        // 命令面板/快捷键触发，无上下文
+        console.log('[resolveTargetToFileUri] 直接 Uri 参数:', uri.toString());
+    } 
+    // 命令面板/快捷键触发，无上下文
+    else {
+        console.log('[resolveTargetToFileUri] 未检测到任何 URI，准备弹出选择框');
         uri = undefined;
     }
 

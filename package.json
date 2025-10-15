@@ -189,7 +189,7 @@
         },
         {
           "command": "filetreeBlueprint.openFromPath",
-          "when": "view == aiExplorer",
+          "when": "view == aiExplorer && (viewItem == folder || viewItem == folderHasAlias)",
           "group": "navigation@17"
         }
       ],
