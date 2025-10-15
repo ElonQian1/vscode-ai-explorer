@@ -312,6 +312,20 @@
           ],
           "description": "直译词典文件路径（相对于工作区根目录，按优先级从高到低排列）"
         },
+        "aiExplorer.batch.maxConcurrency": {
+          "type": "number",
+          "default": 6,
+          "minimum": 1,
+          "maximum": 16,
+          "description": "批量翻译最大并发数（默认 6）。更高的并发数可以提升性能，但可能触发 API 限流"
+        },
+        "aiExplorer.batch.retryTimes": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "maximum": 3,
+          "description": "批量翻译失败重试次数（默认 1）。用于处理短暂错误（如 429 限流、网络超时）"
+        },
         "umlCanvas.layout": {
           "type": "string",
           "default": "hierarchical",

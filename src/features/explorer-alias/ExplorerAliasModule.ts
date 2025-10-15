@@ -246,9 +246,16 @@ export class ExplorerAliasModule extends BaseModule {
             }, async (progress) => {
                 progress.report({ increment: 0, message: `准备翻译 ${filesToTranslate.length} 个文件` });
 
+                // 🆕 读取并发配置
+                const config = vscode.workspace.getConfiguration('aiExplorer');
+                const maxConcurrency = config.get<number>('batch.maxConcurrency', 6);
+                const retryTimes = config.get<number>('batch.retryTimes', 1);
+
                 const results = await this.translateUseCase!.translateFiles(filesToTranslate, {
                     enableLearning: true,
-                    batchSize: 10
+                    batchSize: 10,  // 已废弃，保留用于向后兼容
+                    maxConcurrency,  // 🆕 并发控制
+                    retryTimes       // 🆕 重试机制
                 });
                 
                 // 更新树视图中的别名

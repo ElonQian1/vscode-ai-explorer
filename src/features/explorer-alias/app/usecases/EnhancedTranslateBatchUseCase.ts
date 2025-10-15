@@ -22,6 +22,8 @@ import { LiteralAIFallback } from '../../infra/translators/LiteralAIFallback';
 import { isCoverageSufficient } from '../../domain/policies/CoverageGuard';
 import { splitWithDelimiters } from '../../../../shared/naming/SplitWithDelimiters';
 import { FileNode, TranslationResult } from '../../../../shared/types';
+import { ConcurrencyPool } from '../../../../shared/utils/ConcurrencyPool';
+import { RetryHelper } from '../../../../shared/utils/RetryHelper';
 import * as vscode from 'vscode';
 
 interface TranslationStats {
@@ -102,15 +104,22 @@ export class EnhancedTranslateBatchUseCase {
      *   - forceRefresh: 是否强制刷新（跳过缓存，但仍然使用词典）
      *   - forceAI: 是否强制使用 AI（跳过缓存和词典，直接用 AI 翻译所有词）
      *   - enableLearning: 是否启用学习词典
-     *   - batchSize: 批量大小
+     *   - batchSize: 批量大小（已废弃，保留用于向后兼容）
+     *   - maxConcurrency: 最大并发数（默认 6）
+     *   - retryTimes: 重试次数（默认 1）
      */
     async translateFiles(files: FileNode[], options?: {
         forceRefresh?: boolean;
         forceAI?: boolean;
         enableLearning?: boolean;
-        batchSize?: number;
+        batchSize?: number;  // 已废弃，保留用于向后兼容
+        maxConcurrency?: number;  // 🆕 并发控制
+        retryTimes?: number;      // 🆕 重试次数
     }): Promise<Map<FileNode, TranslationResult>> {
         const startTime = Date.now();
+        const maxConcurrency = options?.maxConcurrency || 1;  // 🆕 默认值为 1（顺序处理），配置后才启用并发
+        const retryTimes = options?.retryTimes || 0;          // 🆕 默认不重试
+        
         const stats: TranslationStats = {
             totalFiles: files.length,
             dictionaryHits: 0,
