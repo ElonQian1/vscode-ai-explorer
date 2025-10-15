@@ -104,10 +104,12 @@ export class FileTreeScanner {
             nodes,
             edges,
             metadata: {
+                graphType: 'filetree', // ✅ 关键：前端双击绑定依赖此字段！
                 rootPath: rootUri.fsPath,
                 scannedAt: new Date().toISOString(),
                 nodeCount: nodes.length,
-                edgeCount: edges.length
+                edgeCount: edges.length,
+                scanMode: 'deep'
             }
         };
     }
@@ -237,6 +239,7 @@ export class FileTreeScanner {
             nodes,
             edges,
             metadata: {
+                graphType: 'filetree', // ✅ 关键：前端双击绑定依赖此字段！
                 rootPath: dirUri.fsPath,
                 workspaceRoot: workspaceRoot?.fsPath,
                 relativePath,
