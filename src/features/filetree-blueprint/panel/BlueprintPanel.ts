@@ -131,6 +131,12 @@ export class BlueprintPanel {
                 await this.handleGoUpDirectory(message.payload.currentPath);
                 break;
 
+            case 'node-moved':
+                // 处理节点移动（手写图等场景）
+                // 对于文件树蓝图，这个消息通常不需要处理
+                this.logger.debug(`节点移动: ${message.payload.nodeId}`, message.payload.position);
+                break;
+
             case 'error':
                 this.logger.error('Webview 错误:', message.payload);
                 vscode.window.showErrorMessage(`蓝图错误: ${message.payload.message}`);
@@ -165,28 +171,15 @@ export class BlueprintPanel {
                 return;
             }
             
-            // 下钻到子文件夹：重新生成该文件夹的蓝图
+            // 下钻到子文件夹：data.path 已经是完整的绝对路径
             const folderPath = nodeData.data.path;
             
-            // 获取工作区根目录
-            const workspaceRoot = this.currentGraph?.metadata?.workspaceRoot;
-            if (!workspaceRoot) {
-                this.logger.warn('无法获取工作区根目录，使用绝对路径');
-                // 使用绝对路径
-                vscode.commands.executeCommand(
-                    'filetreeBlueprint.openFromPath',
-                    vscode.Uri.file(folderPath)
-                );
-                return;
-            }
-
-            // 构造完整路径
-            const fullPath = path.join(workspaceRoot, folderPath);
-            this.logger.info(`下钻到: ${fullPath}`);
+            this.logger.info(`下钻到: ${folderPath}`);
             
+            // 直接使用绝对路径，不需要拼接
             vscode.commands.executeCommand(
                 'filetreeBlueprint.openFromPath',
-                vscode.Uri.file(fullPath)
+                vscode.Uri.file(folderPath)
             );
             
         } else if (nodeData.type === 'file' && nodeData.data?.path) {
