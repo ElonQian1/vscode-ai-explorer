@@ -1,0 +1,222 @@
+/* media/filetree-blueprint/index.css */
+/* 文件树蓝图样式（防抖动优化版） */
+
+/* 禁止全局 transition，避免 hover 导致尺寸/位置动画 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    transition: none !important;
+}
+
+:root {
+    --vscode-editor-background: #1e1e1e;
+    --vscode-editor-foreground: #d4d4d4;
+    --vscode-button-background: #0e639c;
+    --vscode-button-hoverBackground: #1177bb;
+    --folder-color: #dcb67a;
+    --file-color: #75beff;
+    --module-color: #4ec9b0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, ui-sans-serif, system-ui, PingFang SC, Noto Sans SC;
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 工具栏 */
+.toolbar {
+    height: 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+    flex-shrink: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.toolbar button {
+    padding: 4px 12px;
+    background-color: var(--vscode-button-background);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.toolbar button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.toolbar span {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-left: 8px;
+}
+
+/* 画布容器 */
+#canvasWrap {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+#canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+}
+
+/* 节点容器（绝对定位的父容器） */
+#nodes {
+    position: relative;
+    width: 5000px;
+    height: 5000px;
+}
+
+/* 节点样式：加速合成、预告位移变化、禁用尺寸 hover */
+.node {
+    position: absolute;
+    width: 160px;
+    height: 64px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e8e8e8;
+    padding: 10px;
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* 关键：开启 GPU 合成层，减少亚像素抖动 */
+    will-change: left, top;
+    transform: translateZ(0);
+}
+
+/* hover 只改变颜色，不改变尺寸！ */
+.node:hover {
+    border-color: #a3a3a3;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.node.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+}
+
+.node-icon {
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.node-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.node .title {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #333;
+}
+
+.node .desc {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 节点类型特定样式 */
+.node-folder {
+    border-left: 3px solid var(--folder-color);
+}
+
+.node-file {
+    border-left: 3px solid var(--file-color);
+}
+
+.node-module {
+    border-left: 3px solid var(--module-color);
+}
+
+/* SVG 边层 */
+svg.edges {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+}
+
+svg .edge {
+    fill: none;
+    stroke: #8ea1b3;
+    stroke-width: 1.6;
+}
+
+svg .edge-label {
+    font-size: 11px;
+    fill: #6b7280;
+}
+
+/* 面包屑导航 */
+#breadcrumb {
+    padding: 6px 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+#breadcrumb a {
+    color: var(--vscode-button-background);
+    text-decoration: none;
+    margin-right: 4px;
+}
+
+#breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+#breadcrumb span {
+    opacity: 0.5;
+    margin: 0 4px;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

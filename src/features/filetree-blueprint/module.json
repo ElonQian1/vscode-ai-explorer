@@ -1,0 +1,16 @@
+{
+  "moduleId": "filetree-blueprint",
+  "name": "文件树蓝图",
+  "scope": ["filesystem", "visualization", "webview", "blueprint"],
+  "entry": ["FileTreeBlueprintModule.ts", "app/usecases/GenerateBlueprintUseCase.ts"],
+  "searchTags": ["文件树", "蓝图", "可视化", "目录结构", "工作区"],
+  "dependencies": ["@core/logging"],
+  "commands": [
+    "filetreeBlueprint.openFromWorkspace",
+    "filetreeBlueprint.openFromPath",
+    "filetreeBlueprint.openFromJson"
+  ],
+  "webviews": [
+    "fileTreeBlueprint"
+  ]
+}

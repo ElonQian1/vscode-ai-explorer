@@ -9,6 +9,10 @@
       "path": "src/features/explorer-alias"
     },
     {
+      "name": "📊 FileTree-Blueprint (文件树蓝图)",
+      "path": "src/features/filetree-blueprint"
+    },
+    {
       "name": "🎨 UML-Canvas (图表生成)",
       "path": "src/features/uml-canvas"
     },

@@ -1,0 +1,59 @@
+{
+  "id": "example-blueprint",
+  "title": "示例架构蓝图",
+  "nodes": [
+    {
+      "id": "frontend",
+      "label": "前端应用",
+      "type": "module",
+      "position": { "x": 100, "y": 100 }
+    },
+    {
+      "id": "backend",
+      "label": "后端服务",
+      "type": "module",
+      "position": { "x": 400, "y": 100 }
+    },
+    {
+      "id": "database",
+      "label": "数据库",
+      "type": "module",
+      "position": { "x": 700, "y": 100 }
+    },
+    {
+      "id": "components",
+      "label": "components",
+      "type": "folder",
+      "position": { "x": 100, "y": 250 }
+    },
+    {
+      "id": "App.tsx",
+      "label": "App.tsx",
+      "type": "file",
+      "position": { "x": 250, "y": 250 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "label": "API调用",
+      "from": { "node": "frontend" },
+      "to": { "node": "backend" }
+    },
+    {
+      "id": "e2",
+      "label": "数据查询",
+      "from": { "node": "backend" },
+      "to": { "node": "database" }
+    },
+    {
+      "id": "e3",
+      "from": { "node": "frontend" },
+      "to": { "node": "components" }
+    }
+  ],
+  "metadata": {
+    "description": "这是一个示例架构蓝图，展示了前后端分离的架构",
+    "createdAt": "2025-10-15"
+  }
+}
