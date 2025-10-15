@@ -27,6 +27,9 @@ export class FileTreeBlueprintModule extends BaseModule {
         // 注册命令
         this.registerCommands(context);
 
+        // 检查版本更新并显示提示
+        this.checkVersionUpdate(context);
+
         this.logger.info('文件树蓝图模块激活完成');
     }
 
@@ -106,7 +109,104 @@ export class FileTreeBlueprintModule extends BaseModule {
             )
         );
 
-        this.logger.info('已注册 3 个命令');
+        // 命令 4: 打开帮助与快捷键
+        context.subscriptions.push(
+            vscode.commands.registerCommand(
+                'filetreeBlueprint.openHelp',
+                () => {
+                    this.logger.info('执行命令: 打开帮助');
+                    
+                    // 获取当前的蓝图面板并打开帮助
+                    const { BlueprintPanel } = require('./panel/BlueprintPanel');
+                    const currentPanel = (BlueprintPanel as any).currentPanel;
+                    
+                    if (currentPanel && typeof currentPanel.openHelp === 'function') {
+                        currentPanel.openHelp();
+                    } else {
+                        vscode.window.showInformationMessage(
+                            '请先打开蓝图视图，再使用帮助功能。\n\n💡 提示：右键任意文件夹 → "在此打开蓝图"',
+                            '了解更多'
+                        ).then(selection => {
+                            if (selection === '了解更多') {
+                                vscode.commands.executeCommand('filetreeBlueprint.openFromWorkspace');
+                            }
+                        });
+                    }
+                }
+            )
+        );
+
+        // 命令 5: 开关状态栏提示
+        context.subscriptions.push(
+            vscode.commands.registerCommand(
+                'filetreeBlueprint.toggleHints',
+                async () => {
+                    this.logger.info('执行命令: 开关状态栏提示');
+                    
+                    const config = vscode.workspace.getConfiguration('filetreeBlueprint');
+                    const currentValue = config.get<boolean>('showStatusBarHint', true);
+                    
+                    await config.update(
+                        'showStatusBarHint',
+                        !currentValue,
+                        vscode.ConfigurationTarget.Global
+                    );
+                    
+                    vscode.window.showInformationMessage(
+                        `状态栏提示已${!currentValue ? '开启' : '关闭'}` +
+                        (!currentValue ? '\n\n下次打开蓝图时将显示 15 秒的操作提示' : '')
+                    );
+                }
+            )
+        );
+
+        this.logger.info('已注册 5 个命令');
+    }
+
+    /**
+     * 检查版本更新并显示 What's New 提示
+     */
+    private checkVersionUpdate(context: vscode.ExtensionContext): void {
+        const STORAGE_KEY = 'filetreeBlueprint.lastVersion';
+        
+        // 获取当前版本
+        const currentVersion = vscode.extensions.getExtension('ElonQian1.ai-explorer')?.packageJSON.version || '0.0.0';
+        
+        // 获取上次记录的版本
+        const lastVersion = context.globalState.get<string>(STORAGE_KEY);
+        
+        this.logger.debug(`版本检查 - 当前: ${currentVersion}, 上次: ${lastVersion || '未记录'}`);
+        
+        if (lastVersion !== currentVersion) {
+            // 更新存储的版本
+            context.globalState.update(STORAGE_KEY, currentVersion);
+            
+            // 如果是首次安装，不显示更新提示
+            if (!lastVersion) {
+                this.logger.info('首次安装，不显示更新提示');
+                return;
+            }
+            
+            // 显示更新通知
+            this.logger.info(`检测到版本更新: ${lastVersion} → ${currentVersion}`);
+            
+            vscode.window.showInformationMessage(
+                `🎉 蓝图视图已更新至 v${currentVersion}\n\n✨ 新功能：防抖动优化 + 快捷操作帮助系统`,
+                '查看详情',
+                '我知道了'
+            ).then(selection => {
+                if (selection === '查看详情') {
+                    // 打开帮助文档
+                    const helpDoc = vscode.Uri.joinPath(
+                        context.extensionUri,
+                        'docs',
+                        '可视化世界画布',
+                        '第二阶段完成-配置化增强.md'
+                    );
+                    vscode.commands.executeCommand('markdown.showPreview', helpDoc);
+                }
+            });
+        }
     }
 
     async deactivate(): Promise<void> {

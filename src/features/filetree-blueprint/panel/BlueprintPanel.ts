@@ -17,6 +17,7 @@ export class BlueprintPanel {
     private logger: Logger;
     private currentGraph?: Graph;
     private extensionUri: vscode.Uri;
+    private statusBarItem?: vscode.StatusBarItem;
 
     private constructor(
         panel: vscode.WebviewPanel,
@@ -39,6 +40,9 @@ export class BlueprintPanel {
             null,
             this.disposables
         );
+
+        // 显示状态栏提示
+        this.showStatusBarHint();
     }
 
     /**
@@ -297,9 +301,10 @@ export class BlueprintPanel {
         <button id="btn-fit-view" title="适应窗口">📐 适应</button>
         <button id="btn-zoom-in" title="放大">🔍+</button>
         <button id="btn-zoom-out" title="缩小">🔍-</button>
+        <button id="btn-help" title="快捷键与操作说明" style="margin-left: 8px;">❓</button>
         <span id="node-count" style="margin-left: 16px;">节点: 0</span>
         <span id="edge-count">边: 0</span>
-        <span style="opacity: 0.6; margin-left: 16px; font-size: 11px;">💡 双击文件夹下钻 | 拖拽节点 | 空格+拖拽平移 | 滚轮缩放</span>
+        <span style="opacity: 0.6; margin-left: 16px; font-size: 11px;">💡 空格+拖拽=平移 · 滚轮=缩放 · 双击文件夹=下钻 · ?=帮助</span>
     </div>
     <div id="canvasWrap">
         <div id="canvas">
@@ -308,6 +313,28 @@ export class BlueprintPanel {
         </div>
     </div>
     <div id="breadcrumb"></div>
+    
+    <!-- 帮助浮层 -->
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-card">
+            <div class="help-title">🎨 蓝图视图 · 快捷操作</div>
+            <ul class="help-list">
+                <li><kbd>空格</kbd> + 拖拽：平移画布</li>
+                <li><strong>滚轮</strong>：缩放画布</li>
+                <li><strong>拖拽节点</strong>：移动节点位置</li>
+                <li><strong>双击文件夹</strong>：下钻到子目录</li>
+                <li><strong>工具栏</strong>：返回上级、重置视图、适应窗口</li>
+                <li><kbd>?</kbd> 或 <kbd>Shift</kbd>+<kbd>/</kbd>：打开/关闭本帮助</li>
+                <li><kbd>Esc</kbd>：关闭本帮助</li>
+            </ul>
+            <div class="help-note">✨ 已优化防抖动：坐标整数化 · rAF节流 · GPU合成层</div>
+            <div class="help-actions">
+                <label class="noagain"><input type="checkbox" id="noShowAgain"> 下次不再自动显示</label>
+                <button id="helpClose" class="btn-primary">我知道了</button>
+            </div>
+        </div>
+    </div>
+    
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
@@ -323,6 +350,49 @@ export class BlueprintPanel {
             text += possible.charAt(Math.floor(Math.random() * possible.length));
         }
         return text;
+    }
+
+    /**
+     * 显示状态栏提示（15秒后自动隐藏）
+     */
+    private showStatusBarHint(): void {
+        const config = vscode.workspace.getConfiguration('filetreeBlueprint');
+        const showHint = config.get<boolean>('showStatusBarHint', true);
+
+        if (!showHint) {
+            return;
+        }
+
+        // 创建状态栏项
+        this.statusBarItem = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Left,
+            100
+        );
+
+        this.statusBarItem.text = '$(graph) 空格+拖拽=平移 · 滚轮=缩放 · 双击文件夹=下钻 · ?=帮助';
+        this.statusBarItem.tooltip = '蓝图视图快捷操作\n\n• 空格 + 拖拽：平移画布\n• 滚轮：缩放\n• 拖拽节点：移动节点\n• 双击文件夹：下钻\n• ? 键：打开帮助\n\n已优化防抖动：坐标取整 · rAF 节流 · GPU 合成层';
+        this.statusBarItem.command = 'filetreeBlueprint.openHelp';
+        this.statusBarItem.show();
+
+        // 添加到可销毁列表
+        this.disposables.push(this.statusBarItem);
+
+        // 15 秒后自动隐藏
+        setTimeout(() => {
+            if (this.statusBarItem) {
+                this.statusBarItem.hide();
+            }
+        }, 15000);
+
+        this.logger.debug('状态栏提示已显示，将在 15 秒后隐藏');
+    }
+
+    /**
+     * 打开帮助浮层
+     */
+    public openHelp(): void {
+        this.panel.webview.postMessage({ type: 'open-help' });
+        this.logger.debug('已发送打开帮助消息到 Webview');
     }
 
     /**

@@ -126,6 +126,16 @@
         "command": "filetreeBlueprint.openFromJson",
         "title": "打开工作流图（从 JSON/MD）",
         "icon": "$(json)"
+      },
+      {
+        "command": "filetreeBlueprint.openHelp",
+        "title": "蓝图：打开帮助与快捷键",
+        "icon": "$(question)"
+      },
+      {
+        "command": "filetreeBlueprint.toggleHints",
+        "title": "蓝图：开关状态栏提示",
+        "icon": "$(eye)"
       }
     ],
     "menus": {
@@ -274,6 +284,16 @@
           "enum": ["shallow", "deep"],
           "default": "shallow",
           "description": "默认扫描模式：shallow（仅当前目录）或 deep（递归所有子目录）"
+        },
+        "filetreeBlueprint.showStatusBarHint": {
+          "type": "boolean",
+          "default": true,
+          "description": "打开蓝图时在状态栏显示 15 秒的操作提示"
+        },
+        "filetreeBlueprint.autoShowHelpFirstTime": {
+          "type": "boolean",
+          "default": true,
+          "description": "首次打开蓝图时自动显示帮助浮层"
         },
         "aiExplorer.provider.primary": {
           "type": "string",

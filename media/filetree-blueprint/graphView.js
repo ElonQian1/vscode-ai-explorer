@@ -22,6 +22,12 @@
     const nodeCountEl = document.getElementById("node-count");
     const edgeCountEl = document.getElementById("edge-count");
     const breadcrumbEl = document.getElementById("breadcrumb");
+    const helpOverlay = document.getElementById("helpOverlay");
+    const helpCloseBtn = document.getElementById("helpClose");
+    const noShowAgainCheckbox = document.getElementById("noShowAgain");
+
+    // 帮助浮层相关
+    const HELP_STORAGE_KEY = "filetree_blueprint_help_seen_v1";
 
     // 画布变换
     let scale = 1;
@@ -54,6 +60,19 @@
         document.getElementById('btn-fit-view').addEventListener('click', fitView);
         document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
         document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
+        document.getElementById('btn-help').addEventListener('click', toggleHelp);
+
+        // 帮助浮层
+        if (helpCloseBtn) {
+            helpCloseBtn.addEventListener('click', closeHelp);
+        }
+        if (helpOverlay) {
+            helpOverlay.addEventListener('click', (e) => {
+                if (e.target === helpOverlay) {
+                    closeHelp();
+                }
+            });
+        }
 
         // 接收来自扩展的消息
         window.addEventListener('message', handleMessage);
@@ -63,18 +82,31 @@
 
         // 键盘事件
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
+            if (e.code === 'Space' && !isInputFocused()) {
                 spacePressed = true;
+                wrap.classList.add('panning-mode');
                 e.preventDefault();
             }
             if (e.key === 'Backspace' || (e.key === 'ArrowUp' && e.altKey)) {
                 goUpDirectory();
                 e.preventDefault();
             }
+            // ? 键或 Shift+/ 打开帮助
+            if ((e.key === '?' || (e.shiftKey && e.key === '/')) && !isInputFocused()) {
+                toggleHelp();
+                e.preventDefault();
+            }
+            // Esc 关闭帮助
+            if (e.key === 'Escape' && helpOverlay && helpOverlay.classList.contains('show')) {
+                closeHelp();
+                e.preventDefault();
+            }
         });
         window.addEventListener('keyup', (e) => {
             if (e.code === 'Space') {
                 spacePressed = false;
+                wrap.classList.remove('panning-mode');
+                wrap.classList.remove('panning-active');
             }
         });
 
@@ -82,6 +114,7 @@
         wrap.addEventListener('pointerdown', (ev) => {
             if (!spacePressed) return;
             panning = true;
+            wrap.classList.add('panning-active');
             panStart = { x: ev.clientX, y: ev.clientY };
             originAtPanStart = { ...offset };
             wrap.setPointerCapture(ev.pointerId);
@@ -94,7 +127,10 @@
             applyTransform();
         });
         wrap.addEventListener('pointerup', () => {
-            panning = false;
+            if (panning) {
+                panning = false;
+                wrap.classList.remove('panning-active');
+            }
         });
     }
 
@@ -120,6 +156,9 @@
 
             // 自动适应视图
             setTimeout(() => fitView(), 100);
+        } else if (msg?.type === 'open-help') {
+            // 响应来自扩展的打开帮助命令
+            openHelp();
         }
     }
 
@@ -418,6 +457,70 @@
                 }[m])
         );
     }
+
+    // 检查是否有输入框获得焦点
+    function isInputFocused() {
+        const activeEl = document.activeElement;
+        return activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+    }
+
+    // 帮助浮层控制
+    function toggleHelp() {
+        if (!helpOverlay) return;
+        
+        if (helpOverlay.classList.contains('show')) {
+            closeHelp();
+        } else {
+            openHelp();
+        }
+    }
+
+    function openHelp() {
+        if (helpOverlay) {
+            helpOverlay.classList.add('show');
+        }
+    }
+
+    function closeHelp() {
+        if (!helpOverlay) return;
+        
+        helpOverlay.classList.remove('show');
+        
+        // 如果勾选了"不再显示"，保存到 localStorage
+        if (noShowAgainCheckbox && noShowAgainCheckbox.checked) {
+            try {
+                localStorage.setItem(HELP_STORAGE_KEY, '1');
+            } catch (e) {
+                console.warn('无法保存帮助浮层状态', e);
+            }
+        }
+    }
+
+    // 检查是否首次使用，自动显示帮助
+    function checkFirstTimeHelp() {
+        try {
+            const seen = localStorage.getItem(HELP_STORAGE_KEY);
+            if (!seen) {
+                // 延迟 500ms 显示，让画布先渲染
+                setTimeout(() => {
+                    openHelp();
+                }, 500);
+            }
+        } catch (e) {
+            console.warn('无法读取帮助浮层状态', e);
+        }
+    }
+
+    // 初始化时检查
+    window.addEventListener('message', (e) => {
+        const msg = e.data;
+        if (msg?.type === 'init-graph') {
+            // 只在第一次初始化时检查
+            if (!graph.nodes || graph.nodes.length === 0) {
+                setTimeout(checkFirstTimeHelp, 100);
+            }
+        }
+    });
 
     // 启动
     init();
