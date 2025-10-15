@@ -291,26 +291,44 @@
     // 使节点可拖拽
     function makeDraggable(el, node) {
         let dragging = false;
+        let hasMoved = false; // ✅ 新增：跟踪是否实际移动过
         let start = { x: 0, y: 0 };
         let nodeStart = { x: 0, y: 0 };
+        const DRAG_THRESHOLD = 5; // ✅ 移动阈值（像素）
 
         el.addEventListener("pointerdown", (ev) => {
             if (ev.button !== 0) return;
             if (spacePressed) return; // 空格为平移模式
             dragging = true;
+            hasMoved = false; // ✅ 重置移动标记
             el.setPointerCapture(ev.pointerId);
             start = { x: ev.clientX, y: ev.clientY };
             nodeStart = { x: node.position.x, y: node.position.y };
-            el.classList.add("dragging");
+            // ✅ 不要立即添加 dragging 类，等真正移动时再添加
         });
 
         el.addEventListener("pointermove", (ev) => {
             if (!dragging) return;
-            const dx = (ev.clientX - start.x) / scale;
-            const dy = (ev.clientY - start.y) / scale;
+            const dx = ev.clientX - start.x;
+            const dy = ev.clientY - start.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // ✅ 只有移动超过阈值才算真正的拖拽
+            if (!hasMoved && distance < DRAG_THRESHOLD) {
+                return; // 移动太小，忽略（可能是点击/双击）
+            }
+            
+            if (!hasMoved) {
+                hasMoved = true;
+                el.classList.add("dragging"); // ✅ 确认拖拽后才添加样式
+                console.log('[拖拽] 开始拖拽节点:', node.label || node.id);
+            }
+            
+            const scaledDx = dx / scale;
+            const scaledDy = dy / scale;
             // --- 位置取整消抖 ---
-            node.position.x = Math.round(nodeStart.x + dx);
-            node.position.y = Math.round(nodeStart.y + dy);
+            node.position.x = Math.round(nodeStart.x + scaledDx);
+            node.position.y = Math.round(nodeStart.y + scaledDy);
             el.style.left = node.position.x + "px";
             el.style.top = node.position.y + "px";
             // 仅重画边，不重建节点
@@ -322,13 +340,19 @@
             dragging = false;
             el.releasePointerCapture(ev.pointerId);
             el.classList.remove("dragging");
-            // 如果是"手写图"，把新坐标写回
-            if (graph?.metadata?.graphType !== "filetree") {
-                vscode.postMessage({
-                    type: "node-moved",
-                    payload: { nodeId: node.id, position: node.position },
-                });
+            
+            // ✅ 只有真正拖拽过才发送 node-moved 消息
+            if (hasMoved) {
+                console.log('[拖拽] 结束拖拽节点:', node.label || node.id);
+                // 如果是"手写图"，把新坐标写回
+                if (graph?.metadata?.graphType !== "filetree") {
+                    vscode.postMessage({
+                        type: "node-moved",
+                        payload: { nodeId: node.id, position: node.position },
+                    });
+                }
             }
+            hasMoved = false; // ✅ 重置标记
         });
     }
 
