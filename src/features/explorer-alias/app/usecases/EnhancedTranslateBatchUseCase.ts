@@ -316,17 +316,18 @@ export class EnhancedTranslateBatchUseCase {
     }
 
     /**
-     * 翻译单个文件名
+     * 翻译单个文件或文件夹名
      */
     async translateSingle(fileName: string, options?: {
         forceRefresh?: boolean;
         forceAI?: boolean;
         enableLearning?: boolean;
+        itemType?: 'file' | 'directory';  // 新增：允许指定类型，但翻译逻辑不依赖此参数
     }): Promise<TranslationResult> {
         const fileNode: FileNode = {
             name: fileName,
             path: fileName,
-            type: 'file'
+            type: options?.itemType || 'file'  // ✅ 使用传入的类型，默认为 file（向后兼容）
         };
 
         const results = await this.translateFiles([fileNode], options);

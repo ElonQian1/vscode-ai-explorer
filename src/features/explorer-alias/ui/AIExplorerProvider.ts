@@ -361,7 +361,7 @@ export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {
             // 3. 获取名称
             const fsPath = uri.fsPath;
             const itemName = path.basename(fsPath);
-            const itemType = isFile ? 'file' : 'folder';
+            const itemType = isFile ? 'file' : 'directory';  // ✅ 使用 'directory' 而不是 'folder'
             const itemTypeText = isFile ? '文件' : '文件夹';
 
             // 4. 检查是否需要翻译
@@ -400,10 +400,11 @@ export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {
 
                 progress.report({ increment: 30, message: '调用翻译服务...' });
 
-                // 7. 执行翻译
+                // 7. 执行翻译（✅ 传递类型信息，但翻译逻辑不依赖此参数）
                 const result = await this.translateUseCase.translateSingle(itemName, {
                     forceRefresh: false,
-                    enableLearning: true
+                    enableLearning: true,
+                    itemType: itemType  // ✅ 传递文件/文件夹类型
                 });
 
                 progress.report({ increment: 70, message: '更新视图...' });
