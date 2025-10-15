@@ -356,6 +356,22 @@ export class DictionaryResolver {
         '.ai/.ai-glossary.literal.learned.json'
       ];
 
+      // 守卫：禁止纯数字键（根据配置）
+      const blockNumeric = config.get('learning.blockNumericKeys', true) as boolean;
+      const key = word.toLowerCase().trim();
+      
+      // 拒绝纯数字
+      if (blockNumeric && /^\d+$/.test(key)) {
+        console.log(`[DictionaryResolver] 已拒绝写入纯数字: ${key}`);
+        return;
+      }
+      
+      // 只接受字母数字和空格（短语）
+      if (!/^[a-z0-9]+( [a-z0-9]+)*$/.test(key)) {
+        console.log(`[DictionaryResolver] 已拒绝写入非法键: ${key}`);
+        return;
+      }
+
       // 写入第二个词典（学习词典）
       const learnedDictPath = dictPaths[1] || '.ai/.ai-glossary.literal.learned.json';
       const absPath = path.join(workspaceRoot, learnedDictPath);
@@ -373,7 +389,6 @@ export class DictionaryResolver {
       }
 
       // 判断是单词还是短语
-      const key = word.toLowerCase();
       if (key.includes(' ')) {
         // 短语
         dict.phrases[key] = { alias, confidence: 1.0 };

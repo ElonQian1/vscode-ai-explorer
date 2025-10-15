@@ -6,9 +6,10 @@
  * 核心特性：
  * 1. 保留原始分隔符（_ - . 等），不重组语序
  * 2. 支持短语匹配和形态归一化
- * 3. 返回未知词列表，用于 AI 兜底
+ * 3. 返回未知词列表，用于 AI 兜底（经过 AIGuard 过滤）
  * 4. 支持覆盖率计算
  * 5. 读取配置项（keepOriginalDelimiters、appendExtSuffix、literalJoiner）
+ * 6. 数字智能处理（根据 numberMode 策略渲染）
  * 
  * 示例：
  * analyze_element_hierarchy.cjs
@@ -18,6 +19,8 @@
 import * as vscode from 'vscode';
 import { DictionaryResolver } from '../../../../shared/naming/DictionaryResolver';
 import { splitWithDelimiters, rebuildWithDelimiters, TokenPiece } from '../../../../shared/naming/SplitWithDelimiters';
+import { isPureNumericToken, renderNumericToken } from '../../../../shared/naming/NumeralPolicy';
+import { AIGuard } from '../../../../shared/naming/AIGuard';
 
 export type LiteralResultV2 = {
     /** 翻译后的别名 */
@@ -38,9 +41,11 @@ export type LiteralResultV2 = {
 export class LiteralAliasBuilderV2 {
     private resolver: DictionaryResolver;
     private keepExtension: boolean = true;  // 保留扩展名
+    private aiGuard: AIGuard;
 
     constructor(resolver: DictionaryResolver) {
         this.resolver = resolver;
+        this.aiGuard = new AIGuard();
     }
 
     /**
@@ -124,6 +129,13 @@ export class LiteralAliasBuilderV2 {
                     mappedDelims.push(delims[i] || '');
                     debugParts.push(`${token.raw}(缩写)`);
                     translatedCount++;  // 缩写视为已翻译
+                } else if (isPureNumericToken(token.raw)) {
+                    // 数字：根据策略渲染（keep/cn/roman）
+                    const rendered = renderNumericToken(token.raw);
+                    mapped.push(rendered);
+                    mappedDelims.push(delims[i] || '');
+                    debugParts.push(`${token.raw}→${rendered}(数字)`);
+                    translatedCount++;  // 数字视为已翻译
                 } else {
                     // 未知词，保留原词
                     mapped.push(token.raw);
@@ -135,7 +147,15 @@ export class LiteralAliasBuilderV2 {
             }
         }
 
-        // 3. 重建别名（读取配置）
+        // 3. 使用 AIGuard 过滤未知词（移除数字、版本号、日期等）
+        const { keys: filteredUnknown, stats } = this.aiGuard.filterUnknown(unknownWords);
+        
+        // 打印过滤统计（便于观察省算力效果）
+        if (stats.dropped > 0) {
+            console.log(this.aiGuard.formatStats(stats));
+        }
+
+        // 4. 重建别名（读取配置）
         const config = vscode.workspace.getConfiguration('aiExplorer');
         const keepOriginalDelimiters = config.get<boolean>('alias.keepOriginalDelimiters', true);
         const appendExtSuffix = config.get<boolean>('alias.appendExtSuffix', false);
@@ -167,7 +187,7 @@ export class LiteralAliasBuilderV2 {
         
         const alias = rebuildWithDelimiters(mapped, finalDelims, finalExt, this.keepExtension);
 
-        // 4. 计算覆盖率和置信度
+        // 5. 计算覆盖率和置信度
         const coverage = translatedCount / tokens.length;
         const confidence = this.calculateConfidence(coverage);
 
@@ -175,7 +195,7 @@ export class LiteralAliasBuilderV2 {
             alias,
             confidence,
             coverage,
-            unknownWords,
+            unknownWords: filteredUnknown,  // 返回过滤后的未知词（用于 AI 兜底）
             debug: `literal-v2:${debugParts.join('|')} ext=${ext} coverage=${(coverage * 100).toFixed(0)}%`
         };
     }

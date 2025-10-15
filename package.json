@@ -312,6 +312,38 @@
           ],
           "description": "直译词典文件路径（相对于工作区根目录，按优先级从高到低排列）"
         },
+        "aiExplorer.alias.numberMode": {
+          "type": "string",
+          "enum": ["keep", "cn", "roman"],
+          "default": "keep",
+          "description": "数字显示策略：keep=保持阿拉伯数字；cn=中文数字；roman=罗马数字（仅小范围演示）"
+        },
+        "aiExplorer.alias.ai.ignoreNumericTokens": {
+          "type": "boolean",
+          "default": true,
+          "description": "AI 兜底时忽略纯数字 token（节省费用与时延）"
+        },
+        "aiExplorer.alias.learning.blockNumericKeys": {
+          "type": "boolean",
+          "default": true,
+          "description": "学习词典写入时，禁止纯数字键（如 '19'）"
+        },
+        "aiExplorer.alias.stopwords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["the", "a", "an", "of", "for", "to", "in", "on", "by", "and", "or"],
+          "description": "停用词列表（这些词不会发送给 AI 翻译）"
+        },
+        "aiExplorer.alias.keepEnglishVocab": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["react", "vue", "redux", "tailwind", "jest", "vitest", "webpack", "vite", "eslint", "prettier", "nodejs", "typescript"],
+          "description": "保留英文的词汇列表（技术品牌名等，不翻译）"
+        },
         "aiExplorer.batch.maxConcurrency": {
           "type": "number",
           "default": 6,
