@@ -215,6 +215,7 @@
                 if (n.data?.isRoot) {
                     // 双击根节点：返回上一级
                     el.addEventListener("dblclick", () => {
+                        console.log('[双击] 根节点，发送 drill-up:', n.data.path);
                         vscode.postMessage({ 
                             type: "drill-up", 
                             payload: { path: n.data.path } 
@@ -223,6 +224,7 @@
                 } else {
                     // 双击子文件夹：下钻
                     el.addEventListener("dblclick", () => {
+                        console.log('[双击] 子文件夹，发送 drill:', n.data.path);
                         vscode.postMessage({ 
                             type: "drill", 
                             payload: { path: n.data.path } 

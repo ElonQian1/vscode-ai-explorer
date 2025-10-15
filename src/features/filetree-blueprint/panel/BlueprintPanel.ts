@@ -203,6 +203,10 @@ export class BlueprintPanel {
      */
     private async handleDrill(payload: any): Promise<void> {
         const folderPath = payload?.path;
+        
+        this.logger.info(`[handleDrill] 收到下钻请求, payload:`, payload);
+        this.logger.info(`[handleDrill] 提取的 folderPath:`, folderPath);
+        
         if (!folderPath) {
             this.logger.warn('下钻消息缺少路径信息');
             return;
