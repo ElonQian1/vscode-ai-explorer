@@ -9,6 +9,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
+// ✅ 导入 FileNode 类型以支持 AI 资源管理器的节点
+import { FileNode } from '../../../shared/types';
+
 export interface ResolvedTarget {
     /** 工作区根文件夹 */
     workspace: vscode.WorkspaceFolder;
@@ -33,12 +36,21 @@ export async function resolveTargetToFileUri(
     if ((raw as any)?.resourceUri) {
         console.log('[resolveTargetToFileUri] resourceUri:', (raw as any).resourceUri.toString());
     }
+    if ((raw as any)?.path) {
+        console.log('[resolveTargetToFileUri] path 属性:', (raw as any).path);
+    }
 
     // 1) 优先从原始参数解析 URI
     let uri: vscode.Uri | undefined;
 
-    // 优先检查 resourceUri（TreeItem 对象）
-    if ((raw as any)?.resourceUri instanceof vscode.Uri) {
+    // ✅ 优先检查 FileNode 对象（AI 资源管理器传递的原始节点）
+    if ((raw as any)?.path && (raw as any)?.type && typeof (raw as any).path === 'string') {
+        const fileNode = raw as FileNode;
+        uri = vscode.Uri.file(fileNode.path);
+        console.log('[resolveTargetToFileUri] 从 FileNode.path 提取:', uri.toString());
+    }
+    // 检查 resourceUri（TreeItem 对象）
+    else if ((raw as any)?.resourceUri instanceof vscode.Uri) {
         uri = (raw as any).resourceUri as vscode.Uri;
         console.log('[resolveTargetToFileUri] 从 resourceUri 提取:', uri.toString());
     } 
