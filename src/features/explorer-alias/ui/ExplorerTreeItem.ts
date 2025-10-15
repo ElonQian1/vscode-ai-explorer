@@ -24,6 +24,9 @@ export class ExplorerTreeItem extends vscode.TreeItem {
     }
 
     private setupTreeItem(): void {
+        // 🔧 设置 resourceUri（关键！右键菜单命令需要此属性来传递 URI）
+        this.resourceUri = vscode.Uri.file(this.node.path);
+
         // 设置图标
         if (this.node.type === 'directory') {
             this.iconPath = new vscode.ThemeIcon('folder');

@@ -205,18 +205,30 @@
                 </div>
             `;
 
-            // 下钻（仅文件夹且 filetree 模式）
+            // ✅ 双击文件夹：下钻（发送 drill 消息在同一面板刷新）
             if (
                 n.type === "folder" &&
                 n.data?.path &&
                 graph?.metadata?.graphType === "filetree"
             ) {
-                el.addEventListener("dblclick", () => {
-                    vscode.postMessage({ 
-                        type: "node-double-click", 
-                        payload: n 
+                // 判断是否是根节点
+                if (n.data?.isRoot) {
+                    // 双击根节点：返回上一级
+                    el.addEventListener("dblclick", () => {
+                        vscode.postMessage({ 
+                            type: "drill-up", 
+                            payload: { path: n.data.path } 
+                        });
                     });
-                });
+                } else {
+                    // 双击子文件夹：下钻
+                    el.addEventListener("dblclick", () => {
+                        vscode.postMessage({ 
+                            type: "drill", 
+                            payload: { path: n.data.path } 
+                        });
+                    });
+                }
             }
 
             // 使节点可拖拽

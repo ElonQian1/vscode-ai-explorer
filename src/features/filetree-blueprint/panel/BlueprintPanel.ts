@@ -119,6 +119,16 @@ export class BlueprintPanel {
                 await this.handleNodeDoubleClick(message.payload);
                 break;
 
+            case 'drill':
+                // 下钻到子文件夹
+                await this.handleDrill(message.payload);
+                break;
+
+            case 'drill-up':
+                // 返回上一级
+                await this.handleDrillUp();
+                break;
+
             case 'open-file':
                 await this.openFile(message.payload.path);
                 break;
@@ -185,6 +195,108 @@ export class BlueprintPanel {
         } else if (nodeData.type === 'file' && nodeData.data?.path) {
             // 如果是文件，打开该文件
             await this.openFile(nodeData.data.path);
+        }
+    }
+
+    /**
+     * 处理下钻到子文件夹（在同一面板内刷新）
+     */
+    private async handleDrill(payload: any): Promise<void> {
+        const folderPath = payload?.path;
+        if (!folderPath) {
+            this.logger.warn('下钻消息缺少路径信息');
+            return;
+        }
+
+        this.logger.info(`下钻到: ${folderPath}`);
+
+        try {
+            // 重新扫描子文件夹
+            const uri = vscode.Uri.file(folderPath);
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            const workspaceRoot = workspaceFolder?.uri;
+
+            if (!workspaceRoot) {
+                this.logger.warn('无法确定工作区根目录');
+                return;
+            }
+
+            // 使用 FileTreeScanner 扫描子目录
+            const { FileTreeScanner } = await import('../domain/FileTreeScanner');
+            const scanner = new FileTreeScanner(this.logger);
+            const graph = await scanner.scanPathShallow(uri, workspaceRoot);
+
+            // 在同一面板显示新图
+            this.showGraph(graph);
+            this.panel.title = `蓝图: ${path.basename(folderPath)}`;
+
+            this.logger.info(`已刷新到子目录: ${folderPath}`);
+        } catch (error) {
+            this.logger.error('下钻失败', error);
+            vscode.window.showErrorMessage(`无法打开文件夹: ${folderPath}`);
+        }
+    }
+
+    /**
+     * 处理返回上一级（在同一面板内刷新）
+     */
+    private async handleDrillUp(): Promise<void> {
+        const currentPath = this.currentGraph?.metadata?.rootPath;
+        
+        if (!currentPath) {
+            this.logger.warn('无法确定当前路径');
+            return;
+        }
+
+        const workspaceRoot = this.currentGraph?.metadata?.workspaceRoot;
+        
+        if (!workspaceRoot) {
+            vscode.window.showWarningMessage('无法确定工作区根目录');
+            return;
+        }
+
+        // 如果已经是根目录，不能再往上
+        if (currentPath === workspaceRoot) {
+            vscode.window.showInformationMessage('已到达工作区根目录');
+            return;
+        }
+
+        // 计算父目录
+        const parentPath = path.dirname(currentPath);
+        
+        // 防止超出工作区根目录
+        if (parentPath.length < workspaceRoot.length) {
+            this.logger.warn('尝试超出工作区根目录，返回到工作区根');
+            const uri = vscode.Uri.file(workspaceRoot);
+            
+            const { FileTreeScanner } = await import('../domain/FileTreeScanner');
+            const scanner = new FileTreeScanner(this.logger);
+            const graph = await scanner.scanPathShallow(uri, uri);
+            
+            this.showGraph(graph);
+            this.panel.title = `蓝图: ${path.basename(workspaceRoot)}`;
+            return;
+        }
+
+        // 打开父目录的蓝图
+        this.logger.info(`返回到父目录: ${parentPath}`);
+        
+        try {
+            const uri = vscode.Uri.file(parentPath);
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            const wsRoot = workspaceFolder?.uri || vscode.Uri.file(workspaceRoot);
+
+            const { FileTreeScanner } = await import('../domain/FileTreeScanner');
+            const scanner = new FileTreeScanner(this.logger);
+            const graph = await scanner.scanPathShallow(uri, wsRoot);
+
+            this.showGraph(graph);
+            this.panel.title = `蓝图: ${path.basename(parentPath)}`;
+
+            this.logger.info(`已返回到上级目录: ${parentPath}`);
+        } catch (error) {
+            this.logger.error('返回上级失败', error);
+            vscode.window.showErrorMessage('无法返回上级目录');
         }
     }
 
