@@ -154,12 +154,12 @@
         },
         {
           "command": "aiExplorer.translateThisFile",
-          "when": "view == aiExplorer && (viewItem == file || viewItem == fileHasAlias)",
+          "when": "view == aiExplorer && (viewItem == file || viewItem == fileHasAlias || viewItem == folder || viewItem == folderHasAlias)",
           "group": "navigation@15"
         },
         {
           "command": "aiExplorer.forceAITranslate",
-          "when": "view == aiExplorer && (viewItem == file || viewItem == fileHasAlias)",
+          "when": "view == aiExplorer && (viewItem == file || viewItem == fileHasAlias || viewItem == folder || viewItem == folderHasAlias)",
           "group": "navigation@16"
         }
       ],
