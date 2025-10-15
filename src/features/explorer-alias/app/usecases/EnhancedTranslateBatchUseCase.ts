@@ -127,18 +127,18 @@ export class EnhancedTranslateBatchUseCase {
         this.logger.info(`开始智能批量翻译 ${files.length} 个文件`);
         
         const results = new Map<FileNode, TranslationResult>();
-        const needsAITranslation: FileNode[] = [];
 
-        // 第一阶段：缓存和词典查找
+        // 🔧 强制 AI 模式：跳过缓存和词典，直接走强制 AI 翻译
+        if (options?.forceAI) {
+            await this.processForceAITranslations(files, results, stats, options);
+            stats.processingTime = Date.now() - startTime;
+            this.logTranslationStats(stats);
+            return results;
+        }
+
+        // 第一阶段：缓存和词典查找 + 直译V2+AI兜底
         for (const file of files) {
             try {
-                // 🔧 强制 AI 模式：跳过缓存和词典，直接走 AI 翻译
-                if (options?.forceAI) {
-                    this.logger.info(`[强制AI模式] ${file.name} - 跳过缓存和词典，直接使用 AI`);
-                    needsAITranslation.push(file);
-                    continue;
-                }
-                
                 // 1. 检查缓存（除非强制刷新）
                 if (!options?.forceRefresh) {
                     const cached = await this.getCachedTranslation(file.name);
@@ -266,7 +266,7 @@ export class EnhancedTranslateBatchUseCase {
                         continue;
                     }
                 } else {
-                    // 自然中文风格：语序重组
+                    // 自然中文风格：优先尝试智能规则引擎
                     const smartRuleResult = this.smartRuleEngine.translate(file.name);
                     if (smartRuleResult && smartRuleResult.confidence >= 0.6) {
                         const result: TranslationResult = {
@@ -288,23 +288,90 @@ export class EnhancedTranslateBatchUseCase {
                         
                         continue;
                     }
+                    
+                    // 智能规则失败，使用直译V2+AI兜底（统一处理）
+                    if (this.literalBuilderV2 && this.literalAIFallback && this.dictionaryResolver) {
+                        // V2版本：保留分隔符，返回未知词
+                        const literalResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                        
+                        // 如果有未知词，使用 AI 兜底
+                        if (literalResult.unknownWords.length > 0) {
+                            this.logger.debug(`[natural风格] ${file.name} 有 ${literalResult.unknownWords.length} 个未知词，触发 AI 兜底`);
+                            
+                            try {
+                                // AI 只翻译未知词
+                                const aiMappings = await this.literalAIFallback.suggestLiteralTranslations(
+                                    file.name,
+                                    literalResult.unknownWords
+                                );
+                                
+                                // 写回学习词典
+                                if (Object.keys(aiMappings).length > 0) {
+                                    await this.dictionaryResolver.writeBatchLearning(aiMappings);
+                                    stats.aiFallbackHits++;
+                                    
+                                    // 重新翻译（使用更新后的词典）
+                                    const updatedResult = this.literalBuilderV2.buildLiteralAlias(file.name);
+                                    const result: TranslationResult = {
+                                        original: file.name,
+                                        translated: updatedResult.alias,
+                                        confidence: updatedResult.confidence,
+                                        source: 'ai',  // AI兜底
+                                        timestamp: Date.now()
+                                    };
+                                    
+                                    results.set(file, result);
+                                    await this.cacheTranslation(file.name, result);
+                                    stats.literalHits++;
+                                    
+                                    this.logger.info(`[natural风格] AI兜底成功: ${file.name} -> ${updatedResult.alias}`);
+                                    continue;
+                                } else {
+                                    this.logger.warn(`[natural风格] AI兜底返回空，使用部分翻译: ${file.name}`);
+                                }
+                            } catch (aiError) {
+                                this.logger.error(`[natural风格] AI兜底失败: ${file.name}`, aiError);
+                                // 继续使用部分翻译
+                            }
+                        }
+                        
+                        // 没有未知词或AI兜底失败，使用部分翻译结果
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: literalResult.alias,
+                            confidence: literalResult.confidence,
+                            source: literalResult.unknownWords.length > 0 ? 'rule' : 'dictionary',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.literalHits++;
+                        
+                        this.logger.debug(`[natural风格] 直译V2: ${file.name} -> ${literalResult.alias}`);
+                        continue;
+                    } else {
+                        // 回退到基础直译
+                        const literalResult = buildLiteralAlias(file.name);
+                        const result: TranslationResult = {
+                            original: file.name,
+                            translated: literalResult.alias,
+                            confidence: literalResult.confidence,
+                            source: 'rule',
+                            timestamp: Date.now()
+                        };
+                        
+                        results.set(file, result);
+                        await this.cacheTranslation(file.name, result);
+                        stats.literalHits++;
+                        
+                        this.logger.debug(`[natural风格] 基础直译: ${file.name} -> ${literalResult.alias}`);
+                        continue;
+                    }
                 }
-
-                // 4. 需要 AI 翻译
-                needsAITranslation.push(file);
             } catch (error) {
                 this.logger.warn(`处理文件失败: ${file.name}`, error);
                 stats.failed++;
-            }
-        }
-
-        // 第二阶段：AI 批量翻译
-        if (needsAITranslation.length > 0) {
-            // 🔧 区分强制 AI 模式和普通 AI 模式
-            if (options?.forceAI) {
-                await this.processForceAITranslations(needsAITranslation, results, stats, options);
-            } else {
-                await this.processAITranslations(needsAITranslation, results, stats, options);
             }
         }
 
@@ -355,113 +422,6 @@ export class EnhancedTranslateBatchUseCase {
         };
     }
 
-    private async processAITranslations(
-        files: FileNode[],
-        results: Map<FileNode, TranslationResult>,
-        stats: TranslationStats,
-        options?: any
-    ): Promise<void> {
-        const batchSize = options?.batchSize || 20;
-        const fileNames = files.map(f => f.name);
-
-        try {
-            this.logger.info(`开始 AI 翻译 ${files.length} 个文件`);
-            
-            // 批量调用 AI
-            const aiResults = await this.aiClient.translateBatch(fileNames);
-            
-            this.logger.debug(`AI 批量翻译返回 ${aiResults.size} 个结果`);
-            
-            // 处理结果
-            for (const file of files) {
-                const translated = aiResults.get(file.name);
-                
-                if (translated && translated !== file.name) {
-                    // 覆盖度守卫：检查 AI 翻译是否漏词
-                    const isCoverageSufficient_ = isCoverageSufficient(file.name, translated, 0);
-                    
-                    let finalTranslated = translated;
-                    let finalConfidence = 0.9;
-                    
-                    if (!isCoverageSufficient_) {
-                        // AI 翻译漏词，回退到直译
-                        this.logger.warn(`AI 翻译覆盖度不足: ${file.name} -> ${translated}，回退到直译`);
-                        const literalResult = buildLiteralAlias(file.name);
-                        finalTranslated = literalResult.alias;
-                        finalConfidence = literalResult.confidence;
-                        stats.coverageGuardTriggered++;
-                    }
-                    
-                    // AI 翻译成功且覆盖度充分（或已回退到直译）
-                    const result: TranslationResult = {
-                        original: file.name,
-                        translated: finalTranslated,
-                        confidence: finalConfidence,
-                        source: 'ai',
-                        timestamp: Date.now()
-                    };
-
-                    results.set(file, result);
-                    await this.cacheTranslation(file.name, result);
-                    
-                    // 学习词典更新
-                    if (options?.enableLearning !== false) {
-                        await this.dictionary.addLearnedEntry(file.name, finalTranslated, 'learned');
-                    }
-                    
-                    stats.aiTranslations++;
-                    this.logger.info(`AI 翻译成功: ${file.name} -> ${finalTranslated}`);
-                } else {
-                    // AI 翻译失败或返回原名
-                    this.logger.warn(`AI 翻译失败或无变化: ${file.name}, 返回值: ${translated || 'undefined'}`);
-                    
-                    // 🔧 增强错误诊断：检查 AI 客户端状态
-                    const providerStatus = this.aiClient.getProviderStatus();
-                    const config = vscode.workspace.getConfiguration('aiExplorer');
-                    const primaryProvider = config.get<string>('provider.primary', 'openai');
-                    
-                    this.logger.error('AI 翻译详细诊断', {
-                        fileName: file.name,
-                        translatedResult: translated,
-                        primaryProvider,
-                        providerStatus,
-                        aiResultsSize: aiResults.size,
-                        allResults: Array.from(aiResults.entries())
-                    });
-                    
-                    const result: TranslationResult = {
-                        original: file.name,
-                        translated: file.name,
-                        confidence: 0.0,
-                        source: 'fallback',
-                        timestamp: Date.now()
-                    };
-                    
-                    results.set(file, result);
-                    stats.failed++;
-                }
-            }
-        } catch (error) {
-            this.logger.error('AI 批量翻译失败', error);
-            
-            // 降级处理：返回原文件名
-            for (const file of files) {
-                if (!results.has(file)) {
-                    const result: TranslationResult = {
-                        original: file.name,
-                        translated: file.name,
-                        confidence: 0.0,
-                        source: 'error',
-                        timestamp: Date.now()
-                    };
-                    
-                    results.set(file, result);
-                    stats.failed++;
-                }
-            }
-        }
-    }
-
     /**
      * 🆕 强制 AI 翻译模式（总是使用直译样式，不管全局配置）
      * 
@@ -488,8 +448,16 @@ export class EnhancedTranslateBatchUseCase {
             try {
                 // 检查是否有 V2 直译构建器
                 if (!this.literalBuilderV2 || !this.literalAIFallback || !this.dictionaryResolver) {
-                    this.logger.warn(`[强制AI] ${file.name} - 直译组件未初始化，回退到普通 AI 翻译`);
-                    await this.processAITranslations([file], results, stats, options);
+                    this.logger.error(`[强制AI] ${file.name} - 直译组件未初始化，跳过翻译`);
+                    const result: TranslationResult = {
+                        original: file.name,
+                        translated: file.name,
+                        confidence: 0.0,
+                        source: 'error',
+                        timestamp: Date.now()
+                    };
+                    results.set(file, result);
+                    stats.failed++;
                     continue;
                 }
                 
