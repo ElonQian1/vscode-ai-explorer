@@ -11,8 +11,17 @@
  * 核心特性：
  * - 保留原始分隔符类型（_ - . 空格 驼峰分隔等）
  * - 支持驼峰、kebab-case、snake_case、dot.case
- * - 识别缩写（API/HTML）和数字
+ * - 识别缩写（白名单机制：API/HTML/URL等）
+ * - 支持数字缩写（numeronym：i18n/l10n/k8s/e2e）
+ * - 字母/数字边界拆分（JSON2CSV → JSON|2|CSV）
+ * 
+ * 驼峰三类边界：
+ * 1. aB / 9A：小写/数字 → 大写（useForm → use|Form）
+ * 2. ABc：连续大写后接"大写+小写"（HTMLParser → HTML|Parser）
+ * 3. 字母↔数字边界（Ab12 → Ab|12, v2X → v2|X）
  */
+
+import * as vscode from 'vscode';
 
 export type TokenPiece = {
   /** 原始字符串 */
@@ -57,12 +66,8 @@ export function splitWithDelimiters(fileName: string): SplitResult {
     const p = parts[idx];
     
     if (p.t) {
-      // 可能是驼峰，拆成多段
-      const segs = p.t
-        .replace(/(?<=[a-z0-9])(?=[A-Z])/g, ' ')  // camelCase 边界
-        .replace(/(?<=[A-Z])(?=[A-Z][a-z])/g, ' ')  // HTMLParser → HTML Parser
-        .split(/\s+/)
-        .filter(Boolean);
+      // 对"词段"做驼峰/数字边界拆分（增强版）
+      const segs = splitCamelAndDigits(p.t);
 
       for (let s = 0; s < segs.length; s++) {
         const raw = segs[s];
@@ -94,21 +99,66 @@ export function splitWithDelimiters(fileName: string): SplitResult {
 }
 
 /**
- * 分类词元类型
+ * 驼峰和数字边界拆分（增强版）
+ * 规则：
+ * 1. aB / 9A：小写/数字 → 大写
+ * 2. ABc：连续大写后接"大写+小写"
+ * 3. 字母 ↔ 数字边界
+ */
+function splitCamelAndDigits(s: string): string[] {
+  return s
+    .replace(/(?<=[a-z0-9])(?=[A-Z])/g, ' ')      // aB / 9A
+    .replace(/(?<=[A-Z])(?=[A-Z][a-z])/g, ' ')    // ABc
+    .replace(/(?<=[a-zA-Z])(?=\d)/g, ' ')         // A9 (字母→数字)
+    .replace(/(?<=\d)(?=[a-zA-Z])/g, ' ')         // 9A (数字→字母)
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * 分类词元类型（增强版，支持白名单和 numeronym）
  */
 function classify(raw: string): TokenPiece {
-  // 纯数字
+  const lower = raw.toLowerCase();
+  
+  // 1. numeronym 识别（i18n/l10n/k8s/e2e）
+  if (/^(i18n|l10n|k8s|e2e)$/i.test(raw)) {
+    return { raw, lower, type: 'word' };
+  }
+  
+  // 2. 纯数字
   if (/^\d+$/.test(raw)) {
     return { raw, lower: raw, type: 'num' };
   }
   
-  // 全大写缩写（长度 >= 2）
+  // 3. 全大写：仅白名单才当 acronym，其它当普通词
   if (/^[A-Z]{2,}$/.test(raw)) {
-    return { raw, lower: raw.toLowerCase(), type: 'acronym' };
+    const allowlist = getAcronymAllowlist();
+    if (allowlist.has(raw)) {
+      return { raw, lower, type: 'acronym' };  // 白名单缩写：API/HTML/URL等
+    } else {
+      return { raw, lower, type: 'word' };     // 普通词：DEBUG/WARNING等
+    }
   }
   
-  // 普通单词
-  return { raw, lower: raw.toLowerCase(), type: 'word' };
+  // 4. 普通单词
+  return { raw, lower, type: 'word' };
+}
+
+/**
+ * 获取缩写白名单（可配置）
+ */
+function getAcronymAllowlist(): Set<string> {
+  const config = vscode.workspace.getConfiguration('aiExplorer');
+  const list = config.get<string[]>('alias.acronymAllowlist', [
+    'UI', 'API', 'HTTP', 'HTTPS', 'URL', 'URI', 'DOM',
+    'ID', 'UUID', 'CPU', 'GPU', 'DB', 'SQL', 'ORM',
+    'TCP', 'UDP', 'TLS', 'SSL', 'SDK', 'CLI', 'CI', 'CD',
+    'JWT', 'CSS', 'HTML', 'JS', 'TS', 'JSX', 'TSX',
+    'JSON', 'XML', 'CSV', 'PNG', 'JPG', 'GIF', 'SVG',
+    'PDF', 'MD', 'IOS', 'OS'  // 注意：OS 是缩写，但 iOS 会被拆成 i|OS
+  ]);
+  return new Set(list);
 }
 
 /**

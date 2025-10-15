@@ -281,6 +281,21 @@
           "default": false,
           "description": "是否根据扩展名追加中文后缀（如 .js → 脚本, .ts → 模块, .tsx → 组件）。默认 false，保留原扩展名"
         },
+        "aiExplorer.alias.acronymAllowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "UI", "API", "HTTP", "HTTPS", "URL", "URI", "DOM",
+            "ID", "UUID", "CPU", "GPU", "DB", "SQL", "ORM",
+            "TCP", "UDP", "TLS", "SSL", "SDK", "CLI", "CI", "CD",
+            "JWT", "CSS", "HTML", "JS", "TS", "JSX", "TSX",
+            "JSON", "XML", "CSV", "PNG", "JPG", "GIF", "SVG",
+            "PDF", "MD", "IOS", "OS"
+          ],
+          "description": "缩写词白名单。只有在此列表中的全大写词才会被保留为缩写（如 API、HTML），其它全大写词会被当作普通词转为小写（如 DEBUG → debug）"
+        },
         "aiExplorer.alias.literalJoiner": {
           "type": "string",
           "default": "",
