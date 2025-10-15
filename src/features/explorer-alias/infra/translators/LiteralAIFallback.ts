@@ -46,12 +46,13 @@ export class LiteralAIFallback {
 4. 必须逐词或短语直译，保持原意义
 5. 如果单词可以组成短语，优先返回短语翻译
 6. 不要生成整句中文，只要单词映射
+7. ⚠️ 短语翻译时，只翻译单词本身，不要添加任何分隔符（系统会自动保留原文件的分隔符）
 
 示例输出：
 {
   "element": "元素",
   "hierarchy": "层级",
-  "element hierarchy": "元素_层级",
+  "element hierarchy": "元素层级",
   "simple": "简版"
 }`;
 

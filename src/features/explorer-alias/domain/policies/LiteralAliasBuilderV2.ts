@@ -81,12 +81,30 @@ export class LiteralAliasBuilderV2 {
             const [phraseEntry, matchedCount] = this.resolver.matchPhrase(tokenStrings, i);
 
             if (phraseEntry && matchedCount > 0) {
-                // 短语匹配成功
-                mapped.push(phraseEntry.alias);
-                // 短语使用最后一个 token 的分隔符
-                mappedDelims.push(delims[i + matchedCount - 1] || '');
-                const phraseTokens = tokens.slice(i, i + matchedCount).map(t => t.raw);
-                debugParts.push(`[${phraseTokens.join(' ')}→${phraseEntry.alias}]`);
+                // 短语匹配成功 - 但为了保留内部分隔符，我们逐词翻译
+                const phraseTokens = tokens.slice(i, i + matchedCount);
+                const phraseTokenStrings = phraseTokens.map(t => t.raw);
+                
+                // 尝试逐词翻译，用原始分隔符连接
+                const wordTranslations: string[] = [];
+                for (let j = 0; j < matchedCount; j++) {
+                    const token = tokens[i + j];
+                    const wordEntry = this.resolver.resolveWord(token.lower);
+                    
+                    if (wordEntry) {
+                        wordTranslations.push(wordEntry.alias);
+                    } else if (token.type === 'acronym') {
+                        wordTranslations.push(token.raw);
+                    } else {
+                        wordTranslations.push(token.raw);
+                    }
+                    
+                    // 添加到mapped（每个词单独一项）
+                    mapped.push(wordTranslations[j]);
+                    mappedDelims.push(delims[i + j] || '');
+                }
+                
+                debugParts.push(`[${phraseTokenStrings.join(' ')}→${wordTranslations.join('-')} (短语拆分)]`);
                 translatedCount += matchedCount;
                 i += matchedCount;
             } else {
