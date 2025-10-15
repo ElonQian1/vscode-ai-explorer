@@ -84,6 +84,8 @@ body {
     left: 0;
     top: 0;
     transform-origin: 0 0;
+    /* ✅ 让 #canvas 自成堆叠上下文，内部 z-index 可控 */
+    isolation: isolate;
 }
 
 /* 节点容器（绝对定位的父容器） */
@@ -91,6 +93,8 @@ body {
     position: relative;
     width: 5000px;
     height: 5000px;
+    /* ✅ 节点容器在上层 */
+    z-index: 1;
 }
 
 /* 节点样式：加速合成、预告位移变化、禁用尺寸 hover */
@@ -111,6 +115,8 @@ body {
     /* 关键：开启 GPU 合成层，减少亚像素抖动 */
     will-change: left, top;
     transform: translateZ(0);
+    /* ✅ 单个卡片最高层，确保盖住线条 */
+    z-index: 2;
 }
 
 /* hover 只改变颜色，不改变尺寸！ */
@@ -173,6 +179,8 @@ svg.edges {
     left: 0;
     top: 0;
     pointer-events: none;
+    /* ✅ 最底层：连线在下面绘制 */
+    z-index: 0;
 }
 
 svg .edge {

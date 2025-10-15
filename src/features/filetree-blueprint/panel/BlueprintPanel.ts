@@ -308,8 +308,8 @@ export class BlueprintPanel {
     </div>
     <div id="canvasWrap">
         <div id="canvas">
-            <div id="nodes"></div>
             <svg class="edges"></svg>
+            <div id="nodes"></div>
         </div>
     </div>
     <div id="breadcrumb"></div>
