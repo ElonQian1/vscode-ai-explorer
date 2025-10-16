@@ -2,6 +2,13 @@
 // 文件树蓝图前端交互逻辑（防抖动优化版 + 模块化卡片管理）
 // 修复要点：拖拽/悬停不全量重渲染，只重画边；用 rAF 节流；坐标取整；CSS 抖动处理配合 index.css。
 
+/**
+ * 类型定义参考（用于 IDE 智能提示）：
+ * @see {import('../../src/shared/messages').ExtensionToWebview} ExtensionToWebview - 后端发给前端的消息
+ * @see {import('../../src/shared/messages').WebviewToExtension} WebviewToExtension - 前端发给后端的消息
+ * @see {import('../../src/features/file-analysis/types').FileCapsule} FileCapsule - 文件分析数据结构
+ */
+
 (function () {
     const vscode = acquireVsCodeApi();
 

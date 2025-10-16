@@ -1,0 +1,383 @@
+// src/shared/messages/index.ts
+// [module: shared] [tags: Messages, Types]
+/**
+ * Webview ⇄ Extension 消息契约
+ * 
+ * 这是 Webview 和 Extension 之间通信的唯一消息定义来源
+ * 所有模块都应该引用这个文件，而不是自己定义消息类型
+ * 
+ * 设计原则：
+ * 1. 类型安全 - 使用 TypeScript 联合类型确保消息结构正确
+ * 2. 单一来源 - 避免字段名不一致导致的 bug
+ * 3. 可观测性 - 每个关键步骤都有 ACK 消息
+ */
+
+import { FileCapsule } from '../../features/file-analysis/types';
+import { Graph } from '../../features/filetree-blueprint/domain/FileTreeScanner';
+
+// ============================================================================
+// Webview → Extension (前端发给后端的消息)
+// ============================================================================
+
+/**
+ * Webview 准备就绪
+ */
+export interface ReadyMessage {
+    type: 'ready';
+}
+
+/**
+ * 节点点击事件
+ */
+export interface NodeClickMessage {
+    type: 'node-click';
+    payload: {
+        nodeId: string;
+        label: string;
+        type: 'file' | 'folder';
+        data?: any;
+    };
+}
+
+/**
+ * 节点双击事件
+ */
+export interface NodeDoubleClickMessage {
+    type: 'node-double-click';
+    payload: {
+        nodeId: string;
+        label: string;
+        type: 'file' | 'folder';
+        data?: {
+            path: string;
+            isRoot?: boolean;
+        };
+    };
+}
+
+/**
+ * 请求分析文件
+ */
+export interface AnalyzeFileMessage {
+    type: 'analyze-file';
+    payload: {
+        /** 文件绝对路径 */
+        path: string;
+        /** 是否强制重新分析 */
+        force?: boolean;
+    };
+}
+
+/**
+ * 确认已显示分析卡片 (ACK)
+ */
+export interface AnalysisCardShownMessage {
+    type: 'analysis-card-shown';
+    payload: {
+        /** 文件路径 */
+        file: string;
+    };
+}
+
+/**
+ * 打开源文件
+ */
+export interface OpenSourceMessage {
+    type: 'open-source';
+    payload: {
+        /** 文件路径 */
+        file: string;
+        /** 起始行号 (1-based) */
+        line?: number;
+        /** 结束行号 (1-based) */
+        endLine?: number;
+    };
+}
+
+/**
+ * 下钻到子文件夹
+ */
+export interface DrillMessage {
+    type: 'drill';
+    payload: {
+        /** 文件夹路径 */
+        path: string;
+    };
+}
+
+/**
+ * 返回上级目录
+ */
+export interface DrillUpMessage {
+    type: 'drill-up';
+}
+
+/**
+ * 打开文件
+ */
+export interface OpenFileMessage {
+    type: 'open-file';
+    payload: {
+        /** 文件路径 */
+        path: string;
+    };
+}
+
+/**
+ * 在资源管理器中显示
+ */
+export interface RevealInExplorerMessage {
+    type: 'reveal-in-explorer';
+    payload: {
+        /** 文件路径 */
+        path: string;
+    };
+}
+
+/**
+ * 返回上级目录 (备用)
+ */
+export interface GoUpMessage {
+    type: 'go-up';
+    payload: {
+        /** 当前路径 */
+        currentPath: string;
+    };
+}
+
+/**
+ * 节点移动事件
+ */
+export interface NodeMovedMessage {
+    type: 'node-moved';
+    payload: {
+        /** 节点ID */
+        nodeId: string;
+        /** 新位置 */
+        position: {
+            x: number;
+            y: number;
+        };
+    };
+}
+
+/**
+ * Webview 错误报告
+ */
+export interface ErrorMessage {
+    type: 'error';
+    payload: {
+        /** 错误消息 */
+        message: string;
+        /** 错误堆栈 */
+        stack?: string;
+    };
+}
+
+/**
+ * Webview → Extension 消息联合类型
+ */
+export type WebviewToExtension =
+    | ReadyMessage
+    | NodeClickMessage
+    | NodeDoubleClickMessage
+    | AnalyzeFileMessage
+    | AnalysisCardShownMessage
+    | OpenSourceMessage
+    | DrillMessage
+    | DrillUpMessage
+    | OpenFileMessage
+    | RevealInExplorerMessage
+    | GoUpMessage
+    | NodeMovedMessage
+    | ErrorMessage;
+
+// ============================================================================
+// Extension → Webview (后端发给前端的消息)
+// ============================================================================
+
+/**
+ * 初始化图表数据
+ */
+export interface InitGraphMessage {
+    type: 'init-graph';
+    payload: Graph;
+}
+
+/**
+ * 显示分析卡片 (静态分析结果)
+ */
+export interface ShowAnalysisCardMessage {
+    type: 'show-analysis-card';
+    payload: FileCapsule & {
+        /** 是否正在进行 AI 分析 */
+        loading?: boolean;
+    };
+}
+
+/**
+ * 更新分析卡片 (AI 增强结果)
+ */
+export interface UpdateAnalysisCardMessage {
+    type: 'update-analysis-card';
+    payload: FileCapsule & {
+        /** 是否正在加载 */
+        loading?: boolean;
+        /** AI 分析错误信息 (如果有) */
+        aiError?: string;
+    };
+}
+
+/**
+ * 分析失败
+ */
+export interface AnalysisErrorMessage {
+    type: 'analysis-error';
+    payload: {
+        /** 文件路径 */
+        file: string;
+        /** 错误消息 */
+        message: string;
+    };
+}
+
+/**
+ * 打开帮助浮层
+ */
+export interface OpenHelpMessage {
+    type: 'open-help';
+}
+
+/**
+ * Extension → Webview 消息联合类型
+ */
+export type ExtensionToWebview =
+    | InitGraphMessage
+    | ShowAnalysisCardMessage
+    | UpdateAnalysisCardMessage
+    | AnalysisErrorMessage
+    | OpenHelpMessage;
+
+// ============================================================================
+// 类型守卫 (Type Guards)
+// ============================================================================
+
+/**
+ * 检查是否为特定类型的消息
+ */
+export function isMessageOfType<T extends { type: string }>(
+    message: any,
+    type: T['type']
+): message is T {
+    return message && typeof message === 'object' && message.type === type;
+}
+
+// ============================================================================
+// 消息创建辅助函数 (Message Builders)
+// ============================================================================
+
+/**
+ * 创建显示分析卡片消息
+ */
+export function createShowAnalysisCardMessage(
+    capsule: FileCapsule,
+    loading: boolean = true
+): ShowAnalysisCardMessage {
+    return {
+        type: 'show-analysis-card',
+        payload: {
+            ...capsule,
+            loading
+        }
+    };
+}
+
+/**
+ * 创建更新分析卡片消息
+ */
+export function createUpdateAnalysisCardMessage(
+    capsule: FileCapsule,
+    loading: boolean = false,
+    aiError?: string
+): UpdateAnalysisCardMessage {
+    return {
+        type: 'update-analysis-card',
+        payload: {
+            ...capsule,
+            loading,
+            aiError
+        }
+    };
+}
+
+/**
+ * 创建分析错误消息
+ */
+export function createAnalysisErrorMessage(
+    file: string,
+    message: string
+): AnalysisErrorMessage {
+    return {
+        type: 'analysis-error',
+        payload: { file, message }
+    };
+}
+
+/**
+ * 创建分析文件请求消息
+ */
+export function createAnalyzeFileMessage(
+    path: string,
+    force: boolean = false
+): AnalyzeFileMessage {
+    return {
+        type: 'analyze-file',
+        payload: { path, force }
+    };
+}
+
+/**
+ * 创建卡片已显示确认消息
+ */
+export function createAnalysisCardShownMessage(
+    file: string
+): AnalysisCardShownMessage {
+    return {
+        type: 'analysis-card-shown',
+        payload: { file }
+    };
+}
+
+// ============================================================================
+// 导出说明
+// ============================================================================
+
+/**
+ * 使用示例：
+ * 
+ * 后端 (BlueprintPanel.ts):
+ * ```typescript
+ * import { WebviewToExtension, createShowAnalysisCardMessage } from '../../shared/messages';
+ * 
+ * private async handleMessage(message: WebviewToExtension): Promise<void> {
+ *     if (message.type === 'analyze-file') {
+ *         const capsule = await analyzeFile(message.payload.path);
+ *         const msg = createShowAnalysisCardMessage(capsule, true);
+ *         this.panel.webview.postMessage(msg);
+ *     }
+ * }
+ * ```
+ * 
+ * 前端 (graphView.js):
+ * ```javascript
+ * // @ts-check
+ * /// <reference path="../../shared/messages/index.ts" />
+ * 
+ * window.addEventListener('message', (e) => {
+ *     const msg = e.data;
+ *     if (msg.type === 'show-analysis-card') {
+ *         window.cardManager?.showCard(msg.payload);
+ *     }
+ * });
+ * ```
+ */

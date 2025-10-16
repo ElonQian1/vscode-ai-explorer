@@ -10,6 +10,13 @@ import * as path from 'path';
 import { Logger } from '../../../core/logging/Logger';
 import { Graph, Node } from '../domain/FileTreeScanner';
 import { FileAnalysisService } from '../../file-analysis/FileAnalysisService';
+import {
+    WebviewToExtension,
+    ExtensionToWebview,
+    createShowAnalysisCardMessage,
+    createUpdateAnalysisCardMessage,
+    createAnalysisErrorMessage
+} from '../../../shared/messages';
 
 export class BlueprintPanel {
     private static currentPanel: BlueprintPanel | undefined;
@@ -92,7 +99,7 @@ export class BlueprintPanel {
         this.currentGraph = graph;
         this.panel.title = graph.title;
         
-        this.panel.webview.postMessage({
+        this.sendMessage({
             type: 'init-graph',
             payload: graph
         });
@@ -101,9 +108,17 @@ export class BlueprintPanel {
     }
 
     /**
-     * 处理来自 Webview 的消息
+     * 发送消息到 Webview (类型安全)
      */
-    private async handleMessage(message: any): Promise<void> {
+    private sendMessage(message: ExtensionToWebview): void {
+        this.panel.webview.postMessage(message);
+    }
+
+    /**
+     * 处理来自 Webview 的消息
+     * 使用类型安全的消息契约
+     */
+    private async handleMessage(message: WebviewToExtension): Promise<void> {
         this.logger.debug(`收到 Webview 消息: ${message.type}`);
 
         switch (message.type) {
@@ -171,7 +186,9 @@ export class BlueprintPanel {
                 break;
 
             default:
-                this.logger.warn(`未知消息类型: ${message.type}`);
+                // TypeScript 确保所有消息类型都被处理
+                const exhaustiveCheck: never = message;
+                this.logger.warn(`未知消息类型:`, exhaustiveCheck);
         }
     }
 
@@ -407,13 +424,8 @@ export class BlueprintPanel {
             const staticCapsule = await this.fileAnalysisService.analyzeFileStatic(filePath);
 
             // ✅ 步骤2: 立即发送静态结果到前端(带loading标记)
-            this.panel.webview.postMessage({
-                type: 'show-analysis-card',
-                payload: {
-                    ...staticCapsule,
-                    loading: true  // 标记:AI分析进行中
-                }
-            });
+            const showMessage = createShowAnalysisCardMessage(staticCapsule, true);
+            this.sendMessage(showMessage);
 
             this.logger.info(`[UI] 已发送静态分析卡片: ${filePath}`);
 
@@ -424,13 +436,11 @@ export class BlueprintPanel {
             this.logger.error('静态分析失败', error);
             
             // 发送错误消息
-            this.panel.webview.postMessage({
-                type: 'analysis-error',
-                payload: {
-                    file: filePath,
-                    message: error instanceof Error ? error.message : '分析失败'
-                }
-            });
+            const errorMsg = createAnalysisErrorMessage(
+                filePath,
+                error instanceof Error ? error.message : '分析失败'
+            );
+            this.sendMessage(errorMsg);
             
             vscode.window.showErrorMessage(`分析失败: ${path.basename(filePath)}`);
         }
@@ -447,13 +457,8 @@ export class BlueprintPanel {
             const fullCapsule = await this.fileAnalysisService.enhanceWithAI(staticCapsule, { force });
 
             // ✅ 发送AI更新结果
-            this.panel.webview.postMessage({
-                type: 'update-analysis-card',
-                payload: {
-                    ...fullCapsule,
-                    loading: false  // 标记:AI分析完成
-                }
-            });
+            const updateMessage = createUpdateAnalysisCardMessage(fullCapsule, false);
+            this.sendMessage(updateMessage);
 
             this.logger.info(`[UI] 已发送AI增强结果: ${filePath}`);
 
@@ -461,14 +466,12 @@ export class BlueprintPanel {
             this.logger.warn('[AI] AI分析失败,保留静态结果', error);
             
             // AI失败时也发送更新,只是标记loading=false
-            this.panel.webview.postMessage({
-                type: 'update-analysis-card',
-                payload: {
-                    ...staticCapsule,
-                    loading: false,
-                    aiError: error instanceof Error ? error.message : 'AI分析失败'
-                }
-            });
+            const errorMessage = createUpdateAnalysisCardMessage(
+                staticCapsule,
+                false,
+                error instanceof Error ? error.message : 'AI分析失败'
+            );
+            this.sendMessage(errorMessage);
         }
     }
 
@@ -682,7 +685,7 @@ export class BlueprintPanel {
      * 打开帮助浮层
      */
     public openHelp(): void {
-        this.panel.webview.postMessage({ type: 'open-help' });
+        this.sendMessage({ type: 'open-help' });
         this.logger.debug('已发送打开帮助消息到 Webview');
     }
 

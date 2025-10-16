@@ -1,9 +1,17 @@
 /**
  * 文件分析卡片模块
  * 负责卡片的显示、更新、关闭
+ * 
+ * 类型定义参考：
+ * @see {import('../../../src/features/file-analysis/types').FileCapsule} FileCapsule
+ * @see {import('../../../src/shared/messages').ShowAnalysisCardMessage} ShowAnalysisCardMessage
+ * @see {import('../../../src/shared/messages').UpdateAnalysisCardMessage} UpdateAnalysisCardMessage
  */
 
 export class AnalysisCardManager {
+    /**
+     * @param {any} vscode - VSCode API
+     */
     constructor(vscode) {
         this.vscode = vscode;
         this.cardOpenedAt = 0;
@@ -12,7 +20,8 @@ export class AnalysisCardManager {
 
     /**
      * 显示分析卡片
-     * @param {Object} capsule - FileCapsule 数据
+     * @param {Object} capsule - FileCapsule 数据 (包含 file, lang, api, deps 等字段)
+     * @param {boolean} [capsule.loading] - 是否正在加载
      * @returns {boolean} 是否渲染成功
      */
     showCard(capsule) {
