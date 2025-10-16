@@ -159,6 +159,25 @@
         } else if (msg?.type === 'open-help') {
             // 响应来自扩展的打开帮助命令
             openHelp();
+        } else if (msg?.type === 'show-analysis-card') {
+            // ✅ 显示文件分析卡片(初次显示,可能带loading标记)
+            console.log('[webview] 收到 show-analysis-card:', msg.payload.file);
+            showAnalysisCard(msg.payload);
+            
+            // 回传ACK确认消息已收到
+            vscode.postMessage({
+                type: 'analysis-card-shown',
+                payload: { file: msg.payload.file }
+            });
+        } else if (msg?.type === 'update-analysis-card') {
+            // ✅ 更新文件分析卡片(AI分析完成后的增量更新)
+            console.log('[webview] 收到 update-analysis-card:', msg.payload.file);
+            updateAnalysisCard(msg.payload);
+        } else if (msg?.type === 'analysis-error') {
+            // ✅ 显示分析错误
+            console.error('[webview] 分析错误:', msg.payload);
+            const { file, message } = msg.payload || {};
+            vscode.window?.showErrorMessage?.(` 分析失败: ${file}\n${message || '未知错误'}`);
         }
     }
 
@@ -231,6 +250,43 @@
                         });
                     });
                 }
+            }
+
+            // 📊 诊断日志:双击文件绑定条件检查
+            if (n.type === "file") {
+                const graphType = graph?.metadata?.graphType;
+                const hasPath = !!n.data?.path;
+                const shouldBind = n.type === "file" && hasPath && graphType === "filetree";
+                
+                console.log(`[诊断] 文件节点 "${n.label}":`, {
+                    nodeType: n.type,
+                    hasPath,
+                    graphType,
+                    expectedGraphType: 'filetree',
+                    graphTypeMatch: graphType === 'filetree',
+                    willBindDoubleClick: shouldBind
+                });
+            }
+
+            // ✅ 双击文件：展开分析卡片
+            if (
+                n.type === "file" &&
+                n.data?.path &&
+                graph?.metadata?.graphType === "filetree"
+            ) {
+                console.log(`[绑定] 为文件 "${n.label}" 绑定双击事件`);
+                el.addEventListener("dblclick", (e) => {
+                    e.stopPropagation(); // 防止事件冒泡
+                    console.log('[双击] 文件，请求分析:', n.data.path);
+                    vscode.postMessage({
+                        type: "analyze-file",
+                        payload: {
+                            path: n.data.path,
+                            nodeId: n.id,
+                            position: n.position
+                        }
+                    });
+                });
             }
 
             // 使节点可拖拽
@@ -609,6 +665,356 @@
         console.log('📍 目标类名:', e.target.className);
         console.log('📦 目标数据:', e.target.dataset);
     }, true);
+
+    // ===== 文件分析卡片功能 =====
+    
+    function showAnalysisCard(capsule) {
+        console.log('[分析卡片] 显示:', capsule);
+        
+        // 查找或创建卡片容器
+        let cardHost = document.getElementById('analysis-card-host');
+        if (!cardHost) {
+            cardHost = document.createElement('div');
+            cardHost.id = 'analysis-card-host';
+            cardHost.className = 'analysis-card-host';
+            document.getElementById('canvas').appendChild(cardHost);
+        }
+
+        // ✅ 检查是否显示Loading状态
+        const loadingBadge = capsule.loading 
+            ? '<span class="loading-badge">⏳ AI分析中...</span>' 
+            : '';
+
+        // 渲染卡片
+        cardHost.innerHTML = `
+            <div class="analysis-card" data-file="${escapeHtml(capsule.file)}">
+                <!-- 标题栏 -->
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="file-icon">📄</span>
+                        <span class="file-name">${escapeHtml(capsule.file.split(/[/\\]/).pop())}</span>
+                        ${loadingBadge}
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-icon" data-action="open" title="打开源文件">📂</button>
+                        <button class="btn-icon" data-action="refresh" title="刷新分析">↻</button>
+                        <button class="btn-icon" data-action="close" title="关闭">✕</button>
+                    </div>
+                </div>
+
+                <!-- Tab栏 -->
+                <div class="card-tabs">
+                    <button class="tab-btn active" data-tab="overview">概览</button>
+                    <button class="tab-btn" data-tab="api">API</button>
+                    <button class="tab-btn" data-tab="deps">依赖</button>
+                    <button class="tab-btn" data-tab="evidence">证据</button>
+                </div>
+
+                <!-- 内容区域 -->
+                <div class="card-content">
+                    <div class="tab-pane active" data-pane="overview">
+                        ${renderOverviewTab(capsule)}
+                    </div>
+                    <div class="tab-pane" data-pane="api">
+                        ${renderApiTab(capsule)}
+                    </div>
+                    <div class="tab-pane" data-pane="deps">
+                        ${renderDepsTab(capsule)}
+                    </div>
+                    <div class="tab-pane" data-pane="evidence">
+                        ${renderEvidenceTab(capsule)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 绑定Tab切换
+        cardHost.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 切换Tab按钮状态
+                cardHost.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // 切换内容面板
+                const tabName = btn.dataset.tab;
+                cardHost.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+                cardHost.querySelector(`.tab-pane[data-pane="${tabName}"]`).classList.add('active');
+            });
+        });
+
+        // 绑定操作按钮
+        cardHost.querySelector('[data-action="open"]').addEventListener('click', () => {
+            vscode.postMessage({
+                type: 'open-source',
+                payload: { file: capsule.file, line: 1 }
+            });
+        });
+
+        cardHost.querySelector('[data-action="refresh"]').addEventListener('click', () => {
+            vscode.postMessage({
+                type: 'analyze-file',
+                payload: { path: capsule.file, force: true }
+            });
+        });
+
+        cardHost.querySelector('[data-action="close"]').addEventListener('click', () => {
+            cardHost.innerHTML = '';
+        });
+
+        // 绑定证据锚点点击
+        cardHost.querySelectorAll('[data-evidence]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const evidenceId = link.dataset.evidence;
+                const evidence = capsule.evidence?.[evidenceId];
+                if (evidence) {
+                    vscode.postMessage({
+                        type: 'open-source',
+                        payload: {
+                            file: evidence.file,
+                            line: evidence.lines[0],
+                            endLine: evidence.lines[1]
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    /**
+     * 更新已显示的分析卡片(AI分析完成后的增量更新)
+     */
+    function updateAnalysisCard(capsule) {
+        console.log('[分析卡片] AI更新:', capsule);
+        
+        const cardHost = document.getElementById('analysis-card-host');
+        if (!cardHost) {
+            // 如果卡片不存在,直接显示新卡片
+            console.warn('[分析卡片] 卡片容器不存在,执行完整渲染');
+            showAnalysisCard(capsule);
+            return;
+        }
+
+        const card = cardHost.querySelector('.analysis-card');
+        if (!card || card.dataset.file !== capsule.file) {
+            // 如果卡片文件不匹配,重新渲染
+            console.warn('[分析卡片] 文件不匹配,执行完整渲染');
+            showAnalysisCard(capsule);
+            return;
+        }
+
+        // ✅ 增量更新: 移除Loading标记
+        const loadingBadge = card.querySelector('.loading-badge');
+        if (loadingBadge) {
+            loadingBadge.remove();
+        }
+
+        // ✅ 增量更新: 更新各个Tab的内容
+        const currentTab = card.querySelector('.tab-btn.active')?.dataset?.tab || 'overview';
+        
+        card.querySelector('.tab-pane[data-pane="overview"]').innerHTML = renderOverviewTab(capsule);
+        card.querySelector('.tab-pane[data-pane="api"]').innerHTML = renderApiTab(capsule);
+        card.querySelector('.tab-pane[data-pane="deps"]').innerHTML = renderDepsTab(capsule);
+        card.querySelector('.tab-pane[data-pane="evidence"]').innerHTML = renderEvidenceTab(capsule);
+
+        // 重新绑定证据链接
+        cardHost.querySelectorAll('[data-evidence]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const evidenceId = link.dataset.evidence;
+                const evidence = capsule.evidence?.[evidenceId];
+                if (evidence) {
+                    vscode.postMessage({
+                        type: 'open-source',
+                        payload: {
+                            file: evidence.file,
+                            line: evidence.lines[0],
+                            endLine: evidence.lines[1]
+                        }
+                    });
+                }
+            });
+        });
+
+        console.log('[分析卡片] AI更新完成');
+    }
+
+    function renderOverviewTab(capsule) {
+        const summary = capsule.summary?.zh || capsule.summary?.en || '暂无摘要';
+        const facts = capsule.facts || [];
+        const inferences = capsule.inferences || [];
+        const recommendations = capsule.recommendations || [];
+        
+        return `
+            <div class="overview-section">
+                <h4>📝 摘要</h4>
+                <p class="summary">${escapeHtml(summary)}</p>
+                
+                ${facts.length > 0 ? `
+                    <h4>✅ 事实</h4>
+                    <ul class="fact-list">
+                        ${facts.map(f => `
+                            <li>
+                                ${escapeHtml(f.text)}
+                                ${f.evidence?.map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ') || ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
+                
+                ${inferences.length > 0 ? `
+                    <h4>💡 AI 推断</h4>
+                    <ul class="inference-list">
+                        ${inferences.map(i => `
+                            <li>
+                                ${escapeHtml(i.text)}
+                                <span class="confidence">置信度: ${(i.confidence * 100).toFixed(0)}%</span>
+                                ${i.evidence?.map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ') || ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
+                
+                ${recommendations.length > 0 ? `
+                    <h4>💡 AI 建议</h4>
+                    <ul class="recommendation-list">
+                        ${recommendations.map(r => `
+                            <li class="rec-${r.priority || 'medium'}">
+                                <div class="rec-header">
+                                    <span class="rec-priority">${getPriorityEmoji(r.priority)}</span>
+                                    <span class="rec-text">${escapeHtml(r.text)}</span>
+                                </div>
+                                ${r.reason ? `<div class="rec-reason">原因: ${escapeHtml(r.reason)}</div>` : ''}
+                                ${r.evidence?.map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ') || ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
+                
+                <div class="meta-info">
+                    <span>最后验证: ${formatTime(capsule.lastVerifiedAt)}</span>
+                    ${capsule.stale ? '<span class="badge-warning">需要刷新</span>' : ''}
+                    ${inferences.length > 0 || recommendations.length > 0 ? '<span class="badge-ai">🤖 AI增强</span>' : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    function getPriorityEmoji(priority) {
+        const map = {
+            'high': '🔴',
+            'medium': '🟡',
+            'low': '🟢'
+        };
+        return map[priority] || '🟡';
+    }
+
+    function formatTime(isoString) {
+        if (!isoString) return '未知';
+        try {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return '刚刚';
+            if (diffMins < 60) return `${diffMins}分钟前`;
+            
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours}小时前`;
+            
+            return date.toLocaleDateString('zh-CN');
+        } catch {
+            return isoString;
+        }
+    }
+
+    function renderApiTab(capsule) {
+        const api = capsule.api || [];
+        if (api.length === 0) {
+            return '<p class="empty">暂无API信息</p>';
+        }
+        
+        return `
+            <div class="api-section">
+                <h4>📦 导出符号</h4>
+                <ul class="api-list">
+                    ${api.map(item => `
+                        <li class="api-item">
+                            <div class="api-header">
+                                <span class="api-kind">${item.kind}</span>
+                                <span class="api-name">${escapeHtml(item.name)}</span>
+                            </div>
+                            <div class="api-signature"><code>${escapeHtml(item.signature)}</code></div>
+                            ${item.evidence?.map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ') || ''}
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    function renderDepsTab(capsule) {
+        const depsOut = capsule.deps?.out || [];
+        const depsIn = capsule.deps?.inSample || [];
+        
+        return `
+            <div class="deps-section">
+                ${depsOut.length > 0 ? `
+                    <h4>📤 出依赖 (它引用了谁)</h4>
+                    <ul class="deps-list">
+                        ${depsOut.map(dep => `
+                            <li>
+                                ${escapeHtml(dep.module)}
+                                <span class="dep-count">${dep.count} 次</span>
+                                ${dep.evidence?.map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ') || ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : '<p class="empty">无出依赖</p>'}
+                
+                ${depsIn.length > 0 ? `
+                    <h4>📥 入依赖样本 (谁引用了它)</h4>
+                    <ul class="deps-list">
+                        ${depsIn.map(dep => `
+                            <li>
+                                ${escapeHtml(dep.file)} : ${dep.line}
+                                ${dep.evidence?.map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[查看]</a>`).join(' ') || ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : '<p class="empty">无入依赖信息</p>'}
+            </div>
+        `;
+    }
+
+    function renderEvidenceTab(capsule) {
+        const evidence = capsule.evidence || {};
+        const evidenceKeys = Object.keys(evidence);
+        
+        if (evidenceKeys.length === 0) {
+            return '<p class="empty">暂无证据</p>';
+        }
+        
+        return `
+            <div class="evidence-section">
+                <h4>🔍 证据索引</h4>
+                <ul class="evidence-list">
+                    ${evidenceKeys.map(key => {
+                        const ev = evidence[key];
+                        return `
+                            <li class="evidence-item">
+                                <span class="evidence-id">${key}</span>
+                                <a href="#" class="evidence-link" data-evidence="${key}">
+                                    ${escapeHtml(ev.file)} : ${ev.lines[0]}-${ev.lines[1]}
+                                </a>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            </div>
+        `;
+    }
 
     // 启动
     init();

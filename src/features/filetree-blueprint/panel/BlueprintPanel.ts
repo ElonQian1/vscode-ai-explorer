@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { Logger } from '../../../core/logging/Logger';
 import { Graph, Node } from '../domain/FileTreeScanner';
+import { FileAnalysisService } from '../../file-analysis/FileAnalysisService';
 
 export class BlueprintPanel {
     private static currentPanel: BlueprintPanel | undefined;
@@ -18,6 +19,7 @@ export class BlueprintPanel {
     private currentGraph?: Graph;
     private extensionUri: vscode.Uri;
     private statusBarItem?: vscode.StatusBarItem;
+    private fileAnalysisService: FileAnalysisService;
 
     private constructor(
         panel: vscode.WebviewPanel,
@@ -27,6 +29,7 @@ export class BlueprintPanel {
         this.panel = panel;
         this.logger = logger;
         this.extensionUri = extensionUri;
+        this.fileAnalysisService = new FileAnalysisService(logger);
 
         // 设置 HTML 内容
         this.panel.webview.html = this.getHtmlContent(extensionUri);
@@ -141,9 +144,24 @@ export class BlueprintPanel {
                 await this.handleGoUpDirectory(message.payload.currentPath);
                 break;
 
+            case 'analyze-file':
+                // 分析文件并返回FileCapsule
+                await this.handleAnalyzeFile(message.payload);
+                break;
+
+            case 'analysis-card-shown':
+                // ✅ ACK: Webview确认已显示卡片
+                this.logger.info(`[ACK] Webview 已显示卡片: ${message.payload?.file}`);
+                break;
+
+            case 'open-source':
+                // 打开源文件并跳转到指定行
+                await this.handleOpenSource(message.payload);
+                break;
+
             case 'node-moved':
                 // 处理节点移动（手写图等场景）
-                // 对于文件树蓝图，这个消息通常不需要处理
+                // 对于文件树蓝图,这个消息通常不需要处理
                 this.logger.debug(`节点移动: ${message.payload.nodeId}`, message.payload.position);
                 break;
 
@@ -366,6 +384,150 @@ export class BlueprintPanel {
     }
 
     /**
+     * 处理文件分析请求
+     * 
+     * 采用乐观UI模式:
+     * 1. 先立即发送静态分析结果(带loading标记)
+     * 2. 后台继续AI分析
+     * 3. AI完成后发送update消息更新卡片
+     */
+    private async handleAnalyzeFile(payload: any): Promise<void> {
+        const filePath = payload?.path;
+        const force = payload?.force || false;
+        
+        this.logger.info(`[分析文件] ${filePath}, force=${force}`);
+        
+        if (!filePath) {
+            this.logger.warn('分析文件消息缺少路径信息');
+            return;
+        }
+
+        try {
+            // ✅ 步骤1: 先做静态分析,立即返回结果
+            const staticCapsule = await this.fileAnalysisService.analyzeFileStatic(filePath);
+
+            // ✅ 步骤2: 立即发送静态结果到前端(带loading标记)
+            this.panel.webview.postMessage({
+                type: 'show-analysis-card',
+                payload: {
+                    ...staticCapsule,
+                    loading: true  // 标记:AI分析进行中
+                }
+            });
+
+            this.logger.info(`[UI] 已发送静态分析卡片: ${filePath}`);
+
+            // ✅ 步骤3: 后台进行AI分析(不阻塞)
+            this.runAIAnalysisInBackground(filePath, staticCapsule, force);
+
+        } catch (error) {
+            this.logger.error('静态分析失败', error);
+            
+            // 发送错误消息
+            this.panel.webview.postMessage({
+                type: 'analysis-error',
+                payload: {
+                    file: filePath,
+                    message: error instanceof Error ? error.message : '分析失败'
+                }
+            });
+            
+            vscode.window.showErrorMessage(`分析失败: ${path.basename(filePath)}`);
+        }
+    }
+
+    /**
+     * 后台运行AI分析并更新卡片
+     */
+    private async runAIAnalysisInBackground(filePath: string, staticCapsule: any, force: boolean): Promise<void> {
+        try {
+            this.logger.info(`[AI] 开始后台AI分析: ${filePath}`);
+
+            // 调用AI增强分析
+            const fullCapsule = await this.fileAnalysisService.enhanceWithAI(staticCapsule, { force });
+
+            // ✅ 发送AI更新结果
+            this.panel.webview.postMessage({
+                type: 'update-analysis-card',
+                payload: {
+                    ...fullCapsule,
+                    loading: false  // 标记:AI分析完成
+                }
+            });
+
+            this.logger.info(`[UI] 已发送AI增强结果: ${filePath}`);
+
+        } catch (error) {
+            this.logger.warn('[AI] AI分析失败,保留静态结果', error);
+            
+            // AI失败时也发送更新,只是标记loading=false
+            this.panel.webview.postMessage({
+                type: 'update-analysis-card',
+                payload: {
+                    ...staticCapsule,
+                    loading: false,
+                    aiError: error instanceof Error ? error.message : 'AI分析失败'
+                }
+            });
+        }
+    }
+
+    /**
+     * 处理打开源文件请求
+     */
+    private async handleOpenSource(payload: any): Promise<void> {
+        const filePath = payload?.file;
+        const startLine = payload?.line || 1;
+        const endLine = payload?.endLine || startLine;
+        
+        this.logger.info(`[打开源文件] ${filePath}:${startLine}-${endLine}`);
+        
+        if (!filePath) {
+            this.logger.warn('打开源文件消息缺少路径信息');
+            return;
+        }
+
+        try {
+            const uri = vscode.Uri.file(filePath);
+            const doc = await vscode.workspace.openTextDocument(uri);
+            const editor = await vscode.window.showTextDocument(doc, { preview: false });
+            
+            // 跳转到指定行并高亮
+            const range = new vscode.Range(
+                new vscode.Position(startLine - 1, 0),
+                new vscode.Position(endLine - 1, 999)
+            );
+            editor.selection = new vscode.Selection(range.start, range.end);
+            editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+            
+            this.logger.info(`已打开并跳转到: ${filePath}:${startLine}`);
+        } catch (error) {
+            this.logger.error(`打开源文件失败: ${filePath}`, error);
+            vscode.window.showErrorMessage(`无法打开文件: ${path.basename(filePath)}`);
+        }
+    }
+
+    /**
+     * 检测文件语言
+     */
+    private detectLanguage(filePath: string): string {
+        const ext = path.extname(filePath).toLowerCase();
+        const langMap: Record<string, string> = {
+            '.ts': 'typescript',
+            '.js': 'javascript',
+            '.py': 'python',
+            '.java': 'java',
+            '.cpp': 'cpp',
+            '.c': 'c',
+            '.rs': 'rust',
+            '.go': 'go',
+            '.rb': 'ruby',
+            '.php': 'php'
+        };
+        return langMap[ext] || 'unknown';
+    }
+
+    /**
      * 在资源管理器中显示
      */
     private async revealInExplorer(filePath: string): Promise<void> {
@@ -391,6 +553,9 @@ export class BlueprintPanel {
         const styleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'index.css')
         );
+        const cardStyleUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'analysisCard.css')
+        );
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -402,6 +567,7 @@ export class BlueprintPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <link href="${styleUri}" rel="stylesheet">
+    <link href="${cardStyleUri}" rel="stylesheet">
     <title>文件树蓝图</title>
 </head>
 <body>
