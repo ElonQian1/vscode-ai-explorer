@@ -1,10 +1,13 @@
 // media/filetree-blueprint/graphView.js
-// 文件树蓝图前端交互逻辑（防抖动优化版）
+// 文件树蓝图前端交互逻辑（防抖动优化版 + 模块化卡片管理）
 // 修复要点：拖拽/悬停不全量重渲染，只重画边；用 rAF 节流；坐标取整；CSS 抖动处理配合 index.css。
 
 (function () {
     const vscode = acquireVsCodeApi();
 
+    // ✅ 卡片管理器（由 ES6 模块加载）
+    // window.cardManager 在模块脚本中初始化
+    
     // 图表数据
     let graph = {
         nodes: [],
@@ -160,19 +163,32 @@
             // 响应来自扩展的打开帮助命令
             openHelp();
         } else if (msg?.type === 'show-analysis-card') {
-            // ✅ 显示文件分析卡片(初次显示,可能带loading标记)
+            // ✅ 显示文件分析卡片(使用模块化管理器)
             console.log('[webview] 收到 show-analysis-card:', msg.payload.file);
-            showAnalysisCard(msg.payload);
             
-            // 回传ACK确认消息已收到
-            vscode.postMessage({
-                type: 'analysis-card-shown',
-                payload: { file: msg.payload.file }
-            });
+            // ✅ 使用全局卡片管理器
+            if (window.cardManager) {
+                const rendered = window.cardManager.showCard(msg.payload);
+                if (rendered) {
+                    vscode.postMessage({
+                        type: 'analysis-card-shown',
+                        payload: { file: msg.payload.file }
+                    });
+                } else {
+                    console.error('[webview] 卡片渲染失败');
+                }
+            } else {
+                console.error('[webview] cardManager 未初始化');
+            }
         } else if (msg?.type === 'update-analysis-card') {
-            // ✅ 更新文件分析卡片(AI分析完成后的增量更新)
+            // ✅ 更新文件分析卡片(使用模块化管理器)
             console.log('[webview] 收到 update-analysis-card:', msg.payload.file);
-            updateAnalysisCard(msg.payload);
+            
+            if (window.cardManager) {
+                window.cardManager.updateCard(msg.payload);
+            } else {
+                console.error('[webview] cardManager 未初始化');
+            }
         } else if (msg?.type === 'analysis-error') {
             // ✅ 显示分析错误
             console.error('[webview] 分析错误:', msg.payload);
@@ -666,28 +682,58 @@
         console.log('📦 目标数据:', e.target.dataset);
     }, true);
 
-    // ===== 文件分析卡片功能 =====
+    // ===== 文件分析卡片功能 (已模块化) =====
+    // ⚠️ 注意：以下函数已被 modules/analysisCard.js 中的 AnalysisCardManager 替代
+    // 保留这些函数仅作为向后兼容，实际使用 window.cardManager
+    // TODO: 待完全迁移后可以删除这些旧函数
     
+    let cardOpenedAt = 0; // ✅ 记录卡片打开时间，用于防止双击第二下误关闭
+    
+    // ⚠️ 已弃用：请使用 window.cardManager.showCard()
     function showAnalysisCard(capsule) {
         console.log('[分析卡片] 显示:', capsule);
         
-        // 查找或创建卡片容器
-        let cardHost = document.getElementById('analysis-card-host');
-        if (!cardHost) {
-            cardHost = document.createElement('div');
-            cardHost.id = 'analysis-card-host';
-            cardHost.className = 'analysis-card-host';
-            document.getElementById('canvas').appendChild(cardHost);
-        }
+        try {
+            // 查找或创建卡片容器和遮罩容器
+            let analysisHost = document.getElementById('analysis-host');
+            if (!analysisHost) {
+                analysisHost = document.createElement('div');
+                analysisHost.id = 'analysis-host';
+                analysisHost.className = 'analysis-host';
+                document.getElementById('canvas').appendChild(analysisHost);
+            }
 
-        // ✅ 检查是否显示Loading状态
-        const loadingBadge = capsule.loading 
-            ? '<span class="loading-badge">⏳ AI分析中...</span>' 
-            : '';
+            // ✅ 清空旧内容（确保单例）
+            analysisHost.innerHTML = '';
 
-        // 渲染卡片
-        cardHost.innerHTML = `
-            <div class="analysis-card" data-file="${escapeHtml(capsule.file)}">
+            // ✅ 创建遮罩层（点击关闭，但有300ms保护期）
+            const backdrop = document.createElement('div');
+            backdrop.className = 'analysis-backdrop';
+            backdrop.addEventListener('click', (e) => {
+                const elapsed = performance.now() - cardOpenedAt;
+                if (elapsed < 300) {
+                    // ✅ 防止双击第二下立即关闭卡片
+                    console.log('[分析卡片] 保护期内，忽略点击关闭', elapsed);
+                    e.stopPropagation();
+                    return;
+                }
+                console.log('[分析卡片] 点击遮罩关闭');
+                collapseAnalysisCard();
+            });
+            analysisHost.appendChild(backdrop);
+
+            // ✅ 检查是否显示Loading状态
+            const loadingBadge = capsule.loading 
+                ? '<span class="loading-badge">⏳ AI分析中...</span>' 
+                : '';
+
+            // ✅ 创建卡片元素
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            card.setAttribute('data-file', capsule.file);
+            
+            // 渲染卡片内容
+            card.innerHTML = `
                 <!-- 标题栏 -->
                 <div class="card-header">
                     <div class="card-title">
@@ -725,77 +771,106 @@
                         ${renderEvidenceTab(capsule)}
                     </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        // 绑定Tab切换
-        cardHost.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // 切换Tab按钮状态
-                cardHost.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                // 切换内容面板
-                const tabName = btn.dataset.tab;
-                cardHost.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-                cardHost.querySelector(`.tab-pane[data-pane="${tabName}"]`).classList.add('active');
+            analysisHost.appendChild(card);
+
+            // ✅ 使用 requestAnimationFrame 确保 DOM 已插入，然后添加 show 类触发动画
+            requestAnimationFrame(() => {
+                cardOpenedAt = performance.now();
+                card.classList.add('show');
+                console.log('[分析卡片] 已添加 show 类，卡片应该可见');
             });
-        });
 
-        // 绑定操作按钮
-        cardHost.querySelector('[data-action="open"]').addEventListener('click', () => {
-            vscode.postMessage({
-                type: 'open-source',
-                payload: { file: capsule.file, line: 1 }
+            // 绑定Tab切换
+            card.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 切换Tab按钮状态
+                    card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // 切换内容面板
+                    const tabName = btn.dataset.tab;
+                    card.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+                    card.querySelector(`.tab-pane[data-pane="${tabName}"]`).classList.add('active');
+                });
             });
-        });
 
-        cardHost.querySelector('[data-action="refresh"]').addEventListener('click', () => {
-            vscode.postMessage({
-                type: 'analyze-file',
-                payload: { path: capsule.file, force: true }
+            // 绑定操作按钮
+            card.querySelector('[data-action="open"]').addEventListener('click', () => {
+                vscode.postMessage({
+                    type: 'open-source',
+                    payload: { file: capsule.file, line: 1 }
+                });
             });
-        });
 
-        cardHost.querySelector('[data-action="close"]').addEventListener('click', () => {
-            cardHost.innerHTML = '';
-        });
-
-        // 绑定证据锚点点击
-        cardHost.querySelectorAll('[data-evidence]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const evidenceId = link.dataset.evidence;
-                const evidence = capsule.evidence?.[evidenceId];
-                if (evidence) {
-                    vscode.postMessage({
-                        type: 'open-source',
-                        payload: {
-                            file: evidence.file,
-                            line: evidence.lines[0],
-                            endLine: evidence.lines[1]
-                        }
-                    });
-                }
+            card.querySelector('[data-action="refresh"]').addEventListener('click', () => {
+                vscode.postMessage({
+                    type: 'analyze-file',
+                    payload: { path: capsule.file, force: true }
+                });
             });
-        });
+
+            card.querySelector('[data-action="close"]').addEventListener('click', () => {
+                collapseAnalysisCard();
+            });
+
+            // 绑定证据锚点点击
+            card.querySelectorAll('[data-evidence]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const evidenceId = link.dataset.evidence;
+                    const evidence = capsule.evidence?.[evidenceId];
+                    if (evidence) {
+                        vscode.postMessage({
+                            type: 'open-source',
+                            payload: {
+                                file: evidence.file,
+                                line: evidence.lines[0],
+                                endLine: evidence.lines[1]
+                            }
+                        });
+                    }
+                });
+            });
+
+            console.log('[分析卡片] 渲染完成，返回 true');
+            return true; // ✅ 返回 true 表示渲染成功
+            
+        } catch (error) {
+            console.error('[分析卡片] 渲染失败:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 折叠/关闭分析卡片
+     * ⚠️ 已弃用：请使用 window.cardManager.closeCard()
+     */
+    function collapseAnalysisCard() {
+        const analysisHost = document.getElementById('analysis-host');
+        if (analysisHost) {
+            analysisHost.innerHTML = '';
+            console.log('[分析卡片] 已关闭');
+        }
     }
 
     /**
      * 更新已显示的分析卡片(AI分析完成后的增量更新)
+     * ⚠️ 已弃用：请使用 window.cardManager.updateCard()
      */
     function updateAnalysisCard(capsule) {
         console.log('[分析卡片] AI更新:', capsule);
         
-        const cardHost = document.getElementById('analysis-card-host');
-        if (!cardHost) {
-            // 如果卡片不存在,直接显示新卡片
-            console.warn('[分析卡片] 卡片容器不存在,执行完整渲染');
+        const analysisHost = document.getElementById('analysis-host');
+        if (!analysisHost) {
+            // 如果容器不存在,直接显示新卡片
+            console.warn('[分析卡片] 容器不存在,执行完整渲染');
             showAnalysisCard(capsule);
             return;
         }
 
-        const card = cardHost.querySelector('.analysis-card');
+        const card = analysisHost.querySelector('.analysis-card');
         if (!card || card.dataset.file !== capsule.file) {
             // 如果卡片文件不匹配,重新渲染
             console.warn('[分析卡片] 文件不匹配,执行完整渲染');
@@ -807,18 +882,22 @@
         const loadingBadge = card.querySelector('.loading-badge');
         if (loadingBadge) {
             loadingBadge.remove();
+            console.log('[分析卡片] 已移除 loading 徽章');
         }
 
         // ✅ 增量更新: 更新各个Tab的内容
-        const currentTab = card.querySelector('.tab-btn.active')?.dataset?.tab || 'overview';
-        
-        card.querySelector('.tab-pane[data-pane="overview"]').innerHTML = renderOverviewTab(capsule);
-        card.querySelector('.tab-pane[data-pane="api"]').innerHTML = renderApiTab(capsule);
-        card.querySelector('.tab-pane[data-pane="deps"]').innerHTML = renderDepsTab(capsule);
-        card.querySelector('.tab-pane[data-pane="evidence"]').innerHTML = renderEvidenceTab(capsule);
+        const overviewPane = card.querySelector('.tab-pane[data-pane="overview"]');
+        const apiPane = card.querySelector('.tab-pane[data-pane="api"]');
+        const depsPane = card.querySelector('.tab-pane[data-pane="deps"]');
+        const evidencePane = card.querySelector('.tab-pane[data-pane="evidence"]');
+
+        if (overviewPane) overviewPane.innerHTML = renderOverviewTab(capsule);
+        if (apiPane) apiPane.innerHTML = renderApiTab(capsule);
+        if (depsPane) depsPane.innerHTML = renderDepsTab(capsule);
+        if (evidencePane) evidencePane.innerHTML = renderEvidenceTab(capsule);
 
         // 重新绑定证据链接
-        cardHost.querySelectorAll('[data-evidence]').forEach(link => {
+        card.querySelectorAll('[data-evidence]').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const evidenceId = link.dataset.evidence;

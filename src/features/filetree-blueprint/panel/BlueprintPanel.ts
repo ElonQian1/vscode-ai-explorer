@@ -550,6 +550,9 @@ export class BlueprintPanel {
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'graphView.js')
         );
+        const cardModuleUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'modules', 'analysisCard.js')
+        );
         const styleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'index.css')
         );
@@ -610,6 +613,19 @@ export class BlueprintPanel {
         </div>
     </div>
     
+    <!-- ✅ ES6 模块：先加载卡片管理模块 -->
+    <script type="module" nonce="${nonce}">
+        // 导入卡片管理模块
+        import { AnalysisCardManager } from '${cardModuleUri}';
+        
+        // 创建全局卡片管理器实例
+        const vscode = acquireVsCodeApi();
+        window.cardManager = new AnalysisCardManager(vscode);
+        
+        console.log('[模块] AnalysisCardManager 已加载');
+    </script>
+    
+    <!-- 主脚本 -->
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
