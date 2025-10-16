@@ -256,6 +256,11 @@
           "default": false,
           "description": "是否自动翻译新文件"
         },
+        "aiExplorer.fileAnalysis.enableAI": {
+          "type": "boolean",
+          "default": true,
+          "description": "文件分析时是否启用AI增强(生成推断和建议)"
+        },
         "filetreeBlueprint.excludes": {
           "type": "array",
           "default": [
@@ -417,6 +422,42 @@
           },
           "default": ["react", "vue", "redux", "tailwind", "jest", "vitest", "webpack", "vite", "eslint", "prettier", "nodejs", "typescript"],
           "description": "保留英文的词汇列表（技术品牌名等，不翻译）"
+        },
+        "aiExplorer.alias.userWhitelist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "用户自定义白名单（手动添加或通过右键菜单添加）"
+        },
+        "aiExplorer.alias.intelligentNumberMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用智能数字识别：区分纯ID数字(19, 57)和有语义数字(chapter-3中的3)"
+        },
+        "aiExplorer.alias.customFilterRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "description": "正则表达式模式（不含前后斜杠）"
+              },
+              "reason": {
+                "type": "string",
+                "description": "过滤原因（用于统计）"
+              },
+              "description": {
+                "type": "string",
+                "description": "规则描述"
+              }
+            }
+          },
+          "default": [],
+          "description": "自定义过滤规则（正则表达式），优先级高于内置规则",
+          "markdownDescription": "自定义过滤规则示例：\n```json\n[\n  {\n    \"pattern\": \"^tmp_.*\",\n    \"reason\": \"temp-file\",\n    \"description\": \"临时文件前缀\"\n  }\n]\n```"
         },
         "aiExplorer.batch.maxConcurrency": {
           "type": "number",
