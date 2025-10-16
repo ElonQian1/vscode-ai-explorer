@@ -9,6 +9,7 @@ import { Logger } from '../../core/logging/Logger';
 import { MultiProviderAIClient } from '../../core/ai/MultiProviderAIClient';
 import { StaticAnalyzer } from './StaticAnalyzer';
 import { LLMAnalyzer } from './LLMAnalyzer';
+import { CapsuleCache } from './CapsuleCache';
 import { FileCapsule, AnalysisOptions, Fact, Inference, Recommendation } from './types';
 import { toPosixRelative, getWorkspaceRelative } from '../../shared/utils/pathUtils';
 import * as vscode from 'vscode';
@@ -18,10 +19,16 @@ export class FileAnalysisService {
     private staticAnalyzer: StaticAnalyzer;
     private llmAnalyzer?: LLMAnalyzer;
     private aiClient?: MultiProviderAIClient;
+    private cache: CapsuleCache;
 
     constructor(logger: Logger) {
         this.logger = logger;
         this.staticAnalyzer = new StaticAnalyzer(logger);
+        this.cache = new CapsuleCache(logger);
+        // 异步初始化缓存目录
+        this.cache.initialize().catch(err => {
+            this.logger.error('[FileAnalysisService] 缓存初始化失败', err);
+        });
     }
 
     /**
@@ -40,6 +47,11 @@ export class FileAnalysisService {
      * 仅执行静态分析(快速返回)
      * 用于乐观UI模式,立即返回基础结果
      * 
+     * 🔥 Phase 4: 增加缓存支持
+     * - 先计算 contentHash
+     * - 检查缓存是否命中
+     * - 未命中时才执行静态分析
+     * 
      * @param filePath - 文件绝对路径
      * @returns FileCapsule，其中 file 字段为 POSIX 相对路径
      */
@@ -47,11 +59,24 @@ export class FileAnalysisService {
         this.logger.info(`[FileAnalysisService] 静态分析: ${filePath}`);
 
         try {
-            // 1. 静态分析
+            // 0. 读取文件内容并计算哈希
+            const fileUri = vscode.Uri.file(filePath);
+            const fileContent = await vscode.workspace.fs.readFile(fileUri);
+            const contentText = Buffer.from(fileContent).toString('utf8');
+            const contentHash = CapsuleCache.computeContentHash(contentText);
+
+            // 1. 检查缓存
+            const cachedCapsule = await this.cache.get(contentHash);
+            if (cachedCapsule) {
+                this.logger.info(`[FileAnalysisService] ✅ 缓存命中: ${filePath}`);
+                return cachedCapsule;
+            }
+
+            // 2. 静态分析（缓存未命中）
+            this.logger.info(`[FileAnalysisService] ❌ 缓存未命中，执行静态分析`);
             const staticResult = await this.staticAnalyzer.analyzeFile(filePath);
 
-            // 2. 转换为工作区相对路径 (POSIX 格式)
-            const fileUri = vscode.Uri.file(filePath);
+            // 3. 转换为工作区相对路径 (POSIX 格式)
             const relativePath = getWorkspaceRelative(fileUri);
             
             if (!relativePath) {
@@ -87,7 +112,10 @@ export class FileAnalysisService {
                 lastVerifiedAt: new Date().toISOString()
             };
 
-            this.logger.info(`[FileAnalysisService] 静态分析完成: ${relativePath}`);
+            // 6. 写入缓存（仅静态部分）
+            await this.cache.set(contentHash, capsule);
+
+            this.logger.info(`[FileAnalysisService] 静态分析完成并缓存: ${relativePath}`);
             return capsule;
 
         } catch (error) {
@@ -100,8 +128,8 @@ export class FileAnalysisService {
      * 对已有的静态分析结果进行AI增强
      */
     public async enhanceWithAI(staticCapsule: FileCapsule, options: AnalysisOptions = {}): Promise<FileCapsule> {
-        const filePath = staticCapsule.file;
-        this.logger.info(`[FileAnalysisService] AI增强分析: ${filePath}`);
+        const relativePath = staticCapsule.file;
+        this.logger.info(`[FileAnalysisService] AI增强分析: ${relativePath}`);
 
         try {
             // 检查是否启用AI
@@ -121,14 +149,29 @@ export class FileAnalysisService {
                 return staticCapsule;
             }
 
+            // 🔥 将相对路径转换为绝对路径
+            // capsule.file 是 POSIX 相对路径（如 "/src/main.tsx"）
+            // 需要转换为绝对路径才能读取文件
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
+                this.logger.error('[FileAnalysisService] 无法获取工作区根目录');
+                return staticCapsule;
+            }
+            
+            const workspaceRoot = workspaceFolders[0].uri.fsPath;
+            const normalizedRelative = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+            const absolutePath = vscode.Uri.joinPath(workspaceFolders[0].uri, normalizedRelative).fsPath;
+            
+            this.logger.info(`[FileAnalysisService] 路径转换: ${relativePath} → ${absolutePath}`);
+
             // 读取文件内容
-            const uri = vscode.Uri.file(filePath);
+            const uri = vscode.Uri.file(absolutePath);
             const content = await vscode.workspace.fs.readFile(uri);
             const text = Buffer.from(content).toString('utf8');
 
-            // 准备AI分析输入
+            // 准备AI分析输入（使用相对路径，更易读）
             const aiInput = {
-                filePath,
+                filePath: relativePath,
                 lang: staticCapsule.lang,
                 content: text,
                 staticAnalysis: {
@@ -150,7 +193,10 @@ export class FileAnalysisService {
                 lastVerifiedAt: new Date().toISOString()
             };
 
-            this.logger.info('[FileAnalysisService] AI增强完成');
+            // 🔥 Phase 4: 更新缓存（包含AI增强结果）
+            await this.cache.set(staticCapsule.contentHash, enhancedCapsule);
+
+            this.logger.info('[FileAnalysisService] AI增强完成并更新缓存');
             return enhancedCapsule;
 
         } catch (error) {
@@ -414,5 +460,36 @@ export class FileAnalysisService {
 
             return parts.join(' ') + '.';
         }
+    }
+
+    // ==================== 缓存管理 ====================
+
+    /**
+     * 清除所有缓存
+     */
+    public async clearCache(): Promise<void> {
+        await this.cache.clear();
+        this.logger.info('[FileAnalysisService] 缓存已清除');
+    }
+
+    /**
+     * 获取缓存统计信息
+     */
+    public getCacheStats() {
+        return this.cache.getStats();
+    }
+
+    /**
+     * 打印缓存统计信息
+     */
+    public logCacheStats(): void {
+        this.cache.logStats();
+    }
+
+    /**
+     * 获取缓存命中率
+     */
+    public getCacheHitRate(): number {
+        return this.cache.getHitRate();
     }
 }

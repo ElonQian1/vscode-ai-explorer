@@ -300,11 +300,13 @@
                 console.log(`[绑定] 为文件 "${n.label}" 绑定双击事件`);
                 el.addEventListener("dblclick", (e) => {
                     e.stopPropagation(); // 防止事件冒泡
-                    console.log('[双击] 文件，请求分析:', n.data.path);
+                    // 优先使用 absPath，如果没有则回退到 path
+                    const filePath = n.data.absPath || n.data.path;
+                    console.log('[双击] 文件，请求分析:', filePath);
                     vscode.postMessage({
                         type: "analyze-file",
                         payload: {
-                            path: n.data.path,
+                            path: filePath,
                             nodeId: n.id,
                             position: n.position
                         }

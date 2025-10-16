@@ -133,6 +133,11 @@
         "icon": "$(question)"
       },
       {
+        "command": "fileAnalysis.clearCache",
+        "title": "文件分析：清除缓存",
+        "icon": "$(trash)"
+      },
+      {
         "command": "filetreeBlueprint.toggleHints",
         "title": "蓝图：开关状态栏提示",
         "icon": "$(eye)"

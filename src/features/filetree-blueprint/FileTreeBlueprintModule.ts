@@ -13,6 +13,7 @@ import { resolveTargetToFileUri } from './utils/resolveTarget';
 
 export class FileTreeBlueprintModule extends BaseModule {
     private generateUseCase?: GenerateBlueprintUseCase;
+    private fileAnalysisService?: any;  // FileAnalysisService
 
     constructor(container: DIContainer) {
         super(container, 'filetree-blueprint');
@@ -42,6 +43,13 @@ export class FileTreeBlueprintModule extends BaseModule {
         this.generateUseCase = this.container.get<GenerateBlueprintUseCase>(
             'generateBlueprintUseCase'
         );
+
+        // 获取文件分析服务（如果已注册）
+        try {
+            this.fileAnalysisService = this.container.get('fileAnalysisService');
+        } catch {
+            this.logger.warn('文件分析服务未注册，缓存清除功能将不可用');
+        }
     }
 
     private registerCommands(context: vscode.ExtensionContext): void {
@@ -156,6 +164,38 @@ export class FileTreeBlueprintModule extends BaseModule {
                         `状态栏提示已${!currentValue ? '开启' : '关闭'}` +
                         (!currentValue ? '\n\n下次打开蓝图时将显示 15 秒的操作提示' : '')
                     );
+                }
+            )
+        );
+
+        // 命令 6: 清除文件分析缓存
+        context.subscriptions.push(
+            vscode.commands.registerCommand(
+                'fileAnalysis.clearCache',
+                async () => {
+                    this.logger.info('执行命令: 清除文件分析缓存');
+                    
+                    if (!this.fileAnalysisService) {
+                        vscode.window.showWarningMessage('文件分析服务未初始化');
+                        return;
+                    }
+
+                    // 显示确认对话框
+                    const choice = await vscode.window.showWarningMessage(
+                        '确定要清除所有文件分析缓存吗？\n\n这将删除所有已缓存的静态分析和 AI 分析结果。',
+                        { modal: true },
+                        '清除缓存',
+                        '取消'
+                    );
+
+                    if (choice === '清除缓存') {
+                        await this.fileAnalysisService.clearCache();
+                        this.fileAnalysisService.logCacheStats();
+                        
+                        vscode.window.showInformationMessage(
+                            '✅ 文件分析缓存已清除\n\n下次分析文件时将重新执行静态分析和 AI 分析。'
+                        );
+                    }
                 }
             )
         );

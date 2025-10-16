@@ -420,7 +420,7 @@ export class BlueprintPanel {
         let filePath = payload?.path;
         const force = payload?.force || false;
         
-        this.logger.info(`[分析文件] ${filePath}, force=${force}`);
+        this.logger.info(`[分析文件] 收到请求, path=${filePath}, force=${force}`);
         
         if (!filePath) {
             this.logger.warn('分析文件消息缺少路径信息');
@@ -428,9 +428,18 @@ export class BlueprintPanel {
         }
 
         // 如果传入的是相对路径，转换为绝对路径
-        if (!path.isAbsolute(filePath) && this.currentGraph?.metadata?.workspaceRoot) {
-            filePath = toAbsolute(filePath, this.currentGraph.metadata.workspaceRoot);
-            this.logger.debug(`[分析文件] 转换为绝对路径: ${filePath}`);
+        if (!path.isAbsolute(filePath)) {
+            const workspaceRoot = this.currentGraph?.metadata?.workspaceRoot;
+            
+            if (!workspaceRoot) {
+                this.logger.error(`[分析文件] 无法获取工作区根目录，currentGraph=${!!this.currentGraph}`);
+                vscode.window.showErrorMessage(`无法分析文件：未找到工作区根目录`);
+                return;
+            }
+            
+            const oldPath = filePath;
+            filePath = toAbsolute(filePath, workspaceRoot);
+            this.logger.info(`[分析文件] 路径转换: ${oldPath} → ${filePath}`);
         }
 
         try {
