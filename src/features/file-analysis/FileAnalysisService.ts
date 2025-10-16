@@ -10,6 +10,7 @@ import { MultiProviderAIClient } from '../../core/ai/MultiProviderAIClient';
 import { StaticAnalyzer } from './StaticAnalyzer';
 import { LLMAnalyzer } from './LLMAnalyzer';
 import { FileCapsule, AnalysisOptions, Fact, Inference, Recommendation } from './types';
+import { toPosixRelative, getWorkspaceRelative } from '../../shared/utils/pathUtils';
 import * as vscode from 'vscode';
 
 export class FileAnalysisService {
@@ -38,6 +39,9 @@ export class FileAnalysisService {
     /**
      * 仅执行静态分析(快速返回)
      * 用于乐观UI模式,立即返回基础结果
+     * 
+     * @param filePath - 文件绝对路径
+     * @returns FileCapsule，其中 file 字段为 POSIX 相对路径
      */
     public async analyzeFileStatic(filePath: string): Promise<FileCapsule> {
         this.logger.info(`[FileAnalysisService] 静态分析: ${filePath}`);
@@ -46,19 +50,27 @@ export class FileAnalysisService {
             // 1. 静态分析
             const staticResult = await this.staticAnalyzer.analyzeFile(filePath);
 
-            // 2. 生成基础事实列表
+            // 2. 转换为工作区相对路径 (POSIX 格式)
+            const fileUri = vscode.Uri.file(filePath);
+            const relativePath = getWorkspaceRelative(fileUri);
+            
+            if (!relativePath) {
+                throw new Error(`文件不在工作区内: ${filePath}`);
+            }
+
+            // 3. 生成基础事实列表
             const facts = this.generateFacts(staticResult);
 
-            // 3. 生成简单摘要(基于静态分析)
+            // 4. 生成简单摘要(基于静态分析)
             const summary = {
                 zh: this.generateSummary(staticResult, 'zh'),
                 en: this.generateSummary(staticResult, 'en')
             };
 
-            // 4. 构建基础 FileCapsule (不含AI分析)
+            // 5. 构建基础 FileCapsule (不含AI分析)
             const capsule: FileCapsule = {
                 version: '1.0',
-                file: filePath,
+                file: relativePath,  // ✅ 使用 POSIX 相对路径
                 lang: staticResult.lang,
                 contentHash: staticResult.contentHash,
                 summary,
@@ -75,7 +87,7 @@ export class FileAnalysisService {
                 lastVerifiedAt: new Date().toISOString()
             };
 
-            this.logger.info(`[FileAnalysisService] 静态分析完成: ${filePath}`);
+            this.logger.info(`[FileAnalysisService] 静态分析完成: ${relativePath}`);
             return capsule;
 
         } catch (error) {

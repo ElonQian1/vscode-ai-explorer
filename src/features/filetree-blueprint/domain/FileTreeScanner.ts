@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { Logger } from '../../../core/logging/Logger';
 import { gridLayout } from '../utils/layoutHelpers';
+import { toPosixRelative, uriToRelative } from '../../../shared/utils/pathUtils';
 
 export type Position = { x: number; y: number };
 
@@ -87,12 +88,16 @@ export class FileTreeScanner {
             await this.scanDirectory(rootUri, rootUri, nodes, edges, 0);
         } else {
             // 单个文件
+            const relativePath = uriToRelative(rootUri, rootUri);
             nodes.push({
                 id: rootUri.fsPath,
                 label: rootName,
                 type: 'file',
                 position: { x: 0, y: 0 },
-                data: { path: rootUri.fsPath }
+                data: { 
+                    path: relativePath,  // ✅ 使用 POSIX 相对路径
+                    absPath: rootUri.fsPath  // 保留绝对路径供内部使用
+                }
             });
         }
 
@@ -153,13 +158,15 @@ export class FileTreeScanner {
 
         // 添加当前目录作为根节点
         const rootNodeId = dirUri.fsPath;
+        const rootRelativePath = workspaceRoot ? uriToRelative(dirUri, workspaceRoot) : '/';
         nodes.push({
             id: rootNodeId,
             label: dirName,
             type: 'folder',
             position: { x: 400, y: 50 },
             data: {
-                path: dirUri.fsPath,
+                path: rootRelativePath,  // ✅ 使用 POSIX 相对路径
+                absPath: dirUri.fsPath,  // 保留绝对路径供内部使用
                 isRoot: true,
                 relativePath: relativePath || '.'
             }
@@ -183,6 +190,8 @@ export class FileTreeScanner {
 
                 const isDirectory = type === vscode.FileType.Directory;
                 const nodeId = childPath;
+                const childUri = vscode.Uri.file(childPath);
+                const childRelativePath = workspaceRoot ? uriToRelative(childUri, workspaceRoot) : `/${name}`;
 
                 const node: Node = {
                     id: nodeId,
@@ -190,7 +199,8 @@ export class FileTreeScanner {
                     type: isDirectory ? 'folder' : 'file',
                     position: { x: 0, y: 0 }, // 临时位置，稍后批量计算
                     data: {
-                        path: childPath,
+                        path: childRelativePath,  // ✅ 使用 POSIX 相对路径
+                        absPath: childPath,  // 保留绝对路径供内部使用
                         parentPath: dirUri.fsPath,
                         extension: isDirectory ? undefined : path.extname(name)
                     }

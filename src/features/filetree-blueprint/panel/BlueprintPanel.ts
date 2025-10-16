@@ -17,6 +17,7 @@ import {
     createUpdateAnalysisCardMessage,
     createAnalysisErrorMessage
 } from '../../../shared/messages';
+import { toAbsolute, getWorkspaceRelative } from '../../../shared/utils/pathUtils';
 
 export class BlueprintPanel {
     private static currentPanel: BlueprintPanel | undefined;
@@ -207,7 +208,7 @@ export class BlueprintPanel {
     private async handleNodeDoubleClick(nodeData: any): Promise<void> {
         this.logger.info(`节点被双击: ${nodeData.label} (${nodeData.type})`);
 
-        if (nodeData.type === 'folder' && nodeData.data?.path) {
+        if (nodeData.type === 'folder' && nodeData.data) {
             // 如果是根节点，提示用户
             if (nodeData.data?.isRoot) {
                 vscode.window.showInformationMessage(
@@ -216,20 +217,27 @@ export class BlueprintPanel {
                 return;
             }
             
-            // 下钻到子文件夹：data.path 已经是完整的绝对路径
-            const folderPath = nodeData.data.path;
+            // 使用绝对路径（优先使用 absPath，回退到 path）
+            const absPath = nodeData.data.absPath || nodeData.data.path;
             
-            this.logger.info(`下钻到: ${folderPath}`);
+            this.logger.info(`下钻到: ${absPath}`);
             
-            // 直接使用绝对路径，不需要拼接
             vscode.commands.executeCommand(
                 'filetreeBlueprint.openFromPath',
-                vscode.Uri.file(folderPath)
+                vscode.Uri.file(absPath)
             );
             
-        } else if (nodeData.type === 'file' && nodeData.data?.path) {
-            // 如果是文件，打开该文件
-            await this.openFile(nodeData.data.path);
+        } else if (nodeData.type === 'file' && nodeData.data) {
+            // 获取绝对路径
+            const absPath = nodeData.data.absPath || nodeData.data.path;
+            
+            // 如果 path 是相对路径，需要转换为绝对路径
+            let filePath = absPath;
+            if (!path.isAbsolute(absPath) && this.currentGraph?.metadata?.workspaceRoot) {
+                filePath = toAbsolute(absPath, this.currentGraph.metadata.workspaceRoot);
+            }
+            
+            await this.openFile(filePath);
         }
     }
 
@@ -409,7 +417,7 @@ export class BlueprintPanel {
      * 3. AI完成后发送update消息更新卡片
      */
     private async handleAnalyzeFile(payload: any): Promise<void> {
-        const filePath = payload?.path;
+        let filePath = payload?.path;
         const force = payload?.force || false;
         
         this.logger.info(`[分析文件] ${filePath}, force=${force}`);
@@ -417,6 +425,12 @@ export class BlueprintPanel {
         if (!filePath) {
             this.logger.warn('分析文件消息缺少路径信息');
             return;
+        }
+
+        // 如果传入的是相对路径，转换为绝对路径
+        if (!path.isAbsolute(filePath) && this.currentGraph?.metadata?.workspaceRoot) {
+            filePath = toAbsolute(filePath, this.currentGraph.metadata.workspaceRoot);
+            this.logger.debug(`[分析文件] 转换为绝对路径: ${filePath}`);
         }
 
         try {
