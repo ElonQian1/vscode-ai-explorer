@@ -3,6 +3,9 @@
 /**
  * 文件分析服务
  * 协调静态分析、AI分析和缓存
+ * 
+ * 🔥 Phase 4: 缓存机制
+ * 🔥 Phase 6: 错误恢复
  */
 
 import { Logger } from '../../core/logging/Logger';
@@ -10,8 +13,11 @@ import { MultiProviderAIClient } from '../../core/ai/MultiProviderAIClient';
 import { StaticAnalyzer } from './StaticAnalyzer';
 import { LLMAnalyzer } from './LLMAnalyzer';
 import { CapsuleCache } from './CapsuleCache';
+import { AnalysisError, ErrorCode, ErrorSeverity } from './errors';
 import { FileCapsule, AnalysisOptions, Fact, Inference, Recommendation } from './types';
 import { toPosixRelative, getWorkspaceRelative } from '../../shared/utils/pathUtils';
+import { RetryHelper } from '../../shared/utils/RetryHelper';
+import { BatchAnalyzer } from './BatchAnalyzer';
 import * as vscode from 'vscode';
 
 export class FileAnalysisService {
@@ -20,11 +26,13 @@ export class FileAnalysisService {
     private llmAnalyzer?: LLMAnalyzer;
     private aiClient?: MultiProviderAIClient;
     private cache: CapsuleCache;
+    private batchAnalyzer: BatchAnalyzer;
 
     constructor(logger: Logger) {
         this.logger = logger;
         this.staticAnalyzer = new StaticAnalyzer(logger);
         this.cache = new CapsuleCache(logger);
+        this.batchAnalyzer = new BatchAnalyzer(this, logger);
         // 异步初始化缓存目录
         this.cache.initialize().catch(err => {
             this.logger.error('[FileAnalysisService] 缓存初始化失败', err);
@@ -182,7 +190,27 @@ export class FileAnalysisService {
                 }
             };
 
-            const aiResult = await this.llmAnalyzer.analyzeFile(aiInput);
+            // 🔥 Phase 6: 带重试和超时的 AI 分析
+            const aiResult = await RetryHelper.withRetry(
+                async () => {
+                    // 超时控制（30s）
+                    return await Promise.race([
+                        this.llmAnalyzer!.analyzeFile(aiInput),
+                        this.createTimeout(30000, relativePath)
+                    ]);
+                },
+                {
+                    retryTimes: 2,  // 最多重试 2 次（总共 3 次尝试）
+                    backoffMs: 1000,  // 初始等待 1s
+                    backoffMultiplier: 2,  // 指数退避（1s, 2s）
+                    onRetry: (error, attempt) => {
+                        this.logger.warn(
+                            `[FileAnalysisService] AI分析失败，重试 ${attempt}/2`,
+                            error
+                        );
+                    }
+                }
+            );
 
             // 合并AI结果到静态结果
             const enhancedCapsule: FileCapsule = {
@@ -200,10 +228,42 @@ export class FileAnalysisService {
             return enhancedCapsule;
 
         } catch (error) {
-            this.logger.warn('[FileAnalysisService] AI增强失败,返回静态结果', error);
+            // 🔥 Phase 6: 结构化错误处理
+            const analysisError = AnalysisError.fromError(error, ErrorCode.AI_REQUEST_FAILED);
+            
+            // 根据错误严重性记录日志
+            switch (analysisError.severity) {
+                case ErrorSeverity.WARN:
+                    this.logger.warn(analysisError.toLogMessage());
+                    break;
+                case ErrorSeverity.ERROR:
+                case ErrorSeverity.FATAL:
+                    this.logger.error(analysisError.toLogMessage(), error);
+                    break;
+                default:
+                    this.logger.info(analysisError.toLogMessage());
+            }
+
             // 降级: 返回原始静态结果
             return staticCapsule;
         }
+    }
+
+    /**
+     * 创建超时 Promise
+     * 🔥 Phase 6: 超时控制
+     */
+    private createTimeout(ms: number, file: string): Promise<never> {
+        return new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new AnalysisError(
+                    `AI 分析超时 (${ms}ms)`,
+                    ErrorCode.AI_TIMEOUT,
+                    ErrorSeverity.WARN,
+                    { file, timeout: ms }
+                ));
+            }, ms);
+        });
     }
 
     /**
@@ -491,5 +551,40 @@ export class FileAnalysisService {
      */
     public getCacheHitRate(): number {
         return this.cache.getHitRate();
+    }
+
+    // ==================== 批量分析 (Phase 5) ====================
+
+    /**
+     * 批量分析文件（仅静态分析）
+     * 🔥 Phase 5: 性能优化
+     */
+    public async analyzeBatch(
+        filePaths: string[],
+        onProgress?: (progress: any) => void
+    ) {
+        return await this.batchAnalyzer.analyzeFiles(filePaths, onProgress);
+    }
+
+    /**
+     * 批量 AI 增强
+     * 🔥 Phase 5: 性能优化
+     */
+    public async enhanceBatch(
+        capsules: FileCapsule[],
+        onProgress?: (progress: any) => void
+    ) {
+        return await this.batchAnalyzer.enhanceBatch(capsules, onProgress);
+    }
+
+    /**
+     * 批量分析并增强（一站式）
+     * 🔥 Phase 5: 性能优化
+     */
+    public async analyzeAndEnhanceBatch(
+        filePaths: string[],
+        onProgress?: (progress: any) => void
+    ) {
+        return await this.batchAnalyzer.analyzeAndEnhance(filePaths, onProgress);
     }
 }

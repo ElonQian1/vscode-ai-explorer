@@ -3,14 +3,21 @@
  * 重试助手
  * 用于处理短暂错误（如 429 限流、网络超时）的自动重试
  * 
+ * 🔥 Phase 6: 增强版本
+ * - 支持 AnalysisError 判断
+ * - 更智能的重试策略
+ * - 详细的日志记录
+ * 
  * 使用示例：
  * ```typescript
  * const result = await RetryHelper.withRetry(
  *     async () => await apiCall(),
- *     { retryTimes: 3, backoffMs: 300 }
+ *     { retryTimes: 3, backoffMs: 1000 }
  * );
  * ```
  */
+
+import { AnalysisError } from '../../features/file-analysis/errors';
 
 export interface RetryOptions {
     /** 重试次数（默认 1） */
@@ -77,23 +84,40 @@ export class RetryHelper {
 
     /**
      * 默认的重试判断逻辑
+     * 
+     * 🔥 Phase 6: 支持 AnalysisError
+     * 
      * 对以下情况进行重试：
+     * - AnalysisError.isRetryable() === true
      * - HTTP 429 (Too Many Requests)
      * - HTTP 503 (Service Unavailable)
      * - 超时错误
      * - 网络错误
      */
     static defaultShouldRetry(error: any): boolean {
-        // HTTP 状态码判断
+        // 1. AnalysisError 判断
+        if (error instanceof AnalysisError) {
+            return error.isRetryable();
+        }
+
+        // 2. HTTP 状态码判断
         if (error?.response?.status === 429) return true;  // 限流
         if (error?.response?.status === 503) return true;  // 服务不可用
+        if (error?.response?.status === 502) return true;  // 网关错误
+        if (error?.response?.status === 504) return true;  // 网关超时
         
-        // 错误消息判断
+        // 3. Node.js 错误代码
+        if (error?.code === 'ECONNREFUSED') return true;   // 连接被拒绝
+        if (error?.code === 'ETIMEDOUT') return true;      // 超时
+        if (error?.code === 'ECONNRESET') return true;     // 连接重置
+        if (error?.code === 'ENOTFOUND') return true;      // DNS 查找失败
+        if (error?.code === 'ENETUNREACH') return true;    // 网络不可达
+        
+        // 4. 错误消息判断
         const message = error?.message?.toLowerCase() || '';
-        if (message.includes('timeout')) return true;      // 超时
-        if (message.includes('econnreset')) return true;   // 连接重置
-        if (message.includes('enotfound')) return true;    // DNS 查找失败
-        if (message.includes('enetunreach')) return true;  // 网络不可达
+        if (message.includes('timeout')) return true;
+        if (message.includes('network')) return true;
+        if (message.includes('socket hang up')) return true;
         
         return false;
     }
