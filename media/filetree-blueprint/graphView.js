@@ -57,6 +57,37 @@
         });
     }
 
+    // ✅ 辅助函数：路径规范化（转换为 POSIX 格式）
+    function toPosix(p) {
+        return String(p || '').replace(/\\/g, '/');
+    }
+
+    // ✅ 辅助函数：规范化相对路径（确保以 / 开头）
+    function normalizeRel(p, base) {
+        p = toPosix(p);
+        // 如果已经以 / 开头，直接返回
+        if (p.startsWith('/')) {
+            return p;
+        }
+        // 如果有 base 且不是根，拼接 base
+        if (base && base !== '/') {
+            return `${base}/${p}`;
+        }
+        // 否则，添加 / 前缀
+        return `/${p}`;
+    }
+
+    // ✅ 辅助函数：HTML 转义
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, m => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m]));
+    }
+
     // 初始化
     function init() {
         setupEventListeners();

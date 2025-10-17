@@ -18,6 +18,23 @@ import {
     createAnalysisErrorMessage
 } from '../../../shared/messages';
 import { toAbsolute, getWorkspaceRelative } from '../../../shared/utils/pathUtils';
+import { resolveTargetToFileAndRoot, toPosix, relativePosix, toAbsoluteUri } from './resolveTarget';
+
+/**
+ * 面板状态：保存根目录、当前聚焦路径、导航栈等
+ */
+interface PanelState {
+    /** 面板的根目录（必填，所有相对路径都基于此）*/
+    rootUri: vscode.Uri;
+    /** 当前聚焦的子目录（相对 rootUri 的 POSIX 路径，如 '/src/lib'）*/
+    focusPath: string;
+    /** 下钻/上钻导航栈 */
+    navStack: string[];
+    /** Webview 是否已就绪 */
+    webviewReady: boolean;
+    /** 消息队列（在 ready 之前排队）*/
+    messageQueue: ExtensionToWebview[];
+}
 
 export class BlueprintPanel {
     private static currentPanel: BlueprintPanel | undefined;
