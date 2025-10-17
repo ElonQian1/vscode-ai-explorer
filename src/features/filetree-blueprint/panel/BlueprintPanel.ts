@@ -160,6 +160,15 @@ export class BlueprintPanel {
         this.messageQueue = [];
         
         this.logger.info('[UI] ✅ 排队消息发送完成');
+
+        // ✅ 修复：如果已有 currentGraph，重新发送 init-graph（以防在 ready 之前就调用了 showGraph）
+        if (this.currentGraph) {
+            this.logger.info('[UI] 🔄 检测到已有图表数据，重新发送 init-graph');
+            await this.safePostMessage({
+                type: 'init-graph',
+                payload: this.currentGraph
+            });
+        }
     }
 
     /**
