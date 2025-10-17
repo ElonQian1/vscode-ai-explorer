@@ -1123,6 +1123,39 @@
         `;
     }
 
+    // ✅ Phase 7: 双击事件探针（Ctrl+Shift+D 切换）
+    (() => {
+        let probeEnabled = false;
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                probeEnabled = !probeEnabled;
+                console.log(`🔍 双击诊断探针: ${probeEnabled ? 'ON' : 'OFF'}`);
+                if (probeEnabled) {
+                    console.log('💡 现在双击任何元素，都会显示事件路径');
+                }
+            }
+        });
+
+        document.addEventListener('dblclick', (e) => {
+            if (!probeEnabled) return;
+            
+            const path = e.composedPath()
+                .filter(x => x?.nodeType === 1)
+                .map(x => {
+                    if (x.id) return `#${x.id}`;
+                    if (x.className) return `.${x.className.split(' ')[0]}`;
+                    return x.tagName;
+                })
+                .slice(0, 6);
+            
+            console.log('🖱️ dblclick 事件路径:', path.join(' > '));
+            console.log('   目标元素:', e.target);
+            console.log('   是否被阻止:', e.defaultPrevented);
+            console.log('   是否冒泡:', e.bubbles);
+        }, true); // capture 捕获阶段，能看到事件被谁拦截
+    })();
+
     // 启动
     init();
 })();
+
