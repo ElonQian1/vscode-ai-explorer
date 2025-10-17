@@ -27,6 +27,13 @@ export interface ReadyMessage {
 }
 
 /**
+ * ✅ Phase 7: Webview 脚本加载完成，已准备好接收消息
+ */
+export interface WebviewReadyMessage {
+    type: 'webview-ready';
+}
+
+/**
  * 节点点击事件
  */
 export interface NodeClickMessage {
@@ -179,6 +186,7 @@ export interface ErrorMessage {
  */
 export type WebviewToExtension =
     | ReadyMessage
+    | WebviewReadyMessage
     | NodeClickMessage
     | NodeDoubleClickMessage
     | AnalyzeFileMessage

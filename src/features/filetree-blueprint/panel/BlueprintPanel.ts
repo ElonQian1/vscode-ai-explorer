@@ -28,6 +28,10 @@ export class BlueprintPanel {
     private extensionUri: vscode.Uri;
     private statusBarItem?: vscode.StatusBarItem;
     private fileAnalysisService: FileAnalysisService;
+    
+    // ✅ Phase 7: Ready 握手机制
+    private webviewReady: boolean = false;
+    private messageQueue: ExtensionToWebview[] = [];
 
     private constructor(
         panel: vscode.WebviewPanel,
@@ -100,7 +104,8 @@ export class BlueprintPanel {
         this.currentGraph = graph;
         this.panel.title = graph.title;
         
-        this.sendMessage({
+        // ✅ Phase 7: 使用安全发送（带队列）
+        this.safePostMessage({
             type: 'init-graph',
             payload: graph
         });
@@ -110,9 +115,51 @@ export class BlueprintPanel {
 
     /**
      * 发送消息到 Webview (类型安全)
+     * 已废弃：请使用 safePostMessage
      */
     private sendMessage(message: ExtensionToWebview): void {
         this.panel.webview.postMessage(message);
+    }
+
+    /**
+     * ✅ Phase 7: 安全发送消息（带队列机制）
+     * 在 Webview 未就绪时将消息加入队列，就绪后统一发送
+     */
+    private async safePostMessage(message: ExtensionToWebview): Promise<void> {
+        if (!this.webviewReady) {
+            this.messageQueue.push(message);
+            this.logger.debug(`[UI] (defer) 排队消息: ${message.type}`, { queueLength: this.messageQueue.length });
+            return;
+        }
+
+        const ok = await this.panel.webview.postMessage(message);
+        const hasPayload = 'payload' in message ? '(有payload)' : '';
+        this.logger.debug(`[UI] postMessage: ${message.type} ${ok ? '✅' : '❌'} ${hasPayload}`);
+        
+        if (!ok) {
+            this.logger.warn(`[UI] ⚠️ 消息发送失败: ${message.type}，可能 Webview 已释放`);
+        }
+    }
+
+    /**
+     * ✅ Phase 7: 处理 Webview 就绪信号
+     * 收到 webview-ready 后，立即发送所有排队消息
+     */
+    private async handleWebviewReady(): Promise<void> {
+        this.logger.info(`[UI] 🎉 Webview 已就绪，开始发送排队消息: ${this.messageQueue.length} 条`);
+        
+        this.webviewReady = true;
+
+        // 发送所有排队消息
+        for (const msg of this.messageQueue) {
+            const ok = await this.panel.webview.postMessage(msg);
+            this.logger.debug(`[UI] 发送排队消息: ${msg.type} ${ok ? '✅' : '❌'}`);
+        }
+
+        // 清空队列
+        this.messageQueue = [];
+        
+        this.logger.info('[UI] ✅ 排队消息发送完成');
     }
 
     /**
@@ -123,10 +170,18 @@ export class BlueprintPanel {
         this.logger.debug(`收到 Webview 消息: ${message.type}`);
 
         switch (message.type) {
+            case 'webview-ready':
+                // ✅ Phase 7: Webview 脚本已加载完成，可以发送消息了
+                await this.handleWebviewReady();
+                break;
+
             case 'ready':
-                // Webview 已就绪
+                // Webview 已就绪（旧的 ready 保留兼容性）
                 if (this.currentGraph) {
-                    this.showGraph(this.currentGraph);
+                    await this.safePostMessage({
+                        type: 'init-graph',
+                        payload: this.currentGraph
+                    });
                 }
                 break;
 
@@ -446,9 +501,10 @@ export class BlueprintPanel {
             // ✅ 步骤1: 先做静态分析,立即返回结果
             const staticCapsule = await this.fileAnalysisService.analyzeFileStatic(filePath);
 
-            // ✅ 步骤2: 立即发送静态结果到前端(带loading标记)
+            // ✅ Phase 7: 使用安全发送（带队列）
+            // 步骤2: 立即发送静态结果到前端(带loading标记)
             const showMessage = createShowAnalysisCardMessage(staticCapsule, true);
-            this.sendMessage(showMessage);
+            await this.safePostMessage(showMessage);
 
             this.logger.info(`[UI] 已发送静态分析卡片: ${filePath}`);
 
@@ -458,12 +514,13 @@ export class BlueprintPanel {
         } catch (error) {
             this.logger.error('静态分析失败', error);
             
+            // ✅ Phase 7: 使用安全发送
             // 发送错误消息
             const errorMsg = createAnalysisErrorMessage(
                 filePath,
                 error instanceof Error ? error.message : '分析失败'
             );
-            this.sendMessage(errorMsg);
+            await this.safePostMessage(errorMsg);
             
             vscode.window.showErrorMessage(`分析失败: ${path.basename(filePath)}`);
         }
@@ -479,22 +536,24 @@ export class BlueprintPanel {
             // 调用AI增强分析
             const fullCapsule = await this.fileAnalysisService.enhanceWithAI(staticCapsule, { force });
 
-            // ✅ 发送AI更新结果
+            // ✅ Phase 7: 使用安全发送
+            // 发送AI更新结果
             const updateMessage = createUpdateAnalysisCardMessage(fullCapsule, false);
-            this.sendMessage(updateMessage);
+            await this.safePostMessage(updateMessage);
 
             this.logger.info(`[UI] 已发送AI增强结果: ${filePath}`);
 
         } catch (error) {
             this.logger.warn('[AI] AI分析失败,保留静态结果', error);
             
+            // ✅ Phase 7: 使用安全发送
             // AI失败时也发送更新,只是标记loading=false
             const errorMessage = createUpdateAnalysisCardMessage(
                 staticCapsule,
                 false,
                 error instanceof Error ? error.message : 'AI分析失败'
             );
-            this.sendMessage(errorMessage);
+            await this.safePostMessage(errorMessage);
         }
     }
 
@@ -572,7 +631,7 @@ export class BlueprintPanel {
     private getHtmlContent(extensionUri: vscode.Uri): string {
         const webview = this.panel.webview;
 
-        // 资源 URI
+        // ✅ Phase 7: 资源 URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'graphView.js')
         );
@@ -639,7 +698,8 @@ export class BlueprintPanel {
         </div>
     </div>
     
-    <!-- ✅ ES6 模块：先加载卡片管理模块 -->
+    <!-- ✅ Phase 7: 脚本注入顺序（关键！）-->
+    <!-- Step 1: ES6 模块 - 卡片管理模块（必须最先加载） -->
     <script type="module" nonce="${nonce}">
         // 导入卡片管理模块
         import { AnalysisCardManager } from '${cardModuleUri}';
@@ -651,7 +711,7 @@ export class BlueprintPanel {
         console.log('[模块] AnalysisCardManager 已加载');
     </script>
     
-    <!-- 主脚本 -->
+    <!-- Step 2: graphView.js - 图表交互逻辑（包含消息监听 + Ready 握手） -->
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

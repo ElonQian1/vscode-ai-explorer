@@ -144,9 +144,11 @@
         });
     }
 
-    // 通知扩展已就绪
+    // ✅ Phase 7: 通知扩展 Webview 已就绪（可以发送消息了）
     function notifyReady() {
-        vscode.postMessage({ type: 'ready' });
+        console.log('[graphView] 🎉 Webview 已就绪，发送 ready 信号');
+        vscode.postMessage({ type: 'webview-ready' });
+        vscode.postMessage({ type: 'ready' }); // 保留旧消息以兼容
     }
 
     // 处理来自扩展的消息
@@ -170,37 +172,54 @@
             // 响应来自扩展的打开帮助命令
             openHelp();
         } else if (msg?.type === 'show-analysis-card') {
-            // ✅ 显示文件分析卡片(使用模块化管理器)
-            console.log('[webview] 收到 show-analysis-card:', msg.payload.file);
+            // ✅ Phase 7: 显示文件分析卡片(使用模块化管理器)
+            console.log('[graphView] 📨 收到 show-analysis-card:', msg.payload?.file, {
+                hasContent: !!msg.payload?.content,
+                loading: msg.payload?.loading,
+                hasCardManager: !!window.cardManager
+            });
             
             // ✅ 使用全局卡片管理器
             if (window.cardManager) {
-                const rendered = window.cardManager.showCard(msg.payload);
-                if (rendered) {
-                    vscode.postMessage({
-                        type: 'analysis-card-shown',
-                        payload: { file: msg.payload.file }
-                    });
-                } else {
-                    console.error('[webview] 卡片渲染失败');
+                try {
+                    const rendered = window.cardManager.showCard(msg.payload);
+                    if (rendered) {
+                        console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
+                        vscode.postMessage({
+                            type: 'analysis-card-shown',
+                            payload: { file: msg.payload.file }
+                        });
+                    } else {
+                        console.error('[graphView] ❌ 卡片渲染失败（showCard 返回 false）');
+                    }
+                } catch (error) {
+                    console.error('[graphView] ❌ 渲染卡片时异常:', error);
                 }
             } else {
-                console.error('[webview] cardManager 未初始化');
+                console.error('[graphView] ❌ cardManager 未初始化！请检查 analysisCard.js 是否已加载');
             }
         } else if (msg?.type === 'update-analysis-card') {
-            // ✅ 更新文件分析卡片(使用模块化管理器)
-            console.log('[webview] 收到 update-analysis-card:', msg.payload.file);
+            // ✅ Phase 7: 更新文件分析卡片(使用模块化管理器)
+            console.log('[graphView] 📨 收到 update-analysis-card:', msg.payload?.file, {
+                hasAI: msg.payload?.ai !== undefined
+            });
             
             if (window.cardManager) {
-                window.cardManager.updateCard(msg.payload);
+                try {
+                    window.cardManager.updateCard(msg.payload);
+                    console.log('[graphView] ✅ 卡片更新成功');
+                } catch (error) {
+                    console.error('[graphView] ❌ 更新卡片时异常:', error);
+                }
             } else {
-                console.error('[webview] cardManager 未初始化');
+                console.error('[graphView] ❌ cardManager 未初始化');
             }
         } else if (msg?.type === 'analysis-error') {
-            // ✅ 显示分析错误
-            console.error('[webview] 分析错误:', msg.payload);
+            // ✅ Phase 7: 显示分析错误
+            console.error('[graphView] ❌ 分析错误:', msg.payload);
             const { file, message } = msg.payload || {};
-            vscode.window?.showErrorMessage?.(` 分析失败: ${file}\n${message || '未知错误'}`);
+            // TODO: 实现 toast 提示
+            console.error(`分析失败: ${file}\n${message || '未知错误'}`);
         }
     }
 
