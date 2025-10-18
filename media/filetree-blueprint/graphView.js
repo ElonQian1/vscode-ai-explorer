@@ -310,41 +310,54 @@
                 hasCardManager: !!window.cardManager
             });
             
-            // ✅ 使用全局卡片管理器
-            if (window.cardManager) {
-                try {
-                    const rendered = window.cardManager.showCard(msg.payload);
-                    if (rendered) {
-                        console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
-                        vscode.postMessage({
-                            type: 'analysis-card-shown',
-                            payload: { file: msg.payload.file }
-                        });
-                    } else {
-                        console.error('[graphView] ❌ 卡片渲染失败（showCard 返回 false）');
+            // ✅ 智能等待cardManager初始化
+            function tryShowCard(attempts = 0) {
+                if (window.cardManager) {
+                    try {
+                        const rendered = window.cardManager.showCard(msg.payload);
+                        if (rendered) {
+                            console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
+                            vscode.postMessage({
+                                type: 'analysis-card-shown',
+                                payload: { file: msg.payload.file }
+                            });
+                        } else {
+                            console.error('[graphView] ❌ 卡片渲染失败（showCard 返回 false）');
+                        }
+                    } catch (error) {
+                        console.error('[graphView] ❌ 渲染卡片时异常:', error);
                     }
-                } catch (error) {
-                    console.error('[graphView] ❌ 渲染卡片时异常:', error);
+                } else if (attempts < 10) {
+                    console.log(`[graphView] ⏳ cardManager 未就绪，等待... (${attempts + 1}/10)`);
+                    setTimeout(() => tryShowCard(attempts + 1), 100);
+                } else {
+                    console.error('[graphView] ❌ cardManager 初始化超时！请检查 analysisCard.js 加载');
                 }
-            } else {
-                console.error('[graphView] ❌ cardManager 未初始化！请检查 analysisCard.js 是否已加载');
             }
+            tryShowCard();
         } else if (msg?.type === 'update-analysis-card') {
             // ✅ Phase 7: 更新文件分析卡片(使用模块化管理器)
             console.log('[graphView] 📨 收到 update-analysis-card:', msg.payload?.file, {
                 hasAI: msg.payload?.ai !== undefined
             });
             
-            if (window.cardManager) {
-                try {
-                    window.cardManager.updateCard(msg.payload);
-                    console.log('[graphView] ✅ 卡片更新成功');
-                } catch (error) {
-                    console.error('[graphView] ❌ 更新卡片时异常:', error);
+            // ✅ 智能等待cardManager初始化
+            function tryUpdateCard(attempts = 0) {
+                if (window.cardManager) {
+                    try {
+                        window.cardManager.updateCard(msg.payload);
+                        console.log('[graphView] ✅ 卡片更新成功');
+                    } catch (error) {
+                        console.error('[graphView] ❌ 更新卡片时异常:', error);
+                    }
+                } else if (attempts < 10) {
+                    console.log(`[graphView] ⏳ cardManager 未就绪，等待更新... (${attempts + 1}/10)`);
+                    setTimeout(() => tryUpdateCard(attempts + 1), 100);
+                } else {
+                    console.error('[graphView] ❌ cardManager 初始化超时！无法更新卡片');
                 }
-            } else {
-                console.error('[graphView] ❌ cardManager 未初始化');
             }
+            tryUpdateCard();
         } else if (msg?.type === 'analysis-error') {
             // ✅ Phase 7: 显示分析错误
             console.error('[graphView] ❌ 分析错误:', msg.payload);
@@ -668,15 +681,18 @@
 
     // 更新统计信息
     function updateStats() {
-        // 🚨 防御性编程：检查元素是否存在
-        if (nodeCountEl) {
-            nodeCountEl.textContent = `节点: ${graph.nodes.length}`;
+        // 🚨 防御性编程：兼容不同的DOM结构
+        const nEl = document.getElementById('stat-total-nodes') || nodeCountEl;
+        const eEl = document.getElementById('stat-total-edges') || edgeCountEl;
+        
+        if (nEl) {
+            nEl.textContent = `${graph.nodes.length} nodes`;
         }
-        if (edgeCountEl) {
-            edgeCountEl.textContent = `边: ${graph.edges.length}`;
+        if (eEl) {
+            eEl.textContent = `${graph.edges.length} edges`;
         }
         
-        // 在控制台显示统计信息（适配简化HTML）
+        // 在控制台显示统计信息
         console.log(`[统计] 📊 ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
     }
 

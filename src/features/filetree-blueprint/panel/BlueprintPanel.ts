@@ -807,6 +807,13 @@ export class BlueprintPanel {
     <title>文件树蓝图 - 急救模式</title>
 </head>
 <body>
+    <!-- 统计信息工具栏 -->
+    <div id="toolbar" style="position: fixed; top: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 4px; color: white; font-size: 12px;">
+        <span id="stat-total-nodes">0 nodes</span> | 
+        <span id="stat-total-edges">0 edges</span>
+    </div>
+
+    <!-- 主画布容器 -->
     <div id="graph-root">
         <div class="empty-state">
             <h3>🎨 画布已加载</h3>
@@ -814,6 +821,9 @@ export class BlueprintPanel {
             <p><small>如果长时间无数据，请检查Debug Banner状态</small></p>
         </div>
     </div>
+    
+    <!-- 分析卡片容器 -->
+    <div id="analysis-card-root"></div>
     
     <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
     <script src="${smokeProbeUri}"></script>

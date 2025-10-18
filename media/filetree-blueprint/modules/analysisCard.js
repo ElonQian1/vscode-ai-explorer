@@ -466,3 +466,25 @@ export class AnalysisCardManager {
         return date.toLocaleDateString();
     }
 }
+
+// 🚨 全局导出：确保 graphView.js 能访问到 cardManager
+(function() {
+    // 等待VS Code API就绪后创建全局实例
+    function initCardManager() {
+        if (window.__vscode || (typeof acquireVsCodeApi === 'function')) {
+            const vscode = window.__vscode || acquireVsCodeApi();
+            window.cardManager = new AnalysisCardManager(vscode);
+            console.log('[analysisCard] ✅ cardManager 已注册到全局');
+        } else {
+            console.warn('[analysisCard] ⚠️ VS Code API 未就绪，延迟初始化');
+            setTimeout(initCardManager, 100);
+        }
+    }
+    
+    // DOM就绪后立即初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCardManager);
+    } else {
+        initCardManager();
+    }
+})();
