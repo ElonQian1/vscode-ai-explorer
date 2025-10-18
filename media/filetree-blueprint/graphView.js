@@ -313,7 +313,8 @@
             function tryShowCard(attempts = 0) {
                 if (window.cardManager) {
                     try {
-                        const rendered = window.cardManager.showCard(msg.payload);
+                        window.cardManager.show(msg.payload);
+                        const rendered = true; // UMD版本的show方法无返回值
                         if (rendered) {
                             console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
                             vscode.postMessage({
@@ -344,7 +345,7 @@
             function tryUpdateCard(attempts = 0) {
                 if (window.cardManager) {
                     try {
-                        window.cardManager.updateCard(msg.payload);
+                        window.cardManager.update(msg.payload);
                         console.log('[graphView] ✅ 卡片更新成功');
                     } catch (error) {
                         console.error('[graphView] ❌ 更新卡片时异常:', error);
