@@ -76,15 +76,8 @@ export class BlueprintPanel {
             messageQueue: []
         };
 
-        // ✅ 使用 WebviewTemplate 生成 HTML
-        this.panel.webview.html = generateWebviewHtml(
-            this.panel.webview,
-            extensionUri,
-            { 
-                devMode: true, // 🔍 开发模式：启用 SmokeProbe 和 DebugBanner
-                title: panel.title 
-            }
-        );
+        // 🚨 急救补丁：直接生成HTML，绕过可能有问题的WebviewTemplate
+        this.panel.webview.html = this.getEmergencyHtml(extensionUri);
 
         // 监听面板销毁
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -744,93 +737,121 @@ export class BlueprintPanel {
     }
 
     /**
-     * 生成 HTML 内容
+     * 🚨 紧急修复：生成简化的HTML内容，确保画布能显示
      */
-    private getHtmlContent(extensionUri: vscode.Uri): string {
+    private getEmergencyHtml(extensionUri: vscode.Uri): string {
         const webview = this.panel.webview;
+        const csp = webview.cspSource;
 
-        // ✅ Phase 7: 资源 URI
-        const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'graphView.js')
-        );
-        const cardModuleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'modules', 'analysisCard.js')
-        );
-        const styleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'index.css')
-        );
-        const cardStyleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint', 'analysisCard.css')
-        );
+        // 🚨 修复：确保所有资源都用asWebviewUri转换
+        const mediaBase = vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint');
+        
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView.js'));
+        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'index.css'));
+        const smokeProbeUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'SmokeProbe.js'));
+        const debugBannerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'DebugBanner.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
+
+        // 🚨 急救CSS：确保容器有高度，兼容原有的图表结构
+        const emergencyStyles = `
+            html, body { 
+                height: 100%; 
+                margin: 0; 
+                padding: 0; 
+                background: var(--vscode-editor-background, #1e1e1e); 
+                color: var(--vscode-foreground, #cccccc);
+                font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+            }
+            #graph-root { 
+                height: 100vh; 
+                width: 100vw; 
+                position: relative;
+                background: var(--vscode-editor-background, #1e1e1e);
+            }
+            /* 兼容原有结构 */
+            #canvasWrap, #canvas {
+                height: 100%;
+                width: 100%;
+                position: relative;
+            }
+            .empty-state {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
+                opacity: 0.7;
+                z-index: 1;
+            }
+            .empty-state h3 {
+                margin: 0 0 12px 0;
+                font-size: 18px;
+                color: var(--vscode-foreground, #cccccc);
+            }
+            .empty-state p {
+                margin: 8px 0;
+                color: var(--vscode-descriptionForeground, #999);
+            }
+        `;
 
         return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <link href="${styleUri}" rel="stylesheet">
-    <link href="${cardStyleUri}" rel="stylesheet">
-    <title>文件树蓝图</title>
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'none'; 
+        img-src ${csp} https:; 
+        script-src ${csp};
+        style-src ${csp} 'unsafe-inline';
+    ">
+    <link rel="stylesheet" href="${styleUri}">
+    <style>${emergencyStyles}</style>
+    <title>文件树蓝图 - 急救模式</title>
 </head>
 <body>
-    <div class="toolbar">
-        <button id="btn-reset-view" title="重置视图">🔄 重置</button>
-        <button id="btn-fit-view" title="适应窗口">📐 适应</button>
-        <button id="btn-zoom-in" title="放大">🔍+</button>
-        <button id="btn-zoom-out" title="缩小">🔍-</button>
-        <button id="btn-help" title="快捷键与操作说明" style="margin-left: 8px;">❓</button>
-        <span id="node-count" style="margin-left: 16px;">节点: 0</span>
-        <span id="edge-count">边: 0</span>
-        <span style="opacity: 0.6; margin-left: 16px; font-size: 11px;">💡 空格+拖拽=平移 · 滚轮=缩放 · 双击文件夹=下钻 · ?=帮助</span>
-    </div>
-    <div id="canvasWrap">
-        <div id="canvas">
-            <svg class="edges"></svg>
-            <div id="nodes"></div>
-        </div>
-    </div>
-    <div id="breadcrumb"></div>
-    
-    <!-- 帮助浮层 -->
-    <div class="help-overlay" id="helpOverlay">
-        <div class="help-card">
-            <div class="help-title">🎨 蓝图视图 · 快捷操作</div>
-            <ul class="help-list">
-                <li><kbd>空格</kbd> + 拖拽：平移画布</li>
-                <li><strong>滚轮</strong>：缩放画布</li>
-                <li><strong>拖拽节点</strong>：移动节点位置</li>
-                <li><strong>双击文件夹</strong>：下钻到子目录</li>
-                <li><strong>工具栏</strong>：返回上级、重置视图、适应窗口</li>
-                <li><kbd>?</kbd> 或 <kbd>Shift</kbd>+<kbd>/</kbd>：打开/关闭本帮助</li>
-                <li><kbd>Esc</kbd>：关闭本帮助</li>
-            </ul>
-            <div class="help-note">✨ 已优化防抖动：坐标整数化 · rAF节流 · GPU合成层</div>
-            <div class="help-actions">
-                <label class="noagain"><input type="checkbox" id="noShowAgain"> 下次不再自动显示</label>
-                <button id="helpClose" class="btn-primary">我知道了</button>
-            </div>
+    <div id="graph-root">
+        <div class="empty-state">
+            <h3>🎨 画布已加载</h3>
+            <p>正在初始化图表数据...</p>
+            <p><small>如果长时间无数据，请检查Debug Banner状态</small></p>
         </div>
     </div>
     
-    <!-- ✅ Phase 7: 脚本注入顺序（关键！）-->
-    <!-- Step 1: ES6 模块 - 卡片管理模块（必须最先加载） -->
-    <script type="module" nonce="${nonce}">
-        // 导入卡片管理模块
-        import { AnalysisCardManager } from '${cardModuleUri}';
+    <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
+    <script src="${smokeProbeUri}"></script>
+    <script src="${debugBannerUri}"></script>
+    <script src="${scriptUri}"></script>
+    
+    <script>
+        console.log('[BOOT] ✅ 所有脚本已加载完成');
         
-        // 创建全局卡片管理器实例
-        const vscode = acquireVsCodeApi();
-        window.cardManager = new AnalysisCardManager(vscode);
-        
-        console.log('[模块] AnalysisCardManager 已加载');
+        // 等待DOM + 初始化检查
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('[BOOT] ✅ DOM就绪，开始验证容器');
+            const root = document.getElementById('graph-root');
+            if (root) {
+                const rect = root.getBoundingClientRect();
+                console.log('[BOOT] 📐 容器尺寸:', {
+                    width: rect.width, 
+                    height: rect.height,
+                    top: rect.top,
+                    left: rect.left
+                });
+                
+                if (rect.height === 0) {
+                    console.error('[BOOT] ❌ 容器高度为0，CSS布局问题');
+                    root.style.height = '100vh';
+                    root.style.minHeight = '400px';
+                    console.log('[BOOT] � 已强制设置容器高度');
+                }
+            } else {
+                console.error('[BOOT] ❌ 找不到#graph-root容器');
+            }
+        });
     </script>
-    
-    <!-- Step 2: graphView.js - 图表交互逻辑（包含消息监听 + Ready 握手） -->
-    <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
     }

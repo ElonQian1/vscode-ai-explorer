@@ -16,7 +16,11 @@
  */
 
 (function() {
-    const vscode = acquireVsCodeApi();
+    // 🚨 修复：统一VS Code API获取，避免重复调用
+    if (!window.__vscode && typeof acquireVsCodeApi === 'function') {
+        window.__vscode = acquireVsCodeApi();
+    }
+    const vscode = window.__vscode;
     let channelStatus = 'disconnected';
     let lastEvent = '无';
     let probeElement = null;

@@ -10,7 +10,11 @@
  */
 
 (function () {
-    const vscode = acquireVsCodeApi();
+    // 🚨 修复：使用统一的VS Code API，避免重复获取
+    if (!window.__vscode && typeof acquireVsCodeApi === 'function') {
+        window.__vscode = acquireVsCodeApi();
+    }
+    const vscode = window.__vscode;
 
     // ✅ 卡片管理器（由 ES6 模块加载）
     // window.cardManager 在模块脚本中初始化
