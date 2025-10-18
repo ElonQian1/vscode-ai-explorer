@@ -64,7 +64,7 @@
         "title": "设置 OpenAI API Key"
       },
       {
-        "command": "aiExplorer.setHunyuanKey", 
+        "command": "aiExplorer.setHunyuanKey",
         "title": "设置腾讯混元 API Key"
       },
       {
@@ -291,7 +291,10 @@
         },
         "filetreeBlueprint.defaultScanMode": {
           "type": "string",
-          "enum": ["shallow", "deep"],
+          "enum": [
+            "shallow",
+            "deep"
+          ],
           "default": "shallow",
           "description": "默认扫描模式：shallow（仅当前目录）或 deep（递归所有子目录）"
         },
@@ -307,13 +310,20 @@
         },
         "aiExplorer.provider.primary": {
           "type": "string",
-          "enum": ["openai", "hunyuan"],
+          "enum": [
+            "openai",
+            "hunyuan"
+          ],
           "default": "openai",
           "description": "主用 AI 提供商"
         },
         "aiExplorer.provider.fallback": {
           "type": "string",
-          "enum": ["none", "openai", "hunyuan"],
+          "enum": [
+            "none",
+            "openai",
+            "hunyuan"
+          ],
           "default": "none",
           "description": "备用 AI 提供商"
         },
@@ -323,17 +333,17 @@
           "description": "腾讯云混元 API Key（从控制台获取，非 SecretId/SecretKey）"
         },
         "aiExplorer.hunyuanBaseUrl": {
-          "type": "string", 
+          "type": "string",
           "default": "https://api.hunyuan.cloud.tencent.com/v1",
           "description": "腾讯云混元 OpenAI 兼容接口地址（官方端点，无需修改）"
         },
         "aiExplorer.hunyuanModel": {
           "type": "string",
           "enum": [
-            "hunyuan-turbo", 
-            "hunyuan-turbos-longtext", 
-            "hunyuan-lite", 
-            "hunyuan-pro", 
+            "hunyuan-turbo",
+            "hunyuan-turbos-longtext",
+            "hunyuan-lite",
+            "hunyuan-pro",
             "hunyuan-standard"
           ],
           "default": "hunyuan-turbo",
@@ -351,7 +361,10 @@
         },
         "aiExplorer.alias.style": {
           "type": "string",
-          "enum": ["natural", "literal"],
+          "enum": [
+            "natural",
+            "literal"
+          ],
           "default": "literal",
           "description": "别名翻译风格：natural=自然中文（重组语序、可读性优先），literal=直译（逐词翻译、保持原顺序、保留分隔符）"
         },
@@ -371,12 +384,46 @@
             "type": "string"
           },
           "default": [
-            "UI", "API", "HTTP", "HTTPS", "URL", "URI", "DOM",
-            "ID", "UUID", "CPU", "GPU", "DB", "SQL", "ORM",
-            "TCP", "UDP", "TLS", "SSL", "SDK", "CLI", "CI", "CD",
-            "JWT", "CSS", "HTML", "JS", "TS", "JSX", "TSX",
-            "JSON", "XML", "CSV", "PNG", "JPG", "GIF", "SVG",
-            "PDF", "MD", "IOS", "OS"
+            "UI",
+            "API",
+            "HTTP",
+            "HTTPS",
+            "URL",
+            "URI",
+            "DOM",
+            "ID",
+            "UUID",
+            "CPU",
+            "GPU",
+            "DB",
+            "SQL",
+            "ORM",
+            "TCP",
+            "UDP",
+            "TLS",
+            "SSL",
+            "SDK",
+            "CLI",
+            "CI",
+            "CD",
+            "JWT",
+            "CSS",
+            "HTML",
+            "JS",
+            "TS",
+            "JSX",
+            "TSX",
+            "JSON",
+            "XML",
+            "CSV",
+            "PNG",
+            "JPG",
+            "GIF",
+            "SVG",
+            "PDF",
+            "MD",
+            "IOS",
+            "OS"
           ],
           "description": "缩写词白名单。只有在此列表中的全大写词才会被保留为缩写（如 API、HTML），其它全大写词会被当作普通词转为小写（如 DEBUG → debug）"
         },
@@ -398,7 +445,11 @@
         },
         "aiExplorer.alias.numberMode": {
           "type": "string",
-          "enum": ["keep", "cn", "roman"],
+          "enum": [
+            "keep",
+            "cn",
+            "roman"
+          ],
           "default": "keep",
           "description": "数字显示策略：keep=保持阿拉伯数字；cn=中文数字；roman=罗马数字（仅小范围演示）"
         },
@@ -417,7 +468,19 @@
           "items": {
             "type": "string"
           },
-          "default": ["the", "a", "an", "of", "for", "to", "in", "on", "by", "and", "or"],
+          "default": [
+            "the",
+            "a",
+            "an",
+            "of",
+            "for",
+            "to",
+            "in",
+            "on",
+            "by",
+            "and",
+            "or"
+          ],
           "description": "停用词列表（这些词不会发送给 AI 翻译）"
         },
         "aiExplorer.alias.keepEnglishVocab": {
@@ -425,7 +488,20 @@
           "items": {
             "type": "string"
           },
-          "default": ["react", "vue", "redux", "tailwind", "jest", "vitest", "webpack", "vite", "eslint", "prettier", "nodejs", "typescript"],
+          "default": [
+            "react",
+            "vue",
+            "redux",
+            "tailwind",
+            "jest",
+            "vitest",
+            "webpack",
+            "vite",
+            "eslint",
+            "prettier",
+            "nodejs",
+            "typescript"
+          ],
           "description": "保留英文的词汇列表（技术品牌名等，不翻译）"
         },
         "aiExplorer.alias.userWhitelist": {
@@ -507,6 +583,7 @@
     "grep:uml": "npx rg -t ts 'uml-canvas|UML|图表' src/features/uml-canvas"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
     "@types/node": "18.x",
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^6.4.0",
@@ -517,7 +594,8 @@
     "eslint-plugin-import": "^2.28.1",
     "rimraf": "^5.0.1",
     "tsc-alias": "^1.8.16",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "zod": "^3.25.76"
   },
   "dependencies": {
     "d3-force": "^3.0.0",
