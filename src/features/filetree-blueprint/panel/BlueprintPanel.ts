@@ -19,6 +19,8 @@ import {
 } from '../../../shared/messages';
 import { toAbsolute, getWorkspaceRelative } from '../../../shared/utils/pathUtils';
 import { resolveTargetToFileAndRoot, toPosix, relativePosix, toAbsoluteUri } from './resolveTarget';
+import { generateWebviewHtml } from './WebviewTemplate'; // ✅ 引入模板生成器
+import { W2E_DRILL, W2E_DRILL_UP, SYSTEM_PING, SYSTEM_PONG, E2W_INIT_GRAPH, E2W_DRILL_RESULT } from '../../../shared/protocol'; // ✅ 引入协议常量
 
 /**
  * 面板状态：保存根目录、当前聚焦路径、导航栈等
@@ -46,22 +48,38 @@ export class BlueprintPanel {
     private statusBarItem?: vscode.StatusBarItem;
     private fileAnalysisService: FileAnalysisService;
     
-    // ✅ Phase 7: Ready 握手机制
-    private webviewReady: boolean = false;
-    private messageQueue: ExtensionToWebview[] = [];
+    // ✅ Phase 7: 统一状态管理
+    private state: PanelState;
 
     private constructor(
         panel: vscode.WebviewPanel,
         extensionUri: vscode.Uri,
-        logger: Logger
+        logger: Logger,
+        rootUri: vscode.Uri  // ✅ 接收根目录
     ) {
         this.panel = panel;
         this.logger = logger;
         this.extensionUri = extensionUri;
         this.fileAnalysisService = new FileAnalysisService(logger);
 
-        // 设置 HTML 内容
-        this.panel.webview.html = this.getHtmlContent(extensionUri);
+        // ✅ 初始化状态
+        this.state = {
+            rootUri,
+            focusPath: '/',
+            navStack: ['/'],
+            webviewReady: false,
+            messageQueue: []
+        };
+
+        // ✅ 使用 WebviewTemplate 生成 HTML
+        this.panel.webview.html = generateWebviewHtml(
+            this.panel.webview,
+            extensionUri,
+            { 
+                devMode: true, // 🔍 开发模式：启用 SmokeProbe 和 DebugBanner
+                title: panel.title 
+            }
+        );
 
         // 监听面板销毁
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -83,7 +101,8 @@ export class BlueprintPanel {
     public static createOrShow(
         extensionUri: vscode.Uri,
         logger: Logger,
-        title: string = '文件树蓝图'
+        targetUri?: vscode.Uri,     // ✅ 第3个参数：目标 Uri
+        title: string = '文件树蓝图'  // ✅ 第4个参数：标题
     ): BlueprintPanel {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
@@ -93,6 +112,12 @@ export class BlueprintPanel {
         if (BlueprintPanel.currentPanel) {
             BlueprintPanel.currentPanel.panel.reveal(column);
             return BlueprintPanel.currentPanel;
+        }
+
+        // ✅ 解析根目录
+        const rootUri = targetUri || vscode.workspace.workspaceFolders?.[0]?.uri;
+        if (!rootUri) {
+            throw new Error('无法确定工作区根目录');
         }
 
         // 创建新面板
@@ -110,7 +135,7 @@ export class BlueprintPanel {
             }
         );
 
-        BlueprintPanel.currentPanel = new BlueprintPanel(panel, extensionUri, logger);
+        BlueprintPanel.currentPanel = new BlueprintPanel(panel, extensionUri, logger, rootUri); // ✅ 传入 rootUri
         return BlueprintPanel.currentPanel;
     }
 
@@ -143,9 +168,9 @@ export class BlueprintPanel {
      * 在 Webview 未就绪时将消息加入队列，就绪后统一发送
      */
     private async safePostMessage(message: ExtensionToWebview): Promise<void> {
-        if (!this.webviewReady) {
-            this.messageQueue.push(message);
-            this.logger.debug(`[UI] (defer) 排队消息: ${message.type}`, { queueLength: this.messageQueue.length });
+        if (!this.state.webviewReady) {
+            this.state.messageQueue.push(message);
+            this.logger.debug(`[UI] (defer) 排队消息: ${message.type}`, { queueLength: this.state.messageQueue.length });
             return;
         }
 
@@ -163,18 +188,18 @@ export class BlueprintPanel {
      * 收到 webview-ready 后，立即发送所有排队消息
      */
     private async handleWebviewReady(): Promise<void> {
-        this.logger.info(`[UI] 🎉 Webview 已就绪，开始发送排队消息: ${this.messageQueue.length} 条`);
+        this.logger.info(`[UI] 🎉 Webview 已就绪，开始发送排队消息: ${this.state.messageQueue.length} 条`);
         
-        this.webviewReady = true;
+        this.state.webviewReady = true;
 
         // 发送所有排队消息
-        for (const msg of this.messageQueue) {
+        for (const msg of this.state.messageQueue) {
             const ok = await this.panel.webview.postMessage(msg);
             this.logger.debug(`[UI] 发送排队消息: ${msg.type} ${ok ? '✅' : '❌'}`);
         }
 
         // 清空队列
-        this.messageQueue = [];
+        this.state.messageQueue = [];
         
         this.logger.info('[UI] ✅ 排队消息发送完成');
 
@@ -339,26 +364,21 @@ export class BlueprintPanel {
         this.logger.info(`下钻到: ${folderPath}`);
 
         try {
-            // 重新扫描子文件夹
-            const uri = vscode.Uri.file(folderPath);
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            const workspaceRoot = workspaceFolder?.uri;
-
-            if (!workspaceRoot) {
-                this.logger.warn('无法确定工作区根目录');
-                return;
-            }
+            // ✅ 使用 resolveTarget 统一解析路径
+            const { target, root } = resolveTargetToFileAndRoot(folderPath);
+            
+            this.logger.info(`[handleDrill] 解析结果: target=${target.fsPath}, root=${root.fsPath}`);
 
             // 使用 FileTreeScanner 扫描子目录
             const { FileTreeScanner } = await import('../domain/FileTreeScanner');
             const scanner = new FileTreeScanner(this.logger);
-            const graph = await scanner.scanPathShallow(uri, workspaceRoot);
+            const graph = await scanner.scanPathShallow(target, root);
 
             // 在同一面板显示新图
             this.showGraph(graph);
             this.panel.title = `蓝图: ${path.basename(folderPath)}`;
 
-            this.logger.info(`已刷新到子目录: ${folderPath}`);
+            this.logger.info(`已刷新到子目录: ${target.fsPath}`);
         } catch (error) {
             this.logger.error('下钻失败', error);
             vscode.window.showErrorMessage(`无法打开文件夹: ${folderPath}`);
@@ -376,12 +396,10 @@ export class BlueprintPanel {
             return;
         }
 
-        const workspaceRoot = this.currentGraph?.metadata?.workspaceRoot;
+        // ✅ 使用 state.rootUri 而不是从 metadata 获取
+        const workspaceRoot = this.state.rootUri.fsPath;
         
-        if (!workspaceRoot) {
-            vscode.window.showWarningMessage('无法确定工作区根目录');
-            return;
-        }
+        this.logger.info(`[handleDrillUp] 当前路径: ${currentPath}, 工作区根: ${workspaceRoot}`);
 
         // 如果已经是根目录，不能再往上
         if (currentPath === workspaceRoot) {
@@ -395,11 +413,10 @@ export class BlueprintPanel {
         // 防止超出工作区根目录
         if (parentPath.length < workspaceRoot.length) {
             this.logger.warn('尝试超出工作区根目录，返回到工作区根');
-            const uri = vscode.Uri.file(workspaceRoot);
             
             const { FileTreeScanner } = await import('../domain/FileTreeScanner');
             const scanner = new FileTreeScanner(this.logger);
-            const graph = await scanner.scanPathShallow(uri, uri);
+            const graph = await scanner.scanPathShallow(this.state.rootUri, this.state.rootUri);
             
             this.showGraph(graph);
             this.panel.title = `蓝图: ${path.basename(workspaceRoot)}`;
@@ -411,12 +428,10 @@ export class BlueprintPanel {
         
         try {
             const uri = vscode.Uri.file(parentPath);
-            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-            const wsRoot = workspaceFolder?.uri || vscode.Uri.file(workspaceRoot);
 
             const { FileTreeScanner } = await import('../domain/FileTreeScanner');
             const scanner = new FileTreeScanner(this.logger);
-            const graph = await scanner.scanPathShallow(uri, wsRoot);
+            const graph = await scanner.scanPathShallow(uri, this.state.rootUri);
 
             this.showGraph(graph);
             this.panel.title = `蓝图: ${path.basename(parentPath)}`;

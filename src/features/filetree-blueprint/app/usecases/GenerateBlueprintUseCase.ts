@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as path from 'path'; // ✅ 添加 path 模块导入
 import { Logger } from '../../../../core/logging/Logger';
 import { FileTreeScanner, Graph } from '../../domain/FileTreeScanner';
 import { BlueprintPanel } from '../../panel/BlueprintPanel';
@@ -73,7 +74,8 @@ export class GenerateBlueprintUseCase {
                     const panel = BlueprintPanel.createOrShow(
                         this.extensionUri,
                         this.logger,
-                        graph.title
+                        uri,          // ✅ 第3个参数：目标 Uri
+                        graph.title   // ✅ 第4个参数：标题
                     );
 
                     // 显示图表
@@ -164,7 +166,8 @@ export class GenerateBlueprintUseCase {
             const panel = BlueprintPanel.createOrShow(
                 this.extensionUri,
                 this.logger,
-                parseResult.graph.title
+                vscode.Uri.file(path.dirname(document.fileName)), // ✅ 第3个参数：文档所在目录
+                parseResult.graph.title   // ✅ 第4个参数：标题
             );
 
             // 显示图表
