@@ -812,6 +812,9 @@ export class BlueprintPanel {
         <span id="stat-total-nodes">0 nodes</span> | 
         <span id="stat-total-edges">0 edges</span>
     </div>
+    
+    <!-- 面包屑导航 -->
+    <div id="breadcrumb" style="position: fixed; top: 50px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 6px; border-radius: 4px; color: white; font-size: 11px; max-width: 80%;"></div>
 
     <!-- 主画布容器 -->
     <div id="graph-root">

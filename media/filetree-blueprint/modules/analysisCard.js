@@ -8,7 +8,10 @@
  * @see {import('../../../src/shared/messages').UpdateAnalysisCardMessage} UpdateAnalysisCardMessage
  */
 
-export class AnalysisCardManager {
+(function() {
+    'use strict';
+
+class AnalysisCardManager {
     /**
      * @param {any} vscode - VSCode API
      */
@@ -467,8 +470,6 @@ export class AnalysisCardManager {
     }
 }
 
-// 🚨 全局导出：确保 graphView.js 能访问到 cardManager
-(function() {
     // 等待VS Code API就绪后创建全局实例
     function initCardManager() {
         if (window.__vscode || (typeof acquireVsCodeApi === 'function')) {
@@ -487,4 +488,5 @@ export class AnalysisCardManager {
     } else {
         initCardManager();
     }
-})();
+
+})(); // 结束整个模块
