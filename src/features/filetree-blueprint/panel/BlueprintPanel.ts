@@ -21,6 +21,8 @@ import { toAbsolute, getWorkspaceRelative } from '../../../shared/utils/pathUtil
 import { resolveTargetToFileAndRoot, toPosix, relativePosix, toAbsoluteUri } from './resolveTarget';
 import { generateWebviewHtml } from './WebviewTemplate'; // ✅ 引入模板生成器
 import { W2E_DRILL, W2E_DRILL_UP, SYSTEM_PING, SYSTEM_PONG, E2W_INIT_GRAPH, E2W_DRILL_RESULT } from '../../../shared/protocol'; // ✅ 引入协议常量
+import { getWorkspaceRoot } from '../../../core/path/workspaceRoot'; // ✅ 引入统一工作区根服务
+import { relToAbs } from '../../../core/path/pathMapper'; // ✅ 引入路径映射工具
 
 /**
  * 面板状态：保存根目录、当前聚焦路径、导航栈等
@@ -47,6 +49,7 @@ export class BlueprintPanel {
     private extensionUri: vscode.Uri;
     private statusBarItem?: vscode.StatusBarItem;
     private fileAnalysisService: FileAnalysisService;
+    private context: vscode.ExtensionContext;  // ✅ 新增：Extension Context
     
     // ✅ Phase 7: 统一状态管理
     private state: PanelState;
@@ -55,11 +58,13 @@ export class BlueprintPanel {
         panel: vscode.WebviewPanel,
         extensionUri: vscode.Uri,
         logger: Logger,
-        rootUri: vscode.Uri  // ✅ 接收根目录
+        context: vscode.ExtensionContext,  // ✅ 新增参数
+        rootUri: vscode.Uri                // ✅ 接收根目录
     ) {
         this.panel = panel;
         this.logger = logger;
         this.extensionUri = extensionUri;
+        this.context = context;            // ✅ 保存context
         this.fileAnalysisService = new FileAnalysisService(logger);
 
         // ✅ 初始化状态
@@ -101,8 +106,9 @@ export class BlueprintPanel {
     public static createOrShow(
         extensionUri: vscode.Uri,
         logger: Logger,
-        targetUri?: vscode.Uri,     // ✅ 第3个参数：目标 Uri
-        title: string = '文件树蓝图'  // ✅ 第4个参数：标题
+        context: vscode.ExtensionContext,  // ✅ 新增：Extension Context
+        targetUri?: vscode.Uri,           // ✅ 第4个参数：目标 Uri
+        title: string = '文件树蓝图'        // ✅ 第5个参数：标题
     ): BlueprintPanel {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
@@ -135,7 +141,7 @@ export class BlueprintPanel {
             }
         );
 
-        BlueprintPanel.currentPanel = new BlueprintPanel(panel, extensionUri, logger, rootUri); // ✅ 传入 rootUri
+        BlueprintPanel.currentPanel = new BlueprintPanel(panel, extensionUri, logger, context, rootUri); // ✅ 传入 context 和 rootUri
         return BlueprintPanel.currentPanel;
     }
 
@@ -293,11 +299,21 @@ export class BlueprintPanel {
                 break;
 
             default:
+                // 🔍 处理调试消息（开发模式专用）
+                const debugMessage = message as any;
+                if (debugMessage.type === 'PING') {
+                    this.logger.debug('[Smoke] 收到 PING，回复 PONG');
+                    await this.panel.webview.postMessage({ type: 'PONG' });
+                    return;
+                }
+                
                 // TypeScript 确保所有消息类型都被处理
                 const exhaustiveCheck: never = message;
                 this.logger.warn(`未知消息类型:`, exhaustiveCheck);
         }
     }
+
+
 
     /**
      * 处理节点点击
@@ -361,24 +377,32 @@ export class BlueprintPanel {
             return;
         }
 
+        // ✅ 使用统一的工作区根服务
+        const root = await getWorkspaceRoot(this.context);
+        if (!root) {
+            this.logger.warn('[handleDrill] 无法确定工作区根目录');
+            vscode.window.showWarningMessage('AI Explorer：未能识别工作区根目录，请选择一个根目录。');
+            return;
+        }
+
         this.logger.info(`下钻到: ${folderPath}`);
 
         try {
-            // ✅ 使用 resolveTarget 统一解析路径
-            const { target, root } = resolveTargetToFileAndRoot(folderPath);
-            
-            this.logger.info(`[handleDrill] 解析结果: target=${target.fsPath}, root=${root.fsPath}`);
+            // ✅ 使用统一路径映射：相对路径 → 绝对路径
+            const absFolder = relToAbs(folderPath, root);
+            this.logger.info(`[handleDrill] 路径映射: ${folderPath} → ${absFolder}`);
 
             // 使用 FileTreeScanner 扫描子目录
             const { FileTreeScanner } = await import('../domain/FileTreeScanner');
             const scanner = new FileTreeScanner(this.logger);
+            const target = vscode.Uri.file(absFolder);
             const graph = await scanner.scanPathShallow(target, root);
 
             // 在同一面板显示新图
             this.showGraph(graph);
             this.panel.title = `蓝图: ${path.basename(folderPath)}`;
 
-            this.logger.info(`已刷新到子目录: ${target.fsPath}`);
+            this.logger.info(`已刷新到子目录: ${absFolder}`);
         } catch (error) {
             this.logger.error('下钻失败', error);
             vscode.window.showErrorMessage(`无法打开文件夹: ${folderPath}`);

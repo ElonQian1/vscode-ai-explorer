@@ -37,7 +37,7 @@ export class FileTreeBlueprintModule extends BaseModule {
     private registerServices(context: vscode.ExtensionContext): void {
         // 注册生成蓝图用例
         this.container.registerSingleton('generateBlueprintUseCase', () => {
-            return new GenerateBlueprintUseCase(this.logger, context.extensionUri);
+            return new GenerateBlueprintUseCase(this.logger, context.extensionUri, context);  // ✅ 传入context
         });
 
         this.generateUseCase = this.container.get<GenerateBlueprintUseCase>(

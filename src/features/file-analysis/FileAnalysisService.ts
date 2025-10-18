@@ -18,6 +18,7 @@ import { FileCapsule, AnalysisOptions, Fact, Inference, Recommendation } from '.
 import { toPosixRelative, getWorkspaceRelative } from '../../shared/utils/pathUtils';
 import { RetryHelper } from '../../shared/utils/RetryHelper';
 import { BatchAnalyzer } from './BatchAnalyzer';
+import { rememberLastKnownRoot } from '../../core/path/workspaceRoot'; // ✅ 新增：导入记录根目录函数
 import * as vscode from 'vscode';
 
 export class FileAnalysisService {

@@ -15,10 +15,12 @@ export class GenerateBlueprintUseCase {
     private scanner: FileTreeScanner;
     private logger: Logger;
     private extensionUri: vscode.Uri;
+    private context: vscode.ExtensionContext;  // ✅ 新增context
 
-    constructor(logger: Logger, extensionUri: vscode.Uri) {
+    constructor(logger: Logger, extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
         this.logger = logger;
         this.extensionUri = extensionUri;
+        this.context = context;  // ✅ 保存context
         this.scanner = new FileTreeScanner(logger);
     }
 
@@ -74,8 +76,9 @@ export class GenerateBlueprintUseCase {
                     const panel = BlueprintPanel.createOrShow(
                         this.extensionUri,
                         this.logger,
-                        uri,          // ✅ 第3个参数：目标 Uri
-                        graph.title   // ✅ 第4个参数：标题
+                        this.context,  // ✅ 第3个参数：Extension Context
+                        uri,          // ✅ 第4个参数：目标 Uri
+                        graph.title   // ✅ 第5个参数：标题
                     );
 
                     // 显示图表
@@ -166,8 +169,9 @@ export class GenerateBlueprintUseCase {
             const panel = BlueprintPanel.createOrShow(
                 this.extensionUri,
                 this.logger,
-                vscode.Uri.file(path.dirname(document.fileName)), // ✅ 第3个参数：文档所在目录
-                parseResult.graph.title   // ✅ 第4个参数：标题
+                this.context,  // ✅ 第3个参数：Extension Context
+                vscode.Uri.file(path.dirname(document.fileName)), // ✅ 第4个参数：文档所在目录
+                parseResult.graph.title   // ✅ 第5个参数：标题
             );
 
             // 显示图表
