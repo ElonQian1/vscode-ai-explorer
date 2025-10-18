@@ -1,492 +1,132 @@
-/**
- * 文件分析卡片模块
- * 负责卡片的显示、更新、关闭
- * 
- * 类型定义参考：
- * @see {import('../../../src/features/file-analysis/types').FileCapsule} FileCapsule
- * @see {import('../../../src/shared/messages').ShowAnalysisCardMessage} ShowAnalysisCardMessage
- * @see {import('../../../src/shared/messages').UpdateAnalysisCardMessage} UpdateAnalysisCardMessage
- */
-
 (function() {
-    'use strict';
-
-class AnalysisCardManager {
-    /**
-     * @param {any} vscode - VSCode API
-     */
-    constructor(vscode) {
-        this.vscode = vscode;
-        this.cardOpenedAt = 0;
-        this.currentCard = null;
-    }
-
-    /**
-     * 显示分析卡片
-     * @param {Object} capsule - FileCapsule 数据 (包含 file, lang, api, deps 等字段)
-     * @param {boolean} [capsule.loading] - 是否正在加载
-     * @returns {boolean} 是否渲染成功
-     */
-    showCard(capsule) {
-        console.log('[分析卡片] 显示:', capsule);
-        
-        try {
-            this._ensureHost();
-            this.closeCard(); // 确保单例
-
-            const host = document.getElementById('analysis-host');
-            
-            // 创建遮罩层（带300ms保护期）
-            const backdrop = this._createBackdrop();
-            host.appendChild(backdrop);
-
-            // 创建卡片
-            const card = this._createCard(capsule);
-            host.appendChild(card);
-
-            // 使用 rAF 确保 DOM 已插入后再添加 show 类
-            requestAnimationFrame(() => {
-                this.cardOpenedAt = performance.now();
-                card.classList.add('show');
-                console.log('[分析卡片] 已添加 show 类，卡片应该可见');
-            });
-
-            this.currentCard = {
-                element: card,
-                capsule: capsule
-            };
-
-            console.log('[分析卡片] 渲染完成，返回 true');
-            return true;
-            
-        } catch (error) {
-            console.error('[分析卡片] 渲染失败:', error);
-            return false;
-        }
-    }
-
-    /**
-     * 更新卡片内容（AI分析完成后）
-     * @param {Object} capsule - 更新后的 FileCapsule
-     */
-    updateCard(capsule) {
-        console.log('[分析卡片] AI更新:', capsule);
-        
-        const host = document.getElementById('analysis-host');
-        if (!host) {
-            console.warn('[分析卡片] 容器不存在,执行完整渲染');
-            this.showCard(capsule);
-            return;
-        }
-
-        const card = host.querySelector('.analysis-card');
-        if (!card || card.dataset.file !== capsule.file) {
-            console.warn('[分析卡片] 文件不匹配,执行完整渲染');
-            this.showCard(capsule);
-            return;
-        }
-
-        // 移除 Loading 徽章
-        const loadingBadge = card.querySelector('.loading-badge');
-        if (loadingBadge) {
-            loadingBadge.remove();
-            console.log('[分析卡片] 已移除 loading 徽章');
-        }
-
-        // 更新各个 Tab 内容
-        this._updateTabContent(card, capsule);
-
-        console.log('[分析卡片] AI更新完成');
-    }
-
-    /**
-     * 关闭卡片
-     */
-    closeCard() {
-        const host = document.getElementById('analysis-host');
-        if (host) {
-            host.innerHTML = '';
-            this.currentCard = null;
-            console.log('[分析卡片] 已关闭');
-        }
-    }
-
-    /**
-     * 确保容器存在
-     * @private
-     */
-    _ensureHost() {
-        let host = document.getElementById('analysis-host');
-        if (!host) {
-            host = document.createElement('div');
-            host.id = 'analysis-host';
-            host.className = 'analysis-host';
-            document.getElementById('canvas').appendChild(host);
-        }
-    }
-
-    /**
-     * 创建遮罩层
-     * @private
-     */
-    _createBackdrop() {
-        const backdrop = document.createElement('div');
-        backdrop.className = 'analysis-backdrop';
-        backdrop.addEventListener('click', (e) => {
-            const elapsed = performance.now() - this.cardOpenedAt;
-            if (elapsed < 300) {
-                // 防止双击第二下立即关闭卡片
-                console.log('[分析卡片] 保护期内，忽略点击关闭', elapsed);
-                e.stopPropagation();
-                return;
-            }
-            console.log('[分析卡片] 点击遮罩关闭');
-            this.closeCard();
-        });
-        return backdrop;
-    }
-
-    /**
-     * 创建卡片元素
-     * @private
-     */
-    _createCard(capsule) {
-        const card = document.createElement('div');
-        card.className = 'analysis-card';
-        card.setAttribute('data-file', capsule.file);
-        
-        const loadingBadge = capsule.loading 
-            ? '<span class="loading-badge">⏳ AI分析中...</span>' 
-            : '';
-
-        card.innerHTML = `
-            <div class="card-header">
-                <div class="card-title">
-                    <span class="file-icon">📄</span>
-                    <span class="file-name">${this._escapeHtml(capsule.file.split(/[/\\]/).pop())}</span>
-                    ${loadingBadge}
-                </div>
-                <div class="card-actions">
-                    <button class="btn-icon" data-action="open" title="打开源文件">📂</button>
-                    <button class="btn-icon" data-action="refresh" title="刷新分析">↻</button>
-                    <button class="btn-icon" data-action="close" title="关闭">✕</button>
-                </div>
-            </div>
-
-            <div class="card-tabs">
-                <button class="tab-btn active" data-tab="overview">概览</button>
-                <button class="tab-btn" data-tab="api">API</button>
-                <button class="tab-btn" data-tab="deps">依赖</button>
-                <button class="tab-btn" data-tab="evidence">证据</button>
-            </div>
-
-            <div class="card-content">
-                <div class="tab-pane active" data-pane="overview">
-                    ${this._renderOverviewTab(capsule)}
-                </div>
-                <div class="tab-pane" data-pane="api">
-                    ${this._renderApiTab(capsule)}
-                </div>
-                <div class="tab-pane" data-pane="deps">
-                    ${this._renderDepsTab(capsule)}
-                </div>
-                <div class="tab-pane" data-pane="evidence">
-                    ${this._renderEvidenceTab(capsule)}
-                </div>
-            </div>
-        `;
-
-        this._bindCardEvents(card, capsule);
-        return card;
-    }
-
-    /**
-     * 绑定卡片事件
-     * @private
-     */
-    _bindCardEvents(card, capsule) {
-        // Tab 切换
-        card.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const tabName = btn.dataset.tab;
-                card.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-                card.querySelector(`.tab-pane[data-pane="${tabName}"]`).classList.add('active');
-            });
-        });
-
-        // 操作按钮
-        card.querySelector('[data-action="open"]')?.addEventListener('click', () => {
-            this.vscode.postMessage({
-                type: 'open-source',
-                payload: { file: capsule.file, line: 1 }
-            });
-        });
-
-        card.querySelector('[data-action="refresh"]')?.addEventListener('click', () => {
-            this.vscode.postMessage({
-                type: 'analyze-file',
-                payload: { path: capsule.file, force: true }
-            });
-        });
-
-        card.querySelector('[data-action="close"]')?.addEventListener('click', () => {
-            this.closeCard();
-        });
-
-        // 证据链接
-        this._bindEvidenceLinks(card, capsule);
-    }
-
-    /**
-     * 绑定证据链接
-     * @private
-     */
-    _bindEvidenceLinks(card, capsule) {
-        card.querySelectorAll('[data-evidence]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const evidenceId = link.dataset.evidence;
-                const evidence = capsule.evidence?.[evidenceId];
-                if (evidence) {
-                    this.vscode.postMessage({
-                        type: 'open-source',
-                        payload: {
-                            file: evidence.file,
-                            line: evidence.lines[0],
-                            endLine: evidence.lines[1]
-                        }
-                    });
-                }
-            });
-        });
-    }
-
-    /**
-     * 更新 Tab 内容
-     * @private
-     */
-    _updateTabContent(card, capsule) {
-        const overviewPane = card.querySelector('.tab-pane[data-pane="overview"]');
-        const apiPane = card.querySelector('.tab-pane[data-pane="api"]');
-        const depsPane = card.querySelector('.tab-pane[data-pane="deps"]');
-        const evidencePane = card.querySelector('.tab-pane[data-pane="evidence"]');
-
-        if (overviewPane) overviewPane.innerHTML = this._renderOverviewTab(capsule);
-        if (apiPane) apiPane.innerHTML = this._renderApiTab(capsule);
-        if (depsPane) depsPane.innerHTML = this._renderDepsTab(capsule);
-        if (evidencePane) evidencePane.innerHTML = this._renderEvidenceTab(capsule);
-
-        // 重新绑定证据链接
-        this._bindEvidenceLinks(card, capsule);
-    }
-
-    /**
-     * 渲染概览 Tab
-     * @private
-     */
-    _renderOverviewTab(capsule) {
-        const summary = capsule.summary?.zh || capsule.summary?.en || '暂无摘要';
-        const facts = capsule.facts || [];
-        const inferences = capsule.inferences || [];
-        const recommendations = capsule.recommendations || [];
-        
-        return `
-            <div class="overview-section">
-                <h4>📝 摘要</h4>
-                <p class="summary">${this._escapeHtml(summary)}</p>
-                
-                ${facts.length > 0 ? `
-                    <h4>✅ 事实</h4>
-                    <ul class="fact-list">
-                        ${facts.map(f => `
-                            <li>
-                                ${this._escapeHtml(f.text)}
-                                ${(f.evidence || []).map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ')}
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : ''}
-                
-                ${inferences.length > 0 ? `
-                    <h4>💡 AI 推断</h4>
-                    <ul class="inference-list">
-                        ${inferences.map(i => `
-                            <li>
-                                ${this._escapeHtml(i.text)}
-                                <span class="confidence">置信度: ${(i.confidence * 100).toFixed(0)}%</span>
-                                ${(i.evidence || []).map(e => `<a href="#" class="evidence-link" data-evidence="${e}">[证据]</a>`).join(' ')}
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : ''}
-                
-                ${recommendations.length > 0 ? `
-                    <h4>💡 AI 建议</h4>
-                    <ul class="recommendation-list">
-                        ${recommendations.map(r => `
-                            <li class="rec-${r.priority || 'medium'}">
-                                <div class="rec-header">
-                                    <span class="rec-priority">${this._getPriorityEmoji(r.priority)}</span>
-                                    <span class="rec-text">${this._escapeHtml(r.text)}</span>
-                                </div>
-                                <div class="rec-reason">原因: ${this._escapeHtml(r.reason || '')}</div>
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : ''}
-                
-                <div class="meta-info">
-                    <span>最后验证: ${this._formatTime(capsule.lastVerifiedAt)}</span>
-                    ${!capsule.loading ? '<span class="badge-ai">🤖 AI增强</span>' : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * 渲染 API Tab
-     * @private
-     */
-    _renderApiTab(capsule) {
-        const apis = capsule.api || [];
-        if (apis.length === 0) {
-            return '<p class="empty">暂无API信息</p>';
-        }
-
-        return `
-            <div class="api-section">
-                <ul class="api-list">
-                    ${apis.map(api => `
-                        <li class="api-item">
-                            <div class="api-header">
-                                <span class="api-name">${this._escapeHtml(api.name)}</span>
-                                <span class="api-kind">${api.kind}</span>
-                            </div>
-                            <div class="api-signature">${this._escapeHtml(api.signature || '')}</div>
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-        `;
-    }
-
-    /**
-     * 渲染依赖 Tab
-     * @private
-     */
-    _renderDepsTab(capsule) {
-        const outDeps = capsule.deps?.out || [];
-        const inDeps = capsule.deps?.inSample || [];
-
-        return `
-            <div class="deps-section">
-                ${outDeps.length > 0 ? `
-                    <h4>出依赖 (${outDeps.length})</h4>
-                    <ul class="deps-list">
-                        ${outDeps.map(dep => `
-                            <li class="dep-item">
-                                <span class="dep-module">${this._escapeHtml(dep.module)}</span>
-                                <span class="dep-count">${dep.count} 次引用</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : '<p class="empty">无出依赖</p>'}
-                
-                ${inDeps.length > 0 ? `
-                    <h4>入依赖 (${inDeps.length})</h4>
-                    <ul class="deps-list">
-                        ${inDeps.map(dep => `
-                            <li class="dep-item">
-                                <span class="dep-module">${this._escapeHtml(dep.file)}</span>
-                                <span class="dep-count">${dep.count} 次引用</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                ` : '<p class="empty">无入依赖信息</p>'}
-            </div>
-        `;
-    }
-
-    /**
-     * 渲染证据 Tab
-     * @private
-     */
-    _renderEvidenceTab(capsule) {
-        const evidence = capsule.evidence || {};
-        const entries = Object.entries(evidence);
-
-        if (entries.length === 0) {
-            return '<p class="empty">暂无证据</p>';
-        }
-
-        return `
-            <div class="evidence-section">
-                <ul class="evidence-list">
-                    ${entries.map(([id, ev]) => `
-                        <li class="evidence-item">
-                            <div class="evidence-file">${this._escapeHtml(ev.file)}</div>
-                            <div class="evidence-lines" data-evidence="${id}">
-                                第 ${ev.lines[0]} - ${ev.lines[1]} 行
-                            </div>
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-        `;
-    }
-
-    /**
-     * 工具方法
-     * @private
-     */
-    _escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    _getPriorityEmoji(priority) {
-        const map = {
-            'high': '🔴',
-            'medium': '🟡',
-            'low': '🟢'
-        };
-        return map[priority] || '🔵';
-    }
-
-    _formatTime(timestamp) {
-        if (!timestamp) return '未知';
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-        
-        if (diff < 60000) return '刚刚';
-        if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
-        if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
-        return date.toLocaleDateString();
-    }
-}
-
-    // 等待VS Code API就绪后创建全局实例
-    function initCardManager() {
-        if (window.__vscode || (typeof acquireVsCodeApi === 'function')) {
-            const vscode = window.__vscode || acquireVsCodeApi();
-            window.cardManager = new AnalysisCardManager(vscode);
-            console.log('[analysisCard] ✅ cardManager 已注册到全局');
-        } else {
-            console.warn('[analysisCard] ⚠️ VS Code API 未就绪，延迟初始化');
-            setTimeout(initCardManager, 100);
-        }
+    "use strict";
+    
+    const root = document.getElementById("analysis-card-root") || createRoot();
+    
+    function createRoot() {
+        const el = document.createElement("div");
+        el.id = "analysis-card-root";
+        el.style.cssText = "position: fixed; top: 20px; right: 20px; width: 300px; max-height: 80vh; overflow-y: auto; z-index: 2000; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none;";
+        document.body.appendChild(el);
+        console.log("[analysisCard] ✅ 创建了分析卡片容器");
+        return el;
     }
     
-    // DOM就绪后立即初始化
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCardManager);
-    } else {
-        initCardManager();
+    function show(payload) {
+        const path = payload.path || "";
+        const fileInfo = payload.fileInfo || {};
+        const staticAnalysis = payload.staticAnalysis || {};
+        
+        const cardHtml = [
+            '<div class="analysis-card" data-path="' + path + '">',
+            '<div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--vscode-panel-border);">',
+            '<h3 style="margin: 0; font-size: 14px; color: var(--vscode-foreground);">' + getFileName(path) + '</h3>',
+            '<button onclick="window.cardManager.close()" style="background: none; border: none; color: var(--vscode-foreground); cursor: pointer; font-size: 16px;">×</button>',
+            '</div>',
+            '<div class="card-content" style="padding: 12px;">',
+            '<div style="margin-bottom: 16px;">',
+            '<h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--vscode-descriptionForeground);">📁 文件信息</h4>',
+            '<div style="font-size: 11px; color: var(--vscode-foreground);">',
+            '<div>大小: ' + formatFileSize(fileInfo.size || 0) + '</div>',
+            '<div>类型: ' + (fileInfo.extension || "Unknown") + '</div>',
+            '</div>',
+            '</div>',
+            '<div style="margin-bottom: 16px;">',
+            '<h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--vscode-descriptionForeground);">🔍 静态分析</h4>',
+            '<div id="static-analysis" style="font-size: 11px; color: var(--vscode-foreground);">' + renderStaticAnalysis(staticAnalysis) + '</div>',
+            '</div>',
+            '<div>',
+            '<h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--vscode-descriptionForeground);">🤖 AI 增强分析</h4>',
+            '<div id="ai-analysis" style="font-size: 11px; color: var(--vscode-foreground);">',
+            '<div style="display: flex; align-items: center; gap: 8px; color: var(--vscode-descriptionForeground);">',
+            '<span>⏳</span><span>AI 正在分析中...</span>',
+            '</div>',
+            '</div>',
+            '</div>',
+            '</div>',
+            '</div>'
+        ].join("");
+        
+        root.innerHTML = cardHtml;
+        root.style.display = "block";
+        console.log("[analysisCard] ✅ 显示静态分析卡片:", path);
     }
-
-})(); // 结束整个模块
+    
+    function update(payload) {
+        const aiSection = document.getElementById("ai-analysis");
+        if (!aiSection) return;
+        
+        const summary = payload.summary || "无摘要信息";
+        const insights = payload.insights || [];
+        const recommendations = (payload.aiAnalysis && payload.aiAnalysis.recommendations) || [];
+        
+        let html = '<div style="font-size: 11px; color: var(--vscode-foreground);">';
+        html += '<div style="margin-bottom: 8px;"><strong>概要:</strong><p style="margin: 4px 0;">' + summary + '</p></div>';
+        
+        if (insights.length > 0) {
+            html += '<div style="margin-bottom: 8px;"><strong>深度分析:</strong><ul style="margin: 4px 0; padding-left: 16px;">';
+            for (let i = 0; i < insights.length; i++) {
+                html += '<li>' + insights[i] + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        
+        if (recommendations.length > 0) {
+            html += '<div><strong>改进建议:</strong><ul style="margin: 4px 0; padding-left: 16px;">';
+            for (let i = 0; i < recommendations.length; i++) {
+                html += '<li>' + recommendations[i] + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        
+        html += '</div>';
+        aiSection.innerHTML = html;
+        console.log("[analysisCard] ✅ AI分析结果已更新");
+    }
+    
+    function close() {
+        root.style.display = "none";
+        root.innerHTML = "";
+        console.log("[analysisCard] ✅ 卡片已关闭");
+    }
+    
+    function getFileName(path) {
+        return path.split(/[/\\]/).pop() || path;
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+    }
+    
+    function renderStaticAnalysis(analysis) {
+        if (!analysis) {
+            return '<p style="color: var(--vscode-descriptionForeground);">暂无静态分析结果</p>';
+        }
+        
+        let html = "<div>";
+        if (analysis.dependencies && analysis.dependencies.length > 0) {
+            html += '<div style="margin-bottom: 8px;"><strong>依赖:</strong><ul style="margin: 4px 0; padding-left: 16px;">';
+            for (let i = 0; i < analysis.dependencies.length; i++) {
+                html += '<li>' + analysis.dependencies[i] + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        if (analysis.exports && analysis.exports.length > 0) {
+            html += '<div><strong>导出:</strong><ul style="margin: 4px 0; padding-left: 16px;">';
+            for (let i = 0; i < analysis.exports.length; i++) {
+                html += '<li>' + analysis.exports[i] + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        html += "</div>";
+        return html;
+    }
+    
+    window.cardManager = { show: show, update: update, close: close };
+    console.log("[analysisCard] ✅ cardManager 已注册到全局 (UMD/IIFE模式)");
+    
+})();

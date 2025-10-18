@@ -86,7 +86,6 @@
     }
     const nodeCountEl = document.getElementById("node-count");
     const edgeCountEl = document.getElementById("edge-count");
-    const breadcrumbEl = document.getElementById("breadcrumb");
     const helpOverlay = document.getElementById("helpOverlay");
     const helpCloseBtn = document.getElementById("helpClose");
     const noShowAgainCheckbox = document.getElementById("noShowAgain");
@@ -698,6 +697,13 @@
 
     // 更新面包屑
     function updateBreadcrumb(graph) {
+        // B. 防御性编程：检查面包屑容器是否存在
+        const el = document.getElementById('breadcrumb');
+        if (!el) { 
+            console.warn('[breadcrumb] container not found, skip'); 
+            return; 
+        }
+        
         const metadata = graph.metadata || {};
         const rootPath = metadata.rootPath || '';
         const relativePath = metadata.relativePath || '';
@@ -705,7 +711,7 @@
 
         const modeText = scanMode === 'shallow' ? '📂 当前目录' : '🌳 递归扫描';
 
-        breadcrumbEl.innerHTML = `
+        el.innerHTML = `
             <button id="btn-go-up" style="padding: 2px 8px; margin-right: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 3px; cursor: pointer;">
                 ⬆️ 返回上级
             </button>
@@ -811,6 +817,23 @@
             // 只在第一次初始化时检查
             if (!graph.nodes || graph.nodes.length === 0) {
                 setTimeout(checkFirstTimeHelp, 100);
+            }
+        }
+        
+        // C. 消息接入：处理卡片相关消息
+        if (msg?.type === 'show-analysis-card') {
+            if (window.cardManager?.show) {
+                window.cardManager.show(msg.payload);
+            } else {
+                console.warn('[graphView] cardManager 未就绪，无法显示卡片');
+            }
+        }
+        
+        if (msg?.type === 'update-analysis-card') {
+            if (window.cardManager?.update) {
+                window.cardManager.update(msg.payload);
+            } else {
+                console.warn('[graphView] cardManager 未就绪，无法更新卡片');
             }
         }
     });
