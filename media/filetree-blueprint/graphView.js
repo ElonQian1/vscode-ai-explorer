@@ -668,8 +668,16 @@
 
     // 更新统计信息
     function updateStats() {
-        nodeCountEl.textContent = `节点: ${graph.nodes.length}`;
-        edgeCountEl.textContent = `边: ${graph.edges.length}`;
+        // 🚨 防御性编程：检查元素是否存在
+        if (nodeCountEl) {
+            nodeCountEl.textContent = `节点: ${graph.nodes.length}`;
+        }
+        if (edgeCountEl) {
+            edgeCountEl.textContent = `边: ${graph.edges.length}`;
+        }
+        
+        // 在控制台显示统计信息（适配简化HTML）
+        console.log(`[统计] 📊 ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
     }
 
     // 更新面包屑

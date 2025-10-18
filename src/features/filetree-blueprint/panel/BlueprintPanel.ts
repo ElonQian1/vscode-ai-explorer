@@ -744,6 +744,7 @@ export class BlueprintPanel {
         const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'index.css'));
         const smokeProbeUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'SmokeProbe.js'));
         const debugBannerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'DebugBanner.js'));
+        const analysisCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'analysisCard.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -817,6 +818,7 @@ export class BlueprintPanel {
     <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
     <script src="${smokeProbeUri}"></script>
     <script src="${debugBannerUri}"></script>
+    <script src="${analysisCardUri}"></script>
     <script src="${scriptUri}"></script>
     
     <script>
