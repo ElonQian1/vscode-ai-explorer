@@ -28,11 +28,62 @@
         metadata: {},
     };
 
-    // DOM 元素
-    const wrap = document.getElementById("canvasWrap");
-    const canvas = document.getElementById("canvas");
-    const nodeContainer = document.getElementById("nodes");
-    const edgeSvg = document.querySelector("svg.edges");
+    // DOM 元素（适配简化HTML结构）
+    let wrap = document.getElementById("canvasWrap");
+    let canvas = document.getElementById("canvas");
+    let nodeContainer = document.getElementById("nodes");
+    let edgeSvg = document.querySelector("svg.edges");
+    
+    // 🚨 如果是简化HTML结构，创建必要的容器
+    if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
+        const graphRoot = document.getElementById("graph-root");
+        if (graphRoot) {
+            console.log('[graphView] 检测到简化HTML，创建画布容器');
+            
+            // 清空原有内容
+            graphRoot.innerHTML = '';
+            
+            // 创建画布结构
+            wrap = document.createElement('div');
+            wrap.id = 'canvasWrap';
+            wrap.style.width = '100%';
+            wrap.style.height = '100%';
+            wrap.style.position = 'relative';
+            
+            canvas = document.createElement('div');
+            canvas.id = 'canvas';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.position = 'relative';
+            
+            // 创建边的SVG层
+            edgeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            edgeSvg.classList.add('edges');
+            edgeSvg.style.position = 'absolute';
+            edgeSvg.style.top = '0';
+            edgeSvg.style.left = '0';
+            edgeSvg.style.width = '100%';
+            edgeSvg.style.height = '100%';
+            edgeSvg.style.pointerEvents = 'none';
+            edgeSvg.style.zIndex = '1';
+            
+            // 创建节点容器
+            nodeContainer = document.createElement('div');
+            nodeContainer.id = 'nodes';
+            nodeContainer.style.position = 'absolute';
+            nodeContainer.style.top = '0';
+            nodeContainer.style.left = '0';
+            nodeContainer.style.width = '100%';
+            nodeContainer.style.height = '100%';
+            nodeContainer.style.zIndex = '2';
+            
+            // 组装结构
+            canvas.appendChild(edgeSvg);
+            canvas.appendChild(nodeContainer);
+            wrap.appendChild(canvas);
+            graphRoot.appendChild(wrap);
+        }
+    }
     const nodeCountEl = document.getElementById("node-count");
     const edgeCountEl = document.getElementById("edge-count");
     const breadcrumbEl = document.getElementById("breadcrumb");
@@ -98,14 +149,20 @@
         notifyReady();
     }
 
-    // 设置事件监听
+    // 设置事件监听（防御性编程：检查元素存在）
     function setupEventListeners() {
-        // 工具栏按钮
-        document.getElementById('btn-reset-view').addEventListener('click', resetView);
-        document.getElementById('btn-fit-view').addEventListener('click', fitView);
-        document.getElementById('btn-zoom-in').addEventListener('click', () => zoom(1.2));
-        document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(0.8));
-        document.getElementById('btn-help').addEventListener('click', toggleHelp);
+        // 工具栏按钮（可选，如果不存在则跳过）
+        const btnResetView = document.getElementById('btn-reset-view');
+        const btnFitView = document.getElementById('btn-fit-view');
+        const btnZoomIn = document.getElementById('btn-zoom-in');
+        const btnZoomOut = document.getElementById('btn-zoom-out');
+        const btnHelp = document.getElementById('btn-help');
+        
+        if (btnResetView) btnResetView.addEventListener('click', resetView);
+        if (btnFitView) btnFitView.addEventListener('click', fitView);
+        if (btnZoomIn) btnZoomIn.addEventListener('click', () => zoom(1.2));
+        if (btnZoomOut) btnZoomOut.addEventListener('click', () => zoom(0.8));
+        if (btnHelp) btnHelp.addEventListener('click', toggleHelp);
 
         // 帮助浮层
         if (helpCloseBtn) {
@@ -186,45 +243,61 @@
         vscode.postMessage({ type: 'ready' }); // 保留旧消息以兼容
     }
 
-    // 处理来自扩展的消息
+    // 暴露给调试横幅的全局状态
+    window.__graphState = { nodes: [], edges: [], metadata: { graphType: 'filetree' } };
+
+    // 统一渲染入口 - 按朋友建议添加
+    function renderGraph(g) {
+        window.__graphState = g;
+        graph = g;
+        
+        console.log('[graphView] 🎨 统一渲染入口:', `${g.nodes.length} nodes, ${g.edges.length} edges`);
+        
+        // 初始化节点与边的可视化
+        renderNodesOnce();
+        initEdgesLayerOnce();
+        drawEdges();
+        updateStats();
+        updateBreadcrumb(g);
+        
+        // 更新 DebugBanner
+        if (window.debugBanner?.setGraphMeta) {
+            window.debugBanner.setGraphMeta(g);
+        }
+
+        // 自动适应视图
+        setTimeout(() => fitView(), 100);
+    }
+
+    // 处理来自扩展的消息 - 按朋友建议修改
     function handleMessage(event) {
         const msg = event.data;
+        const { type, payload } = msg || {};
 
-        if (msg?.type === 'init-graph') {
-            graph = msg.payload;
-            console.log('Rendering graph:', graph.title, graph);
+        // 兼容两种消息名：'init-graph'（新）与 'INIT_RESULT'（旧）
+        if (type === 'init-graph' || type === 'INIT_RESULT') {
+            // 旧消息可能是 { graph, ... }，新的是 payload=graph
+            const g = (type === 'INIT_RESULT' && payload?.graph) ? payload.graph : payload;
             
-            // 初始化一次节点与边
-            renderNodesOnce();
-            initEdgesLayerOnce();
-            drawEdges();
-            updateStats();
-            updateBreadcrumb(graph);
+            if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.edges)) {
+                console.warn('[graphView] init payload invalid:', g);
+                return;
+            }
+            
+            // graphType 兜底
+            g.metadata = g.metadata || {};
+            g.metadata.graphType = g.metadata.graphType || 'filetree';
 
-            // 自动适应视图
-            setTimeout(() => fitView(), 100);
-        } else if (msg?.type === 'INIT_RESULT') {
-            // ✅ 处理新的初始化结果消息
-            console.log('[graphView] 📨 收到 INIT_RESULT:', msg.payload);
-            if (msg.payload?.ok && msg.payload?.graph) {
-                graph = {
-                    ...msg.payload.graph,
-                    title: 'AI Explorer',
-                    metadata: { graphType: msg.payload.graphType || 'filetree' }
-                };
-                console.log('Rendering graph from INIT_RESULT:', graph);
-                
-                // 初始化一次节点与边
-                renderNodesOnce();
-                initEdgesLayerOnce();
-                drawEdges();
-                updateStats();
-                updateBreadcrumb(graph);
-
-                // 自动适应视图
-                setTimeout(() => fitView(), 100);
-            } else {
-                console.error('[graphView] 初始化失败:', msg.payload?.reason);
+            renderGraph(g);
+            
+            // 发送确认消息
+            try { 
+                vscode?.postMessage({ 
+                    type: 'ack:init-graph', 
+                    payload: { nodes: g.nodes.length, edges: g.edges.length } 
+                }); 
+            } catch (e) {
+                console.warn('[graphView] 发送确认消息失败:', e);
             }
         } else if (msg?.type === 'open-help') {
             // 响应来自扩展的打开帮助命令

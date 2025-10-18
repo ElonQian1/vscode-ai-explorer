@@ -321,43 +321,37 @@ export class BlueprintPanel {
             const root = await getWorkspaceRoot(this.context);
             if (!root) {
                 this.logger.warn('[Init] 无法确定工作区根目录，发送失败结果');
-                await this.panel.webview.postMessage({ 
-                    type: 'INIT_RESULT', 
-                    payload: { ok: false, reason: 'NO_WORKSPACE_ROOT' } 
-                });
+                // 🔧 TODO: 统一错误消息格式
                 return;
             }
 
             this.logger.info(`[Init] 选定工作区根: ${root.fsPath}`);
 
-            // 2. 生成初始文件树图数据
+            // 2. ✅ 恢复真实的FileTreeScanner扫描
             const { FileTreeScanner } = await import('../domain/FileTreeScanner');
             const scanner = new FileTreeScanner(this.logger);
             const graph = await scanner.scanPathShallow(root, root);
 
-            // 3. 发送初始化结果
+            // 3. ✅ 按朋友建议补齐元数据，确保前端渲染器前置条件满足
+            graph.metadata = { 
+                ...(graph.metadata ?? {}), 
+                graphType: 'filetree' // 前端根据此字段绑定交互逻辑
+            };
+
+            // 4. 发送正确的消息契约 'init-graph'
             await this.panel.webview.postMessage({
-                type: 'INIT_RESULT',
-                payload: { 
-                    ok: true, 
-                    graphType: 'filetree', 
-                    graph: {
-                        nodes: graph.nodes,
-                        edges: graph.edges
-                    }
-                }
+                type: 'init-graph',
+                payload: graph
             });
 
-            // 4. 同时调用showGraph显示图表
+            // 5. 同时调用showGraph显示图表
             this.showGraph(graph);
 
             this.logger.info(`[Init] 初始化完成: ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
+
         } catch (error) {
             this.logger.error('[Init] 初始化失败', error);
-            await this.panel.webview.postMessage({ 
-                type: 'INIT_RESULT', 
-                payload: { ok: false, reason: 'INIT_FAILED', error: error instanceof Error ? error.message : '未知错误' } 
-            });
+            // 🔧 TODO: 统一错误处理，暂时先确保图数据能正常显示
         }
     }
 
