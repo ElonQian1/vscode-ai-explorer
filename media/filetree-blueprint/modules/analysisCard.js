@@ -126,7 +126,15 @@
         return html;
     }
     
-    window.cardManager = { show: show, update: update, close: close };
-    console.log("[analysisCard] ✅ cardManager 已注册到全局 (UMD/IIFE模式)");
+    // 导出方法，同时提供兼容的别名
+    window.cardManager = { 
+        show: show, 
+        update: update, 
+        close: close,
+        // 兼容旧的方法名
+        showCard: show,
+        updateCard: update
+    };
+    console.log("[analysisCard] ✅ cardManager 已注册到全局 (UMD/IIFE模式，兼容 show/showCard)");
     
 })();

@@ -169,6 +169,19 @@ export interface NodeMovedMessage {
 }
 
 /**
+ * 确认已接收 init-graph 消息 (ACK)
+ */
+export interface AckInitGraphMessage {
+    type: 'ack:init-graph';
+    payload: {
+        /** 图表标题 */
+        title?: string;
+        /** 节点数量 */
+        nodeCount?: number;
+    };
+}
+
+/**
  * Webview 错误报告
  */
 export interface ErrorMessage {
@@ -191,6 +204,7 @@ export type WebviewToExtension =
     | NodeDoubleClickMessage
     | AnalyzeFileMessage
     | AnalysisCardShownMessage
+    | AckInitGraphMessage
     | OpenSourceMessage
     | DrillMessage
     | DrillUpMessage

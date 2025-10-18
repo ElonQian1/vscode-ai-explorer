@@ -275,6 +275,11 @@ export class BlueprintPanel {
                 this.logger.info(`[ACK] Webview 已显示卡片: ${message.payload?.file}`);
                 break;
 
+            case 'ack:init-graph':
+                // ✅ ACK: Webview确认已接收init-graph消息
+                this.logger.debug('[ACK] Webview已确认init-graph');
+                break;
+
             case 'open-source':
                 // 打开源文件并跳转到指定行
                 await this.handleOpenSource(message.payload);
