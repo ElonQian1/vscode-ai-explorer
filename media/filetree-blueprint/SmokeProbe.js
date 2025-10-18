@@ -134,6 +134,10 @@
                     console.log('[Smoke] ✅ 收到 PONG，通道正常');
                     updateChannelStatus('connected');
                     updateLastEvent('收到 PONG ✅');
+                    // ✅ 握手成功后立即请求初始化
+                    console.log('[Smoke] 📨 发送 REQUEST_INIT');
+                    vscode.postMessage({ type: 'REQUEST_INIT' });
+                    updateLastEvent('发送 REQUEST_INIT');
                     break;
 
                 case 'drill-result':
@@ -148,6 +152,16 @@
                 case 'init-graph':
                     console.log('[Smoke] 📊 收到 init-graph');
                     updateLastEvent('收到 init-graph');
+                    break;
+
+                case 'INIT_RESULT':
+                    console.log('[Smoke] 📊 收到 INIT_RESULT:', msg.payload);
+                    if (msg.payload?.ok) {
+                        const graph = msg.payload.graph;
+                        updateLastEvent(`初始化成功 (${graph?.nodes?.length || 0} nodes)`);
+                    } else {
+                        updateLastEvent(`初始化失败: ${msg.payload?.reason}`);
+                    }
                     break;
 
                 default:

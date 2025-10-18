@@ -307,13 +307,66 @@ export class BlueprintPanel {
                     return;
                 }
                 
+                if (debugMessage.type === 'REQUEST_INIT') {
+                    this.logger.info('[Init] 收到初始化请求，开始选根和生成图数据');
+                    await this.handleInitRequest();
+                    return;
+                }
+                
                 // TypeScript 确保所有消息类型都被处理
                 const exhaustiveCheck: never = message;
                 this.logger.warn(`未知消息类型:`, exhaustiveCheck);
         }
     }
 
+    /**
+     * 处理初始化请求：选根 + 生成初始图数据
+     */
+    private async handleInitRequest(): Promise<void> {
+        try {
+            // 1. 获取工作区根目录
+            const root = await getWorkspaceRoot(this.context);
+            if (!root) {
+                this.logger.warn('[Init] 无法确定工作区根目录，发送失败结果');
+                await this.panel.webview.postMessage({ 
+                    type: 'INIT_RESULT', 
+                    payload: { ok: false, reason: 'NO_WORKSPACE_ROOT' } 
+                });
+                return;
+            }
 
+            this.logger.info(`[Init] 选定工作区根: ${root.fsPath}`);
+
+            // 2. 生成初始文件树图数据
+            const { FileTreeScanner } = await import('../domain/FileTreeScanner');
+            const scanner = new FileTreeScanner(this.logger);
+            const graph = await scanner.scanPathShallow(root, root);
+
+            // 3. 发送初始化结果
+            await this.panel.webview.postMessage({
+                type: 'INIT_RESULT',
+                payload: { 
+                    ok: true, 
+                    graphType: 'filetree', 
+                    graph: {
+                        nodes: graph.nodes,
+                        edges: graph.edges
+                    }
+                }
+            });
+
+            // 4. 同时调用showGraph显示图表
+            this.showGraph(graph);
+
+            this.logger.info(`[Init] 初始化完成: ${graph.nodes.length} nodes, ${graph.edges.length} edges`);
+        } catch (error) {
+            this.logger.error('[Init] 初始化失败', error);
+            await this.panel.webview.postMessage({ 
+                type: 'INIT_RESULT', 
+                payload: { ok: false, reason: 'INIT_FAILED', error: error instanceof Error ? error.message : '未知错误' } 
+            });
+        }
+    }
 
     /**
      * 处理节点点击

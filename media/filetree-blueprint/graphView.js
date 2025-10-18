@@ -199,6 +199,29 @@
 
             // 自动适应视图
             setTimeout(() => fitView(), 100);
+        } else if (msg?.type === 'INIT_RESULT') {
+            // ✅ 处理新的初始化结果消息
+            console.log('[graphView] 📨 收到 INIT_RESULT:', msg.payload);
+            if (msg.payload?.ok && msg.payload?.graph) {
+                graph = {
+                    ...msg.payload.graph,
+                    title: 'AI Explorer',
+                    metadata: { graphType: msg.payload.graphType || 'filetree' }
+                };
+                console.log('Rendering graph from INIT_RESULT:', graph);
+                
+                // 初始化一次节点与边
+                renderNodesOnce();
+                initEdgesLayerOnce();
+                drawEdges();
+                updateStats();
+                updateBreadcrumb(graph);
+
+                // 自动适应视图
+                setTimeout(() => fitView(), 100);
+            } else {
+                console.error('[graphView] 初始化失败:', msg.payload?.reason);
+            }
         } else if (msg?.type === 'open-help') {
             // 响应来自扩展的打开帮助命令
             openHelp();
