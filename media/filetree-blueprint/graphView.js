@@ -142,10 +142,44 @@
         }[m]));
     }
 
-    // 初始化
-    function init() {
+    // ✅ 初始化启动（按照对症下药方案）
+    function boot() {
+        // 1) mount card layer
+        const layer = document.getElementById('card-layer') || (() => {
+            const d = document.createElement('div'); 
+            d.id = 'card-layer'; 
+            d.className = 'card-layer';
+            document.body.appendChild(d); 
+            console.log('[graphView] 📦 创建了缺失的 card-layer');
+            return d;
+        })();
+        
+        if (window.cardManager && typeof window.cardManager.mount === 'function') {
+            window.cardManager.mount('#card-layer');
+            console.log('[graphView] ✅ cardManager 已挂载到 card-layer');
+        } else {
+            console.log('[graphView] ⏳ cardManager 暂未就绪，稍后自动挂载');
+        }
+
+        // 2) breadcrumb 兜底
+        const breadcrumb = document.getElementById('breadcrumb');
+        if (!breadcrumb) {
+            const bc = document.createElement('div');
+            bc.id = 'breadcrumb';
+            bc.className = 'breadcrumb';
+            bc.style.cssText = 'position: fixed; top: 50px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 6px; border-radius: 4px; color: white; font-size: 11px; max-width: 80%;';
+            document.body.prepend(bc);
+            console.log('[graphView] 📍 创建了缺失的 breadcrumb');
+        }
+        
+        // 3) 原有初始化
         setupEventListeners();
         notifyReady();
+    }
+
+    // 初始化（保留兼容性）
+    function init() {
+        boot();
     }
 
     // 设置事件监听（防御性编程：检查元素存在）
@@ -302,28 +336,27 @@
             // 响应来自扩展的打开帮助命令
             openHelp();
         } else if (msg?.type === 'show-analysis-card') {
-            // ✅ Phase 7: 显示文件分析卡片(使用模块化管理器)
-            console.log('[graphView] 📨 收到 show-analysis-card:', msg.payload?.file, {
-                hasContent: !!msg.payload?.content,
+            // ✅ 强制走卡片流：显示文件分析卡片
+            const { path, file } = msg.payload || {};
+            const filePath = file || path; // 兼容不同字段名
+            
+            console.log('[graphView] 📨 收到 show-analysis-card:', filePath, {
+                hasStatic: !!msg.payload?.static,
                 loading: msg.payload?.loading,
                 hasCardManager: !!window.cardManager
             });
             
-            // ✅ 智能等待cardManager初始化
+            // ✅ 智能等待并挂载 cardManager
             function tryShowCard(attempts = 0) {
                 if (window.cardManager) {
                     try {
-                        window.cardManager.show(msg.payload);
-                        const rendered = true; // UMD版本的show方法无返回值
-                        if (rendered) {
-                            console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
-                            vscode.postMessage({
-                                type: 'analysis-card-shown',
-                                payload: { file: msg.payload.file }
-                            });
-                        } else {
-                            console.error('[graphView] ❌ 卡片渲染失败（showCard 返回 false）');
-                        }
+                        // 统一调用 showCard API
+                        window.cardManager.showCard(filePath, msg.payload);
+                        console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
+                        vscode?.postMessage({
+                            type: 'ack:show-analysis-card',
+                            payload: { path: filePath }
+                        });
                     } catch (error) {
                         console.error('[graphView] ❌ 渲染卡片时异常:', error);
                     }
@@ -336,17 +369,27 @@
             }
             tryShowCard();
         } else if (msg?.type === 'update-analysis-card') {
-            // ✅ Phase 7: 更新文件分析卡片(使用模块化管理器)
-            console.log('[graphView] 📨 收到 update-analysis-card:', msg.payload?.file, {
-                hasAI: msg.payload?.ai !== undefined
+            // ✅ 强制走卡片流：更新文件分析卡片
+            const { path, file } = msg.payload || {};
+            const filePath = file || path; // 兼容不同字段名
+            
+            console.log('[graphView] 📨 收到 update-analysis-card:', filePath, {
+                hasInferences: !!(msg.payload?.inferences?.length),
+                hasRecommendations: !!(msg.payload?.recommendations?.length),
+                loading: msg.payload?.loading
             });
             
-            // ✅ 智能等待cardManager初始化
+            // ✅ 智能等待并更新卡片
             function tryUpdateCard(attempts = 0) {
                 if (window.cardManager) {
                     try {
-                        window.cardManager.update(msg.payload);
+                        // 统一调用 updateCard API
+                        window.cardManager.updateCard(filePath, msg.payload);
                         console.log('[graphView] ✅ 卡片更新成功');
+                        vscode?.postMessage({
+                            type: 'ack:update-analysis-card',
+                            payload: { path: filePath }
+                        });
                     } catch (error) {
                         console.error('[graphView] ❌ 更新卡片时异常:', error);
                     }

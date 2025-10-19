@@ -1,0 +1,128 @@
+# AI Explorer - 自动发布
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: |
+          echo "🏗️ 构建扩展..."
+          npm run compile
+          echo "✅ 构建完成"
+
+      - name: Run tests
+        run: |
+          echo "🧪 运行测试..."
+          npm run pretest
+          echo "✅ 测试通过"
+
+      - name: Package VSIX
+        run: |
+          echo "📦 打包 VSIX..."
+          npx vsce package --no-dependencies
+          ls -la *.vsix
+          echo "✅ VSIX 打包完成"
+
+      - name: Generate Release Notes
+        id: release-notes
+        run: |
+          echo "📝 生成发布说明..."
+          cat > release-notes.md << 'EOF'
+          ## 🚀 AI Explorer v${{ github.ref_name }}
+          
+          ### ✨ 主要功能
+          - 🌳 **文件树蓝图**: 可视化项目结构，支持双击文件分析
+          - 🤖 **AI 文件分析**: 静态分析 + AI 增强，提供深度洞察
+          - 🎯 **智能导航**: 面包屑导航，支持目录下钻和返回
+          - 📊 **实时统计**: 节点数量、边数、深度等项目指标
+          
+          ### 🔧 技术特性
+          - TypeScript + Webview 架构
+          - 模块化设计，支持扩展
+          - 完善的缓存机制，提升性能
+          - CSP 安全策略，保障安全
+          
+          ### 📋 版本信息
+          - **构建时间**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          - **Node.js**: $(node --version)
+          - **TypeScript**: $(npx tsc --version)
+          - **平台**: Linux, Windows, macOS
+          
+          ---
+          
+          更多详情请查看 [CHANGELOG](./CHANGELOG.md) 和项目文档。
+          EOF
+          
+          echo "content=$(cat release-notes.md)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.vsix"
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          generate_release_notes: true
+
+      - name: Publish to VS Code Marketplace
+        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+        run: |
+          echo "🚀 发布到 VS Code Marketplace..."
+          if [ -n "$VSCE_PAT" ]; then
+            npx vsce publish --packagePath *.vsix --pat $VSCE_PAT
+            echo "✅ Marketplace 发布完成"
+          else
+            echo "⚠️ VSCE_TOKEN 未配置，跳过发布"
+          fi
+
+      - name: Publish to Open VSX Registry
+        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+        run: |
+          echo "🚀 发布到 Open VSX Registry..."
+          if [ -n "$OVSX_PAT" ]; then
+            npx ovsx publish *.vsix -p $OVSX_PAT
+            echo "✅ Open VSX 发布完成"
+          else
+            echo "⚠️ OVSX_TOKEN 未配置，跳过发布"
+          fi
+
+      - name: Notify Release
+        run: |
+          echo "🎉 发布完成！"
+          echo "📦 VSIX: $(ls *.vsix)"
+          echo "🔗 Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}"

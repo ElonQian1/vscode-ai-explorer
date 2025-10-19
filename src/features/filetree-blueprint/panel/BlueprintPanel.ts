@@ -754,7 +754,7 @@ export class BlueprintPanel {
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
 
-        // 🚨 急救CSS：确保容器有高度，兼容原有的图表结构
+        // 🚨 急救CSS：确保容器有高度，兼容原有的图表结构 + 卡片层
         const emergencyStyles = `
             html, body { 
                 height: 100%; 
@@ -794,6 +794,56 @@ export class BlueprintPanel {
                 margin: 8px 0;
                 color: var(--vscode-descriptionForeground, #999);
             }
+            /* 🎯 卡片层样式 */
+            .card-layer { 
+                position: fixed; 
+                inset: 0; 
+                pointer-events: none; 
+                z-index: 1000; 
+            }
+            .analysis-card { 
+                position: absolute; 
+                pointer-events: auto; 
+                min-width: 360px; 
+                max-width: 560px;
+                background: var(--vscode-editor-background, #1e1e1e); 
+                color: var(--vscode-foreground, #cccccc); 
+                border-radius: 12px; 
+                box-shadow: 0 8px 28px rgba(0,0,0,.45);
+                border: 1px solid var(--vscode-panel-border, rgba(255,255,255,.08)); 
+            }
+            .analysis-card .header { 
+                cursor: move; 
+                padding: 10px 14px; 
+                font-weight: 600; 
+                border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,.06)); 
+                background: var(--vscode-tab-activeBackground, rgba(255,255,255,.05));
+                border-radius: 12px 12px 0 0;
+                user-select: none;
+            }
+            .analysis-card .body { 
+                padding: 12px 14px; 
+                max-height: 50vh; 
+                overflow: auto; 
+            }
+            .analysis-card .close { 
+                position: absolute; 
+                right: 10px; 
+                top: 8px; 
+                opacity: .7; 
+                background: none;
+                border: none;
+                color: var(--vscode-foreground, #cccccc);
+                cursor: pointer;
+                font-size: 16px;
+                width: 24px;
+                height: 24px;
+                border-radius: 3px;
+            }
+            .analysis-card .close:hover {
+                background: var(--vscode-button-hoverBackground, rgba(255,255,255,.1));
+                opacity: 1;
+            }
         `;
 
         return `<!DOCTYPE html>
@@ -830,10 +880,11 @@ export class BlueprintPanel {
         </div>
     </div>
     
-    <!-- 分析卡片容器 -->
-    <div id="analysis-card-root"></div>
+    <!-- 🎯 浮动卡片挂载层：绝对定位在顶层 -->
+    <div id="card-layer" class="card-layer" aria-live="polite"></div>
     
     <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
+    <!-- 顺序很关键：先卡片，再画布逻辑 -->
     <script src="${smokeProbeUri}"></script>
     <script src="${debugBannerUri}"></script>
     <script src="${analysisCardUri}"></script>

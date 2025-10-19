@@ -1,0 +1,32 @@
+# 模块相关
+"src/core/**/*": ["area/core", "component/infrastructure"]
+"src/features/explorer-alias/**/*": ["area/explorer", "component/feature"]
+"src/features/filetree-blueprint/**/*": ["area/blueprint", "component/feature"]
+"src/features/uml-canvas/**/*": ["area/uml", "component/feature"]
+"src/shared/**/*": ["area/shared", "component/shared"]
+
+# 构建和配置
+"package.json": ["area/build", "component/config"]
+"tsconfig*.json": ["area/build", "component/config"]
+"*.md": ["area/docs", "component/docs"]
+"docs/**/*": ["area/docs", "component/docs"]
+
+# CI/CD
+".github/**/*": ["area/ci", "component/infrastructure"]
+"scripts/**/*": ["area/build", "component/tooling"]
+
+# Webview 前端
+"webview/**/*": ["area/webview", "component/frontend"]
+"media/**/*": ["area/webview", "component/assets"]
+
+# 测试相关
+"**/*.test.ts": ["area/testing", "component/test"]
+"**/*.spec.ts": ["area/testing", "component/test"]
+"test/**/*": ["area/testing", "component/test"]
+
+# 特定文件类型
+"**/*.ts": ["language/typescript"]
+"**/*.js": ["language/javascript"]
+"**/*.html": ["language/html"]
+"**/*.css": ["language/css"]
+"**/*.json": ["language/json"]

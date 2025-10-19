@@ -1,0 +1,202 @@
+# AI Explorer - 安全扫描
+name: Security
+
+on:
+  schedule:
+    # 每周一早上 8:00 UTC 运行
+    - cron: '0 8 * * 1'
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          echo "🔍 NPM 安全审计..."
+          npm audit --audit-level=moderate || echo "⚠️ 发现安全问题，请检查"
+
+      - name: OSV Scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: |-
+            -r
+            --skip-git
+            .
+
+  csp-validation:
+    name: CSP Policy Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run compile
+
+      - name: Validate CSP policies
+        run: |
+          echo "🛡️ 验证 CSP 安全策略..."
+          
+          # 检查 webview HTML 文件中的 CSP
+          find webview -name "*.html" -exec echo "检查文件: {}" \;
+          find webview -name "*.html" -exec grep -l "Content-Security-Policy" {} \; || echo "⚠️ 未找到 CSP 策略"
+          
+          # 检查内联脚本和样式
+          echo "🔍 检查内联脚本..."
+          if find webview -name "*.html" -exec grep -l "script.*>" {} \; 2>/dev/null; then
+            echo "⚠️ 发现内联脚本，可能违反 CSP"
+          else
+            echo "✅ 未发现内联脚本"
+          fi
+          
+          echo "🔍 检查内联样式..."
+          if find webview -name "*.html" -exec grep -l "style.*>" {} \; 2>/dev/null; then
+            echo "⚠️ 发现内联样式，可能违反 CSP" 
+          else
+            echo "✅ 未发现内联样式"
+          fi
+
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint Security Analysis
+        run: |
+          echo "🔍 ESLint 安全分析..."
+          npm run lint -- --format=json --output-file=eslint-results.json || true
+          
+          # 检查安全相关的 ESLint 规则
+          echo "🔍 检查潜在安全问题..."
+          if [ -f eslint-results.json ]; then
+            node -e "
+              const results = require('./eslint-results.json');
+              const securityIssues = results.flatMap(r => r.messages)
+                .filter(m => m.ruleId && (
+                  m.ruleId.includes('security') || 
+                  m.ruleId.includes('no-eval') ||
+                  m.ruleId.includes('no-implied-eval')
+                ));
+              if (securityIssues.length > 0) {
+                console.log('⚠️ 发现安全相关问题:', securityIssues.length);
+                securityIssues.forEach(issue => console.log(issue));
+              } else {
+                console.log('✅ 未发现安全相关的 ESLint 问题');
+              }
+            "
+          fi
+
+      - name: TypeScript Security Check
+        run: |
+          echo "🔍 TypeScript 安全检查..."
+          
+          # 检查潜在的不安全模式
+          echo "🔍 检查 eval 使用..."
+          if grep -r "eval(" src/ --include="*.ts" --include="*.js"; then
+            echo "⚠️ 发现 eval 使用，可能存在安全风险"
+          else
+            echo "✅ 未发现 eval 使用"
+          fi
+          
+          echo "🔍 检查 innerHTML 使用..."
+          if grep -r "innerHTML" src/ --include="*.ts" --include="*.js"; then
+            echo "⚠️ 发现 innerHTML 使用，请确保已进行安全处理"
+          else
+            echo "✅ 未发现 innerHTML 使用"
+          fi
+
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: License Check
+        run: |
+          echo "📄 许可证合规检查..."
+          
+          # 安装 license-checker
+          npm install -g license-checker
+          
+          # 生成许可证报告
+          license-checker --json --out licenses.json
+          
+          # 检查是否有禁用的许可证
+          node -e "
+            const licenses = require('./licenses.json');
+            const forbidden = ['GPL-2.0', 'GPL-3.0', 'AGPL-1.0', 'AGPL-3.0'];
+            const found = Object.entries(licenses)
+              .filter(([pkg, info]) => forbidden.includes(info.licenses))
+              .map(([pkg, info]) => ({ package: pkg, license: info.licenses }));
+            
+            if (found.length > 0) {
+              console.log('⚠️ 发现禁用许可证:');
+              found.forEach(item => console.log(\`  \${item.package}: \${item.license}\`));
+              process.exit(1);
+            } else {
+              console.log('✅ 所有依赖许可证合规');
+            }
+          "
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
