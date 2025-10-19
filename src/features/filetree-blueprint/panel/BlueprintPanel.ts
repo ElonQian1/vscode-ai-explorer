@@ -762,6 +762,7 @@ export class BlueprintPanel {
         const messageContractsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'contracts', 'messageContracts.js'));
         const blueprintCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'blueprintCard.js'));
         const layoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'layoutEngine.js'));
+        const validationTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'validation-test.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -808,11 +809,34 @@ export class BlueprintPanel {
             }
             /* 🎯 卡片层样式 */
             .card-layer { 
-                position: fixed; 
+                position: absolute; 
                 inset: 0; 
                 pointer-events: none; 
-                z-index: 1000; 
+                z-index: 1500; 
             }
+            
+            /* 🎨 蓝图卡片样式（新系统） */
+            .bp-card { 
+                position: absolute; 
+                pointer-events: auto; 
+                z-index: 3; 
+                background: var(--vscode-editor-background, #1e1e1e); 
+                color: var(--vscode-foreground, #cccccc); 
+                border-radius: 8px; 
+                box-shadow: 0 8px 20px rgba(0,0,0,.35);
+                border: 1px solid var(--vscode-panel-border, rgba(255,255,255,.12)); 
+                min-width: 360px;
+                width: 520px;
+                height: 420px;
+                display: flex;
+                flex-direction: column;
+            }
+            .bp-card.pinned { 
+                box-shadow: 0 12px 28px rgba(0,0,0,.25); 
+                border-color: var(--vscode-focusBorder, #0078d4);
+            }
+            
+            /* 📊 旧分析卡片样式（兼容） */
             .analysis-card { 
                 position: absolute; 
                 pointer-events: auto; 
@@ -904,6 +928,7 @@ export class BlueprintPanel {
     <script src="${blueprintCardUri}"></script>
     <script src="${analysisCardUri}"></script>
     <script src="${scriptUri}"></script>
+    <script src="${validationTestUri}"></script>
     
     <script>
         console.log('[BOOT] ✅ 所有脚本已加载完成');
