@@ -11,15 +11,28 @@
     // 等待所有依赖加载完成
     function waitForDependencies() {
         return new Promise((resolve) => {
+            let checkCount = 0;
             const checkInterval = setInterval(() => {
+                checkCount++;
                 const hasELK = !!(window.ELK);
                 const hasBlueprintCard = !!(window.blueprintCard);
                 const hasMessageContracts = !!(window.messageContracts);
                 const hasLayoutEngine = !!(window.layoutEngine);
                 
+                // 每10次检查打印一次状态（每0.5秒）
+                if (checkCount % 10 === 0) {
+                    console.log(`[BOOT] 依赖检查 #${checkCount}:`, {
+                        ELK: hasELK,
+                        blueprintCard: hasBlueprintCard,
+                        messageContracts: hasMessageContracts,
+                        layoutEngine: hasLayoutEngine,
+                        windowELKType: typeof window.ELK
+                    });
+                }
+                
                 if (hasELK && hasBlueprintCard && hasMessageContracts && hasLayoutEngine) {
                     clearInterval(checkInterval);
-                    console.log('[BOOT] ✅ 所有依赖已加载完成');
+                    console.log('[BOOT] ✅ 所有依赖已加载完成，ELK类型:', typeof window.ELK);
                     resolve();
                 }
             }, 50);

@@ -45,21 +45,35 @@
         constructor() {
             this.onLayoutComplete = null;
             this.onLayoutStart = null;
+            this.elkInitialized = false;
             
-            // 动态加载elkjs (浏览器环境)
-            this.initELK();
+            // 延迟初始化ELK，在首次使用时加载
         }
 
         async initELK() {
             try {
-                // 🔧 CSP修复：直接使用本地加载的window.ELK
-                if (window.ELK && typeof window.ELK === 'function') {
-                    elkInstance = new window.ELK();
-                    console.log('[layoutEngine] ✅ 本地ELK.js初始化成功');
-                } else {
-                    console.warn('[layoutEngine] ⚠️ 本地ELK.js未找到，使用网格兜底布局');
-                    elkInstance = this.createFallbackLayout();
+                // 🔧 CSP修复：等待本地ELK加载完成
+                console.log('[layoutEngine] 🔄 等待本地ELK.js加载...');
+                
+                // 等待ELK加载（最多3秒）
+                let attempts = 0;
+                const maxAttempts = 30; // 30 * 100ms = 3秒
+                
+                while (attempts < maxAttempts) {
+                    if (window.ELK && typeof window.ELK === 'function') {
+                        elkInstance = new window.ELK();
+                        console.log('[layoutEngine] ✅ 本地ELK.js初始化成功');
+                        return;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
                 }
+                
+                // 超时后使用兜底
+                console.warn('[layoutEngine] ⚠️ 本地ELK.js加载超时，使用网格兜底布局');
+                elkInstance = this.createFallbackLayout();
+                
             } catch (error) {
                 console.warn('[layoutEngine] ELK初始化失败，使用网格兜底布局:', error);
                 elkInstance = this.createFallbackLayout();
@@ -146,8 +160,14 @@
                 return false;
             }
 
+            // 🔧 延迟初始化：首次使用时才加载ELK
+            if (!this.elkInitialized) {
+                await this.initELK();
+                this.elkInitialized = true;
+            }
+
             if (!elkInstance) {
-                console.warn('[layoutEngine] ⚠️ ELK实例未就绪');
+                console.warn('[layoutEngine] ⚠️ ELK实例未就绪，可能是加载失败');
                 return false;
             }
 
