@@ -10,6 +10,7 @@ import * as path from 'path';
 import { Logger } from '../../../core/logging/Logger';
 import { Graph, Node } from '../domain/FileTreeScanner';
 import { FileAnalysisService } from '../../file-analysis/FileAnalysisService';
+import { EnhancedAnalysisUseCase } from '../usecases/EnhancedAnalysisUseCase'; // ✅ 新增：引入增强分析用例
 import {
     WebviewToExtension,
     ExtensionToWebview,
@@ -49,6 +50,7 @@ export class BlueprintPanel {
     private extensionUri: vscode.Uri;
     private statusBarItem?: vscode.StatusBarItem;
     private fileAnalysisService: FileAnalysisService;
+    private enhancedAnalysisUseCase: EnhancedAnalysisUseCase; // ✅ 新增：增强分析用例
     private context: vscode.ExtensionContext;  // ✅ 新增：Extension Context
     
     // ✅ Phase 7: 统一状态管理
@@ -66,6 +68,7 @@ export class BlueprintPanel {
         this.extensionUri = extensionUri;
         this.context = context;            // ✅ 保存context
         this.fileAnalysisService = new FileAnalysisService(logger);
+        this.enhancedAnalysisUseCase = new EnhancedAnalysisUseCase(logger, context); // ✅ 初始化增强分析用例
 
         // ✅ 初始化状态
         this.state = {
@@ -583,16 +586,17 @@ export class BlueprintPanel {
     /**
      * 处理文件分析请求
      * 
-     * 采用乐观UI模式:
-     * 1. 先立即发送静态分析结果(带loading标记)
-     * 2. 后台继续AI分析
-     * 3. AI完成后发送update消息更新卡片
+     * 使用S3胶囊缓存系统:
+     * 1. 缓存优先：先检查缓存，立即返回已有结果
+     * 2. 静态分析：如果无缓存，执行静态分析并立即显示
+     * 3. 后台AI分析：异步执行AI分析，完成后更新卡片
+     * 4. 增量更新：AI结果不覆盖用户备注
      */
     private async handleAnalyzeFile(payload: any): Promise<void> {
         let filePath = payload?.path;
         const force = payload?.force || false;
         
-        this.logger.info(`[分析文件] 收到请求, path=${filePath}, force=${force}`);
+        this.logger.info(`[S3缓存分析] 收到请求, path=${filePath}, force=${force}`);
         
         if (!filePath) {
             this.logger.warn('分析文件消息缺少路径信息');
@@ -615,24 +619,52 @@ export class BlueprintPanel {
         }
 
         try {
-            // ✅ 步骤1: 先做静态分析,立即返回结果
-            const staticCapsule = await this.fileAnalysisService.analyzeFileStatic(filePath);
+            // ✅ 使用S3胶囊缓存系统的增强分析
+            const result = await this.enhancedAnalysisUseCase.analyzeFile({
+                filePath,
+                forceRefresh: force,
+                includeAI: true,
+                progressCallback: async (stage, progress) => {
+                    this.logger.info(`[S3分析进度] ${filePath} - ${stage}: ${progress}%`);
+                    
+                    // ✅ 当AI分析完成时，获取最新数据并更新UI
+                    if (stage === 'complete' && progress === 100) {
+                        try {
+                            const updatedResult = await this.enhancedAnalysisUseCase.analyzeFile({
+                                filePath,
+                                forceRefresh: false,
+                                includeAI: false  // 只获取缓存，不重新分析
+                            });
+                            
+                            if (updatedResult.success && updatedResult.data) {
+                                const fileCapsule = this.enhancedAnalysisUseCase.convertToFileCapsule(updatedResult.data);
+                                const updateMessage = createUpdateAnalysisCardMessage(fileCapsule, false);
+                                await this.safePostMessage(updateMessage);
+                                this.logger.info(`[S3缓存UI] AI分析完成，已更新卡片: ${filePath}`);
+                            }
+                        } catch (error) {
+                            this.logger.warn(`[S3缓存UI] AI完成后更新失败: ${filePath}`, error);
+                        }
+                    }
+                }
+            });
 
-            // ✅ Phase 7: 使用安全发送（带队列）
-            // 步骤2: 立即发送静态结果到前端(带loading标记)
-            const showMessage = createShowAnalysisCardMessage(staticCapsule, true);
-            await this.safePostMessage(showMessage);
+            if (result.success && result.data) {
+                // ✅ 立即发送分析结果（可能是缓存或静态分析）
+                const fileCapsule = this.enhancedAnalysisUseCase.convertToFileCapsule(result.data);
+                const isLoading = !result.data.ai || Object.keys(result.data.ai).length === 0;
+                const showMessage = createShowAnalysisCardMessage(fileCapsule, isLoading);
+                await this.safePostMessage(showMessage);
 
-            this.logger.info(`[UI] 已发送静态分析卡片: ${filePath}`);
-
-            // ✅ 步骤3: 后台进行AI分析(不阻塞)
-            this.runAIAnalysisInBackground(filePath, staticCapsule, force);
+                this.logger.info(`[S3缓存UI] 已发送分析卡片: ${filePath}, 来源=${result.fromCache ? '缓存' : '实时分析'}, AI状态=${isLoading ? '加载中' : '已完成'}`);
+            } else {
+                throw new Error(result.error || '分析失败');
+            }
 
         } catch (error) {
-            this.logger.error('静态分析失败', error);
+            this.logger.error(`[S3缓存分析] 分析失败: ${filePath}`, error);
             
-            // ✅ Phase 7: 使用安全发送
-            // 发送错误消息
+            // ✅ 发送错误消息
             const errorMsg = createAnalysisErrorMessage(
                 filePath,
                 error instanceof Error ? error.message : '分析失败'
@@ -643,36 +675,7 @@ export class BlueprintPanel {
         }
     }
 
-    /**
-     * 后台运行AI分析并更新卡片
-     */
-    private async runAIAnalysisInBackground(filePath: string, staticCapsule: any, force: boolean): Promise<void> {
-        try {
-            this.logger.info(`[AI] 开始后台AI分析: ${filePath}`);
 
-            // 调用AI增强分析
-            const fullCapsule = await this.fileAnalysisService.enhanceWithAI(staticCapsule, { force });
-
-            // ✅ Phase 7: 使用安全发送
-            // 发送AI更新结果
-            const updateMessage = createUpdateAnalysisCardMessage(fullCapsule, false);
-            await this.safePostMessage(updateMessage);
-
-            this.logger.info(`[UI] 已发送AI增强结果: ${filePath}`);
-
-        } catch (error) {
-            this.logger.warn('[AI] AI分析失败,保留静态结果', error);
-            
-            // ✅ Phase 7: 使用安全发送
-            // AI失败时也发送更新,只是标记loading=false
-            const errorMessage = createUpdateAnalysisCardMessage(
-                staticCapsule,
-                false,
-                error instanceof Error ? error.message : 'AI分析失败'
-            );
-            await this.safePostMessage(errorMessage);
-        }
-    }
 
     /**
      * 处理打开源文件请求

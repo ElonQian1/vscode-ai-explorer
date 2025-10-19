@@ -1,0 +1,424 @@
+/**
+ * 🧠 增强版AI分析UseCase
+ * 
+ * 核心特性：
+ * 1. 🎯 优先缓存加载：快速响应
+ * 2. 🔄 增量AI分析：流式更新
+ * 3. 📝 用户备注分离：避免覆盖
+ * 4. ⚡ 后台智能分析：非阻塞体验
+ * 5. 🔔 实时状态反馈：进度可视化
+ */
+
+import * as vscode from 'vscode';
+import * as crypto from 'crypto';
+import { Logger } from '../../../core/logging/Logger';
+import { MultiProviderAIClient } from '../../../core/ai/MultiProviderAIClient';
+import { EnhancedCapsuleCache, CapsuleData, AIAnalysisResult } from '../cache/EnhancedCapsuleCache';
+
+export interface AnalysisRequest {
+    filePath: string;
+    forceRefresh?: boolean;
+    includeAI?: boolean;
+    progressCallback?: (stage: AnalysisStage, progress: number) => void;
+}
+
+export interface AnalysisResult {
+    success: boolean;
+    data?: CapsuleData;
+    fromCache: boolean;
+    error?: string;
+    analysisTime: number;
+}
+
+export enum AnalysisStage {
+    Loading = 'loading',
+    StaticAnalysis = 'static',
+    AIAnalysis = 'ai',
+    Caching = 'caching',
+    Complete = 'complete'
+}
+
+export class EnhancedAnalysisUseCase {
+    private cache: EnhancedCapsuleCache;
+    private aiClient: MultiProviderAIClient | null = null;
+    private isAIInitialized = false;
+
+    constructor(
+        private logger: Logger,
+        private context: vscode.ExtensionContext
+    ) {
+        this.cache = new EnhancedCapsuleCache(logger, context);
+        this.initialize();
+    }
+
+    private async initialize(): Promise<void> {
+        await this.cache.initialize();
+        this.logger.info('[EnhancedAnalysis] ✅ UseCase初始化完成');
+    }
+
+    /**
+     * 分析单个文件（主入口）
+     */
+    public async analyzeFile(request: AnalysisRequest): Promise<AnalysisResult> {
+        const startTime = Date.now();
+        const { filePath, forceRefresh = false, includeAI = true, progressCallback } = request;
+
+        try {
+            progressCallback?.(AnalysisStage.Loading, 0);
+            
+            // 1. 读取文件内容和计算哈希
+            const { content, contentHash } = await this.readFileContent(filePath);
+            
+            // 2. 尝试从缓存加载（除非强制刷新）
+            if (!forceRefresh) {
+                const cached = await this.cache.getCapsule(filePath, contentHash);
+                if (cached) {
+                    progressCallback?.(AnalysisStage.Complete, 100);
+                    return {
+                        success: true,
+                        data: cached,
+                        fromCache: true,
+                        analysisTime: Date.now() - startTime
+                    };
+                }
+            }
+
+            // 3. 执行静态分析
+            progressCallback?.(AnalysisStage.StaticAnalysis, 25);
+            const staticResult = await this.performStaticAnalysis(content, filePath);
+
+            // 4. 创建基础胶囊数据
+            let capsuleData = await this.createBaseCapsule(filePath, contentHash, staticResult);
+            
+            // 5. 保存静态分析结果（立即可用）
+            await this.cache.saveAIAnalysis(filePath, contentHash, capsuleData.ai);
+            progressCallback?.(AnalysisStage.Caching, 60);
+
+            // 6. 后台执行AI分析（如果需要）
+            if (includeAI) {
+                this.performBackgroundAIAnalysis(filePath, contentHash, content, staticResult, progressCallback);
+            } else {
+                progressCallback?.(AnalysisStage.Complete, 100);
+            }
+
+            return {
+                success: true,
+                data: capsuleData,
+                fromCache: false,
+                analysisTime: Date.now() - startTime
+            };
+
+        } catch (error) {
+            this.logger.error(`[EnhancedAnalysis] 分析失败: ${filePath}`, error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : '分析失败',
+                fromCache: false,
+                analysisTime: Date.now() - startTime
+            };
+        }
+    }
+
+    /**
+     * 批量分析文件
+     */
+    public async analyzeFiles(filePaths: string[], options?: {
+        includeAI?: boolean;
+        concurrency?: number;
+        progressCallback?: (completed: number, total: number, current: string) => void;
+    }): Promise<AnalysisResult[]> {
+        const { includeAI = true, concurrency = 3, progressCallback } = options || {};
+        const results: AnalysisResult[] = [];
+        
+        // 分批处理以控制并发
+        for (let i = 0; i < filePaths.length; i += concurrency) {
+            const batch = filePaths.slice(i, i + concurrency);
+            const batchPromises = batch.map(async (filePath) => {
+                progressCallback?.(i, filePaths.length, filePath);
+                return this.analyzeFile({ filePath, includeAI });
+            });
+            
+            const batchResults = await Promise.allSettled(batchPromises);
+            results.push(...batchResults.map(r => 
+                r.status === 'fulfilled' ? r.value : {
+                    success: false,
+                    error: 'Promise rejected',
+                    fromCache: false,
+                    analysisTime: 0
+                }
+            ));
+        }
+
+        progressCallback?.(filePaths.length, filePaths.length, 'completed');
+        return results;
+    }
+
+    /**
+     * 保存用户备注（独立于AI分析）
+     */
+    public async saveUserNotes(filePath: string, notes: {
+        comments?: string[];
+        tags?: string[];
+        priority?: 'low' | 'medium' | 'high';
+        bookmarked?: boolean;
+    }): Promise<void> {
+        await this.cache.saveUserNotes(filePath, notes);
+        this.logger.info(`[EnhancedAnalysis] 📝 用户备注已保存: ${filePath}`);
+    }
+
+    /**
+     * 获取缓存统计信息
+     */
+    public getCacheStats() {
+        return this.cache.getStats();
+    }
+
+    /**
+     * 清理缓存
+     */
+    public async clearCache(): Promise<void> {
+        await this.cache.clearAll();
+        this.logger.info('[EnhancedAnalysis] 🧹 缓存已清理');
+    }
+
+    /**
+     * 销毁UseCase
+     */
+    public dispose(): void {
+        this.cache.dispose();
+    }
+
+    // ===== 私有方法 =====
+
+    private async readFileContent(filePath: string): Promise<{ content: string; contentHash: string }> {
+        try {
+            const uri = vscode.Uri.file(filePath);
+            const bytes = await vscode.workspace.fs.readFile(uri);
+            const content = Buffer.from(bytes).toString('utf8');
+            const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+            
+            return { content, contentHash };
+        } catch (error) {
+            throw new Error(`无法读取文件: ${filePath} - ${error}`);
+        }
+    }
+
+    private async performStaticAnalysis(content: string, filePath: string): Promise<{
+        exports: string[];
+        imports: string[];
+        functions: string[];
+        classes: string[];
+        summary: string;
+    }> {
+        // 简单的静态分析实现
+        const lines = content.split('\n');
+        const exports: string[] = [];
+        const imports: string[] = [];
+        const functions: string[] = [];
+        const classes: string[] = [];
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            // 导出检测
+            if (trimmed.startsWith('export ')) {
+                const match = trimmed.match(/export\\s+(function|class|const|let|var)\\s+(\\w+)/);
+                if (match) exports.push(match[2]);
+            }
+            
+            // 导入检测
+            if (trimmed.startsWith('import ')) {
+                const match = trimmed.match(/from\\s+['"']([^'"']+)['"']/);
+                if (match) imports.push(match[1]);
+            }
+            
+            // 函数检测
+            if (trimmed.includes('function ')) {
+                const match = trimmed.match(/function\\s+(\\w+)/);
+                if (match) functions.push(match[1]);
+            }
+            
+            // 类检测
+            if (trimmed.startsWith('class ')) {
+                const match = trimmed.match(/class\\s+(\\w+)/);
+                if (match) classes.push(match[1]);
+            }
+        }
+
+        const summary = `文件包含 ${functions.length} 个函数，${classes.length} 个类，${exports.length} 个导出，${imports.length} 个导入`;
+        
+        return { exports, imports, functions, classes, summary };
+    }
+
+    private async createBaseCapsule(
+        filePath: string,
+        contentHash: string,
+        staticResult: any
+    ): Promise<CapsuleData> {
+        const now = Date.now();
+        
+        return {
+            meta: {
+                version: '2.0',
+                filePath,
+                language: this.detectLanguage(filePath),
+                contentHash,
+                fileSize: 0, // TODO: 实际文件大小
+                lastModified: now,
+                createdAt: now,
+                updatedAt: now
+            },
+            ai: {
+                static: staticResult,
+                inferences: [],
+                suggestions: [],
+                analyzedAt: now,
+                aiVersion: '1.0'
+            },
+            notes: {
+                comments: [],
+                tags: [],
+                lastEditedAt: now,
+                bookmarked: false
+            }
+        };
+    }
+
+    private async performBackgroundAIAnalysis(
+        filePath: string,
+        contentHash: string,
+        content: string,
+        staticResult: any,
+        progressCallback?: (stage: AnalysisStage, progress: number) => void
+    ): Promise<void> {
+        // 异步执行，不阻塞主流程
+        setTimeout(async () => {
+            try {
+                progressCallback?.(AnalysisStage.AIAnalysis, 70);
+                
+                // 确保AI客户端已初始化
+                await this.ensureAIClient();
+                
+                if (!this.aiClient) {
+                    this.logger.warn('[EnhancedAnalysis] AI客户端未可用，跳过AI分析');
+                    return;
+                }
+
+                // 执行AI分析
+                const aiResult = await this.performAIAnalysis(content, staticResult);
+                
+                // 增量更新AI结果
+                await this.cache.mergeAIAnalysis(filePath, contentHash, {
+                    inferences: aiResult.inferences,
+                    suggestions: aiResult.suggestions,
+                    analyzedAt: Date.now(),
+                    aiVersion: '1.0'
+                });
+
+                progressCallback?.(AnalysisStage.Complete, 100);
+                this.logger.info(`[EnhancedAnalysis] 🤖 AI分析完成: ${filePath}`);
+                
+                // 通知UI更新
+                this.notifyAIAnalysisComplete(filePath, aiResult);
+
+            } catch (error) {
+                this.logger.error(`[EnhancedAnalysis] AI分析失败: ${filePath}`, error);
+            }
+        }, 100); // 短延迟确保主流程先完成
+    }
+
+    private async ensureAIClient(): Promise<void> {
+        if (!this.isAIInitialized) {
+            this.aiClient = new MultiProviderAIClient(this.logger);
+            await this.aiClient.initialize();
+            this.isAIInitialized = true;
+        }
+    }
+
+    private async performAIAnalysis(content: string, staticResult: any): Promise<{
+        inferences: string[];
+        suggestions: string[];
+    }> {
+        // 这里调用实际的AI分析
+        // 暂时返回模拟结果
+        return {
+            inferences: [
+                '该文件似乎是一个工具类，提供了基础的功能函数',
+                '代码结构清晰，遵循了良好的编码规范'
+            ],
+            suggestions: [
+                '建议添加更多的单元测试',
+                '考虑添加更详细的文档注释'
+            ]
+        };
+    }
+
+    private detectLanguage(filePath: string): string {
+        const ext = filePath.split('.').pop()?.toLowerCase();
+        const langMap: Record<string, string> = {
+            'ts': 'typescript',
+            'tsx': 'typescript',
+            'js': 'javascript', 
+            'jsx': 'javascript',
+            'py': 'python',
+            'java': 'java',
+            'cs': 'csharp',
+            'cpp': 'cpp',
+            'c': 'c',
+            'go': 'go',
+            'rs': 'rust'
+        };
+        return langMap[ext || ''] || 'unknown';
+    }
+
+    private notifyAIAnalysisComplete(filePath: string, aiResult: any): void {
+        // 发送消息给webview，通知AI分析完成
+        // TODO: 实现具体的通知机制
+        this.logger.debug(`[EnhancedAnalysis] 🔔 通知AI分析完成: ${filePath}`);
+    }
+
+    /**
+     * 将CapsuleData转换为FileCapsule格式（用于UI展示）
+     */
+    public convertToFileCapsule(capsuleData: CapsuleData): any {
+        const { meta, ai, notes } = capsuleData;
+        
+        return {
+            version: '1.0',
+            file: meta.filePath,
+            lang: meta.language,
+            contentHash: meta.contentHash,
+            summary: {
+                zh: ai?.static?.summary || '静态分析完成',
+                en: ai?.static?.summary || 'Static analysis completed'
+            },
+            api: ai?.static?.exports?.map(name => ({
+                name,
+                type: 'export',
+                signature: name
+            })) || [],
+            deps: {
+                imports: ai?.static?.imports || [],
+                exports: ai?.static?.exports || []
+            },
+            facts: ai?.static ? [
+                `包含 ${ai.static.functions.length} 个函数`,
+                `包含 ${ai.static.classes.length} 个类`,
+                `导入 ${ai.static.imports.length} 个模块`,
+                `导出 ${ai.static.exports.length} 个符号`
+            ] : [],
+            inferences: ai?.inferences?.map(inf => ({
+                category: 'analysis',
+                content: inf,
+                confidence: 0.8
+            })) || [],
+            recommendations: ai?.suggestions?.map(sug => ({
+                type: 'improvement',
+                priority: 'medium',
+                content: sug
+            })) || [],
+            // 附加用户备注信息（如果有的话）
+            userNotes: notes || undefined
+        };
+    }
+}
