@@ -455,82 +455,229 @@
         }
 
         renderNotes() {
-            const notes = this.data?.notes || {};
-            const markdown = notes.md || '';
+            // 获取用户备注数据（来自S3缓存系统）
+            const userNotes = this.data?.userNotes || {};
+            const comments = userNotes.comments || [];
+            const tags = userNotes.tags || [];
+            const priority = userNotes.priority || '';
+            const lastEdited = userNotes.lastEditedAt;
+            
+            const safeId = this.path.replace(/[^a-zA-Z0-9]/g, '_');
             
             this.content.innerHTML = `
-                <div class="notes-section">
-                    <textarea 
-                        id="notes-${this.path.replace(/[^a-zA-Z0-9]/g, '_')}"
-                        placeholder="在此添加您的备注和笔记...&#10;&#10;支持 Markdown 格式：&#10;- **粗体** *斜体*&#10;- # 标题&#10;- - 列表项&#10;- [链接](url)"
-                        style="
-                            width: 100%; 
-                            height: 280px; 
-                            border: 1px solid var(--vscode-input-border); 
-                            background: var(--vscode-input-background); 
-                            color: var(--vscode-input-foreground);
-                            padding: 8px;
-                            border-radius: 4px;
-                            font-family: var(--vscode-editor-font-family, 'Consolas', monospace);
-                            font-size: 12px;
-                            resize: vertical;
-                            line-height: 1.4;
-                        "
-                    >${markdown}</textarea>
-                    
-                    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <div style="font-size: 10px; color: var(--vscode-descriptionForeground);">
-                            ${notes.updatedAt ? `最后更新: ${new Date(notes.updatedAt).toLocaleString()}` : '尚未保存'}
-                            ${notes.author ? ` | 作者: ${notes.author}` : ''}
+                <div class="user-notes-container" style="padding: 8px;">
+                    <!-- 优先级选择 -->
+                    <div class="notes-section" style="margin-bottom: 12px;">
+                        <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">⚡ 优先级</h4>
+                        <div class="priority-selector" style="display: flex; gap: 8px;">
+                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="high" ${priority === 'high' ? 'checked' : ''}> 🔴 高</label>
+                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="medium" ${priority === 'medium' ? 'checked' : ''}> 🟡 中</label>
+                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="low" ${priority === 'low' ? 'checked' : ''}> 🟢 低</label>
+                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="" ${!priority ? 'checked' : ''}> ⚪ 无</label>
                         </div>
-                        <button id="save-notes-${this.path.replace(/[^a-zA-Z0-9]/g, '_')}" 
-                                style="
-                                    background: var(--vscode-button-background);
-                                    color: var(--vscode-button-foreground);
-                                    border: none;
-                                    padding: 4px 8px;
-                                    border-radius: 3px;
-                                    font-size: 11px;
-                                    cursor: pointer;
-                                ">💾 保存</button>
+                    </div>
+                    
+                    <!-- 标签管理 -->
+                    <div class="notes-section" style="margin-bottom: 12px;">
+                        <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">🏷️ 标签</h4>
+                        <div class="tags-container">
+                            <div class="tags-display" id="tags-display-${safeId}" style="margin-bottom: 6px; min-height: 20px;">
+                                ${tags.map(tag => `
+                                    <span class="tag-item" data-tag="${tag}" style="
+                                        display: inline-block; background: var(--vscode-button-background); 
+                                        color: var(--vscode-button-foreground); padding: 2px 6px; margin: 2px; 
+                                        border-radius: 12px; font-size: 10px; cursor: pointer;">
+                                        ${tag} 
+                                        <span class="tag-remove" onclick="window.blueprintCard.removeTag('${this.path}', '${tag}')" 
+                                              style="margin-left: 4px; color: var(--vscode-errorForeground); cursor: pointer;">×</span>
+                                    </span>
+                                `).join('')}
+                            </div>
+                            <div class="tags-input-row" style="display: flex; gap: 4px;">
+                                <input type="text" id="tag-input-${safeId}" placeholder="添加标签..." 
+                                       style="flex: 1; padding: 4px; border: 1px solid var(--vscode-input-border); 
+                                              background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+                                              border-radius: 3px; font-size: 11px;">
+                                <button id="add-tag-${safeId}" style="padding: 4px 8px; 
+                                        background: var(--vscode-button-background); color: var(--vscode-button-foreground); 
+                                        border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">+ 添加</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 评论列表 -->
+                    <div class="notes-section" style="margin-bottom: 12px;">
+                        <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">💭 评论备注</h4>
+                        <div class="comments-list" id="comments-list-${safeId}" style="max-height: 150px; overflow-y: auto; margin-bottom: 8px;">
+                            ${comments.map((comment, index) => `
+                                <div class="comment-item" data-index="${index}" style="
+                                    background: var(--vscode-editor-background); border: 1px solid var(--vscode-input-border);
+                                    padding: 6px; margin-bottom: 4px; border-radius: 4px; position: relative;">
+                                    <div class="comment-content" style="font-size: 11px; line-height: 1.4; padding-right: 40px;">${this.escapeHtml(comment)}</div>
+                                    <button class="comment-remove" onclick="window.blueprintCard.removeComment('${this.path}', ${index})" 
+                                            style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; 
+                                                   color: var(--vscode-errorForeground); cursor: pointer; font-size: 10px;">删除</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="comment-input-section">
+                            <textarea id="comment-input-${safeId}" placeholder="添加新评论..." 
+                                     style="width: 100%; height: 60px; padding: 6px; border: 1px solid var(--vscode-input-border); 
+                                            background: var(--vscode-input-background); color: var(--vscode-input-foreground); 
+                                            border-radius: 4px; font-family: var(--vscode-font-family); font-size: 11px; resize: vertical;
+                                            box-sizing: border-box;"></textarea>
+                            <div style="margin-top: 6px; text-align: right;">
+                                <button id="add-comment-${safeId}" style="padding: 6px 12px; background: var(--vscode-button-background); 
+                                        color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">💬 添加评论</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 状态信息 -->
+                    <div class="notes-footer" style="display: flex; justify-content: space-between; align-items: center; 
+                         border-top: 1px solid var(--vscode-input-border); padding-top: 8px;">
+                        <div style="font-size: 10px; color: var(--vscode-descriptionForeground);">
+                            ${lastEdited ? `最后编辑: ${new Date(lastEdited).toLocaleString()}` : '尚未保存'}
+                        </div>
+                        <button id="save-all-notes-${safeId}" style="background: var(--vscode-button-background); 
+                                color: var(--vscode-button-foreground); border: none; padding: 6px 12px; 
+                                border-radius: 3px; font-size: 10px; cursor: pointer;">💾 保存所有更改</button>
                     </div>
                 </div>
             `;
             
-            // 设置保存事件
-            const saveBtn = this.content.querySelector(`#save-notes-${this.path.replace(/[^a-zA-Z0-9]/g, '_')}`);
-            const textarea = this.content.querySelector(`#notes-${this.path.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            // 设置事件监听器
+            this.setupNotesEventListeners(safeId);
+        }
+        
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        setupNotesEventListeners(safeId) {
+            // 标签添加
+            const tagInput = this.content.querySelector(`#tag-input-${safeId}`);
+            const addTagBtn = this.content.querySelector(`#add-tag-${safeId}`);
             
-            if (saveBtn && textarea) {
-                saveBtn.onclick = () => this.saveNotes(textarea.value);
-                
-                // 自动保存 (防抖)
-                let saveTimeout;
-                textarea.oninput = () => {
-                    clearTimeout(saveTimeout);
-                    saveTimeout = setTimeout(() => this.saveNotes(textarea.value), 2000);
+            const addTag = () => {
+                const tagValue = tagInput.value.trim();
+                if (tagValue) {
+                    this.addTag(tagValue);
+                    tagInput.value = '';
+                }
+            };
+            
+            if (addTagBtn) addTagBtn.onclick = addTag;
+            if (tagInput) {
+                tagInput.onkeypress = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTag();
+                    }
                 };
+            }
+            
+            // 评论添加
+            const commentInput = this.content.querySelector(`#comment-input-${safeId}`);
+            const addCommentBtn = this.content.querySelector(`#add-comment-${safeId}`);
+            
+            const addComment = () => {
+                const commentValue = commentInput.value.trim();
+                if (commentValue) {
+                    this.addComment(commentValue);
+                    commentInput.value = '';
+                }
+            };
+            
+            if (addCommentBtn) addCommentBtn.onclick = addComment;
+            
+            // 优先级更改
+            const priorityInputs = this.content.querySelectorAll(`input[name="priority-${safeId}"]`);
+            priorityInputs.forEach(input => {
+                input.onchange = () => {
+                    this.updatePriority(input.value);
+                };
+            });
+            
+            // 保存所有更改
+            const saveAllBtn = this.content.querySelector(`#save-all-notes-${safeId}`);
+            if (saveAllBtn) {
+                saveAllBtn.onclick = () => this.saveUserNotes();
+            }
+        }
+        
+        addTag(tag) {
+            if (!this.data) this.data = {};
+            if (!this.data.userNotes) this.data.userNotes = { comments: [], tags: [] };
+            if (!this.data.userNotes.tags) this.data.userNotes.tags = [];
+            
+            if (!this.data.userNotes.tags.includes(tag)) {
+                this.data.userNotes.tags.push(tag);
+                this.refreshNotesDisplay();
+            }
+        }
+        
+        addComment(comment) {
+            if (!this.data) this.data = {};
+            if (!this.data.userNotes) this.data.userNotes = { comments: [], tags: [] };
+            if (!this.data.userNotes.comments) this.data.userNotes.comments = [];
+            
+            this.data.userNotes.comments.push(comment);
+            this.refreshNotesDisplay();
+        }
+        
+        updatePriority(priority) {
+            if (!this.data) this.data = {};
+            if (!this.data.userNotes) this.data.userNotes = { comments: [], tags: [] };
+            
+            this.data.userNotes.priority = priority || undefined;
+            console.log(`[blueprintCard] 优先级更新为: ${priority || '无'}`);
+        }
+        
+        refreshNotesDisplay() {
+            if (this.options.activeTab === 'notes') {
+                this.renderTabContent('notes');
+            }
+        }
+        
+        saveUserNotes() {
+            if (!this.data?.userNotes) {
+                console.log(`[blueprintCard] 没有用户备注需要保存: ${this.path}`);
+                return;
+            }
+            
+            // 更新最后编辑时间
+            this.data.userNotes.lastEditedAt = Date.now();
+            
+            // 发送到后端保存
+            if (window.vscode) {
+                window.vscode.postMessage({
+                    type: 'save-user-notes',
+                    payload: {
+                        filePath: this.path,
+                        notes: {
+                            comments: this.data.userNotes.comments || [],
+                            tags: this.data.userNotes.tags || [],
+                            priority: this.data.userNotes.priority
+                        }
+                    }
+                });
+                console.log(`[blueprintCard] 💾 保存用户备注: ${this.path}`, this.data.userNotes);
+            } else {
+                console.warn(`[blueprintCard] vscode API 不可用，无法保存备注`);
             }
         }
 
         saveNotes(content) {
-            if (!this.data) this.data = {};
-            if (!this.data.notes) this.data.notes = {};
-            
-            this.data.notes.md = content;
-            this.data.notes.updatedAt = new Date().toISOString();
-            this.data.notes.author = 'Current User'; // 可以从VS Code API获取
-            
-            // 通知扩展端保存
-            this.onNotesChange?.(this.path, this.data.notes);
-            
-            // 更新界面显示
-            const statusEl = this.content.querySelector('.notes-section div div');
-            if (statusEl) {
-                statusEl.textContent = `最后更新: ${new Date().toLocaleString()} | 作者: ${this.data.notes.author}`;
+            // 保持向后兼容的旧方法（现在转换为使用新的用户备注系统）
+            if (content && content.trim()) {
+                this.addComment(content);
+                this.saveUserNotes();
             }
-            
-            console.log(`[blueprintCard] 💾 保存备注: ${this.path} (${content.length} 字符)`);
+            console.log(`[blueprintCard] 💾 保存备注(兼容模式): ${this.path} (${content?.length || 0} 字符)`);
         }
 
         togglePin() {
@@ -766,8 +913,45 @@
          */
         setLayoutEngine(engine) {
             layoutEngine = engine;
+        },
+
+        /**
+         * 全局方法：移除标签
+         */
+        removeTag(path, tag) {
+            const card = cardStore.get(path);
+            if (card && card.data && card.data.userNotes && card.data.userNotes.tags) {
+                const index = card.data.userNotes.tags.indexOf(tag);
+                if (index > -1) {
+                    card.data.userNotes.tags.splice(index, 1);
+                    card.refreshNotesDisplay();
+                }
+            }
+        },
+
+        /**
+         * 全局方法：移除评论
+         */
+        removeComment(path, index) {
+            const card = cardStore.get(path);
+            if (card && card.data && card.data.userNotes && card.data.userNotes.comments) {
+                card.data.userNotes.comments.splice(index, 1);
+                card.refreshNotesDisplay();
+            }
+        },
+
+        /**
+         * 获取指定路径的卡片实例
+         */
+        getCard(path) {
+            return cardStore.get(path);
         }
     };
+
+    // 暴露全局方法到window，供HTML onclick使用
+    if (typeof window !== 'undefined') {
+        window.blueprintCard = api;
+    }
 
     return api;
 });

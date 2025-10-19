@@ -16,7 +16,9 @@ import {
     ExtensionToWebview,
     createShowAnalysisCardMessage,
     createUpdateAnalysisCardMessage,
-    createAnalysisErrorMessage
+    createAnalysisErrorMessage,
+    createUserNotesDataMessage,
+    createUserNotesSavedMessage
 } from '../../../shared/messages';
 import { toAbsolute, getWorkspaceRelative } from '../../../shared/utils/pathUtils';
 import { resolveTargetToFileAndRoot, toPosix, relativePosix, toAbsoluteUri } from './resolveTarget';
@@ -297,6 +299,14 @@ export class BlueprintPanel {
             case 'error':
                 this.logger.error('Webview 错误:', message.payload);
                 vscode.window.showErrorMessage(`蓝图错误: ${message.payload.message}`);
+                break;
+
+            case 'save-user-notes':
+                await this.handleSaveUserNotes(message.payload);
+                break;
+
+            case 'get-user-notes':
+                await this.handleGetUserNotes(message.payload);
                 break;
 
             default:
@@ -1006,6 +1016,100 @@ export class BlueprintPanel {
     public openHelp(): void {
         this.sendMessage({ type: 'open-help' });
         this.logger.debug('已发送打开帮助消息到 Webview');
+    }
+
+    /**
+     * 处理保存用户备注请求
+     */
+    private async handleSaveUserNotes(payload: any): Promise<void> {
+        const { filePath, notes } = payload;
+        
+        this.logger.info(`[用户备注] 保存备注: ${filePath}`);
+        
+        if (!filePath) {
+            this.logger.warn('保存用户备注消息缺少路径信息');
+            return;
+        }
+
+        try {
+            // 使用增强分析用例保存用户备注
+            await this.enhancedAnalysisUseCase.saveUserNotes(filePath, notes);
+            
+            // 发送成功确认消息
+            const successMessage = createUserNotesSavedMessage(filePath, true);
+            await this.safePostMessage(successMessage);
+            
+            this.logger.info(`[用户备注] 备注保存成功: ${filePath}`);
+            
+        } catch (error) {
+            this.logger.error(`[用户备注] 保存失败: ${filePath}`, error);
+            
+            // 发送失败消息
+            const errorMessage = createUserNotesSavedMessage(
+                filePath, 
+                false, 
+                error instanceof Error ? error.message : '保存失败'
+            );
+            await this.safePostMessage(errorMessage);
+        }
+    }
+
+    /**
+     * 处理获取用户备注请求
+     */
+    private async handleGetUserNotes(payload: any): Promise<void> {
+        const { filePath } = payload;
+        
+        this.logger.info(`[用户备注] 获取备注: ${filePath}`);
+        
+        if (!filePath) {
+            this.logger.warn('获取用户备注消息缺少路径信息');
+            return;
+        }
+
+        try {
+            // 使用增强分析用例获取胶囊数据
+            const result = await this.enhancedAnalysisUseCase.analyzeFile({
+                filePath,
+                forceRefresh: false,
+                includeAI: false  // 只获取缓存，不执行AI分析
+            });
+
+            let notes = {
+                comments: [] as string[],
+                tags: [] as string[],
+                priority: undefined as 'low' | 'medium' | 'high' | undefined,
+                lastEditedAt: undefined as number | undefined
+            };
+
+            if (result.success && result.data?.notes) {
+                notes = {
+                    comments: result.data.notes.comments || [],
+                    tags: result.data.notes.tags || [],
+                    priority: result.data.notes.priority,
+                    lastEditedAt: result.data.notes.lastEditedAt
+                };
+            }
+
+            // 发送用户备注数据
+            const dataMessage = createUserNotesDataMessage(filePath, notes);
+            await this.safePostMessage(dataMessage);
+            
+            this.logger.info(`[用户备注] 备注获取成功: ${filePath}`, notes);
+            
+        } catch (error) {
+            this.logger.error(`[用户备注] 获取失败: ${filePath}`, error);
+            
+            // 发送空的备注数据作为降级
+            const emptyNotes = {
+                comments: [],
+                tags: [],
+                priority: undefined,
+                lastEditedAt: undefined
+            };
+            const dataMessage = createUserNotesDataMessage(filePath, emptyNotes);
+            await this.safePostMessage(dataMessage);
+        }
     }
 
     /**

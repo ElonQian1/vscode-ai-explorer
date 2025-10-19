@@ -195,6 +195,31 @@ export interface ErrorMessage {
 }
 
 /**
+ * 保存用户备注
+ */
+export interface SaveUserNotesMessage {
+    type: 'save-user-notes';
+    payload: {
+        filePath: string;
+        notes: {
+            comments?: string[];
+            tags?: string[];
+            priority?: 'low' | 'medium' | 'high';
+        };
+    };
+}
+
+/**
+ * 获取用户备注
+ */
+export interface GetUserNotesMessage {
+    type: 'get-user-notes';
+    payload: {
+        filePath: string;
+    };
+}
+
+/**
  * Webview → Extension 消息联合类型
  */
 export type WebviewToExtension =
@@ -212,7 +237,9 @@ export type WebviewToExtension =
     | RevealInExplorerMessage
     | GoUpMessage
     | NodeMovedMessage
-    | ErrorMessage;
+    | ErrorMessage
+    | SaveUserNotesMessage
+    | GetUserNotesMessage;
 
 // ============================================================================
 // Extension → Webview (后端发给前端的消息)
@@ -271,6 +298,34 @@ export interface OpenHelpMessage {
 }
 
 /**
+ * 用户备注数据响应
+ */
+export interface UserNotesDataMessage {
+    type: 'user-notes-data';
+    payload: {
+        filePath: string;
+        notes: {
+            comments: string[];
+            tags: string[];
+            priority?: 'low' | 'medium' | 'high';
+            lastEditedAt?: number;
+        };
+    };
+}
+
+/**
+ * 用户备注保存成功确认
+ */
+export interface UserNotesSavedMessage {
+    type: 'user-notes-saved';
+    payload: {
+        filePath: string;
+        success: boolean;
+        error?: string;
+    };
+}
+
+/**
  * Extension → Webview 消息联合类型
  */
 export type ExtensionToWebview =
@@ -278,7 +333,9 @@ export type ExtensionToWebview =
     | ShowAnalysisCardMessage
     | UpdateAnalysisCardMessage
     | AnalysisErrorMessage
-    | OpenHelpMessage;
+    | OpenHelpMessage
+    | UserNotesDataMessage
+    | UserNotesSavedMessage;
 
 // ============================================================================
 // 类型守卫 (Type Guards)
@@ -342,6 +399,38 @@ export function createAnalysisErrorMessage(
     return {
         type: 'analysis-error',
         payload: { file, message }
+    };
+}
+
+/**
+ * 创建用户备注数据消息
+ */
+export function createUserNotesDataMessage(
+    filePath: string,
+    notes: {
+        comments: string[];
+        tags: string[];
+        priority?: 'low' | 'medium' | 'high';
+        lastEditedAt?: number;
+    }
+): UserNotesDataMessage {
+    return {
+        type: 'user-notes-data',
+        payload: { filePath, notes }
+    };
+}
+
+/**
+ * 创建用户备注保存成功消息
+ */
+export function createUserNotesSavedMessage(
+    filePath: string,
+    success: boolean,
+    error?: string
+): UserNotesSavedMessage {
+    return {
+        type: 'user-notes-saved',
+        payload: { filePath, success, error }
     };
 }
 

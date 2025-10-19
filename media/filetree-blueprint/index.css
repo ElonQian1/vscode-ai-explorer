@@ -442,3 +442,184 @@ kbd {
     opacity: 0.5;
     margin-left: 8px;
 }
+
+/* ===== 用户备注UI样式 ===== */
+
+/* 用户备注容器 */
+.user-notes-container {
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* 备注区段标题 */
+.user-notes-container .section-title {
+    color: var(--vscode-foreground);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 优先级选择器 */
+.priority-selector {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.priority-selector label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.priority-selector label:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.priority-selector input[type="radio"] {
+    margin: 0;
+}
+
+/* 标签容器 */
+.tags-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tags-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 24px;
+    padding: 4px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    background: var(--vscode-input-background);
+}
+
+.tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.tag-remove {
+    cursor: pointer;
+    color: var(--vscode-errorForeground);
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.tag-remove:hover {
+    background: var(--vscode-errorBackground);
+}
+
+.tags-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+
+/* 评论列表 */
+.comments-list {
+    max-height: 140px;
+    overflow-y: auto;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    background: var(--vscode-editor-background);
+}
+
+.comment-item {
+    position: relative;
+    padding: 8px;
+    border-bottom: 1px solid var(--vscode-input-border);
+    background: var(--vscode-input-background);
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-content {
+    padding-right: 50px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.comment-remove {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: var(--vscode-errorForeground);
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.comment-remove:hover {
+    background: var(--vscode-errorBackground);
+}
+
+/* 评论输入区 */
+.comment-input-section textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+/* 备注底部状态栏 */
+.notes-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid var(--vscode-input-border);
+    margin-top: 8px;
+}
+
+/* 空状态提示 */
+.comments-list:empty::before {
+    content: "暂无评论，点击下方添加第一条评论...";
+    display: block;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    padding: 20px;
+}
+
+.tags-display:empty::before {
+    content: "暂无标签";
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    padding: 4px 8px;
+}
+
+/* 按钮样式统一 */
+.user-notes-container button {
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.user-notes-container button:hover {
+    transform: translateY(-1px);
+}
+
+.user-notes-container button:active {
+    transform: translateY(0);
+}

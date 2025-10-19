@@ -628,6 +628,34 @@
             const { file, message } = msg.payload || {};
             // TODO: 实现 toast 提示
             console.error(`分析失败: ${file}\n${message || '未知错误'}`);
+        } else if (msg?.type === 'user-notes-data') {
+            // 🗒️ 用户备注数据响应
+            const { filePath, notes } = msg.payload || {};
+            console.log('[graphView] 📝 收到用户备注数据:', filePath, notes);
+            
+            if (window.blueprintCard && filePath) {
+                // 更新卡片中的用户备注数据
+                const card = window.blueprintCard.getCard(filePath);
+                if (card && card.data) {
+                    card.data.userNotes = notes;
+                    // 如果当前显示notes标签，刷新显示
+                    if (card.options.activeTab === 'notes') {
+                        card.renderTabContent('notes');
+                    }
+                }
+            }
+        } else if (msg?.type === 'user-notes-saved') {
+            // 💾 用户备注保存确认
+            const { filePath, success, error } = msg.payload || {};
+            console.log('[graphView] 💾 用户备注保存结果:', filePath, success ? '成功' : '失败', error);
+            
+            if (success) {
+                // 可以显示成功提示，或更新UI状态
+                console.log(`[graphView] ✅ 用户备注已保存: ${filePath}`);
+            } else {
+                console.error(`[graphView] ❌ 用户备注保存失败: ${filePath}`, error);
+                // 可以显示错误提示
+            }
         }
     }
 
