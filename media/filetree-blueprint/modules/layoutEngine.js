@@ -52,25 +52,16 @@
 
         async initELK() {
             try {
-                // 尝试从CDN加载elkjs
-                if (!window.ELK) {
-                    const script = document.createElement('script');
-                    script.src = 'https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js';
-                    script.onload = () => {
-                        elkInstance = new window.ELK();
-                        console.log('[layoutEngine] ✅ ELK.js 加载成功');
-                    };
-                    script.onerror = () => {
-                        console.warn('[layoutEngine] ⚠️ ELK.js CDN加载失败，使用本地实现');
-                        elkInstance = this.createFallbackLayout();
-                    };
-                    document.head.appendChild(script);
-                } else {
+                // 🔧 CSP修复：直接使用本地加载的window.ELK
+                if (window.ELK && typeof window.ELK === 'function') {
                     elkInstance = new window.ELK();
-                    console.log('[layoutEngine] ✅ ELK.js 已存在');
+                    console.log('[layoutEngine] ✅ 本地ELK.js初始化成功');
+                } else {
+                    console.warn('[layoutEngine] ⚠️ 本地ELK.js未找到，使用网格兜底布局');
+                    elkInstance = this.createFallbackLayout();
                 }
             } catch (error) {
-                console.warn('[layoutEngine] ELK初始化失败，使用降级布局:', error);
+                console.warn('[layoutEngine] ELK初始化失败，使用网格兜底布局:', error);
                 elkInstance = this.createFallbackLayout();
             }
         }
@@ -79,20 +70,29 @@
         createFallbackLayout() {
             return {
                 layout: async (graph) => {
-                    console.log('[layoutEngine] 🔄 使用降级布局算法');
+                    console.log('[layoutEngine] 🔄 使用降级网格布局算法');
                     
-                    // 简单的网格布局
-                    const cols = Math.ceil(Math.sqrt(graph.children.length));
-                    const cellWidth = 200;
-                    const cellHeight = 100;
+                    // ✅ 真实网格布局：一定返回坐标，保证节点能画出来
+                    const children = graph.children || [];
+                    const COLS = Math.ceil(Math.sqrt(children.length || 1));
+                    const GAPX = 80, GAPY = 60, W = 160, H = 40;
+                    
+                    children.forEach((c, i) => {
+                        const col = i % COLS;
+                        const row = Math.floor(i / COLS);
+                        c.x = col * (W + GAPX);
+                        c.y = row * (H + GAPY);
+                        // 确保尺寸信息存在
+                        c.width = c.width || W;
+                        c.height = c.height || H;
+                    });
+                    
+                    console.log(`[layoutEngine] ✅ 网格布局完成: ${children.length}个节点已分配坐标`);
                     
                     return {
-                        ...graph,
-                        children: graph.children.map((node, i) => ({
-                            ...node,
-                            x: (i % cols) * cellWidth,
-                            y: Math.floor(i / cols) * cellHeight
-                        }))
+                        id: 'root',
+                        children: children,
+                        edges: graph.edges || []
                     };
                 }
             };

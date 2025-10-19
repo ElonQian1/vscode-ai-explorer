@@ -763,6 +763,12 @@ export class BlueprintPanel {
         const blueprintCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'blueprintCard.js'));
         const layoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'layoutEngine.js'));
         const validationTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'validation-test.js'));
+        
+        // 🔧 本地ELK引擎（避免CDN CSP拦截）
+        const elkUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'vendor', 'elk.bundled.js'));
+        
+        // 🔧 CSP修复版启动脚本（替代内联script）
+        const bootScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'boot-script.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -890,12 +896,13 @@ export class BlueprintPanel {
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'none'; 
         img-src ${csp} https:; 
-        script-src ${csp};
-        style-src ${csp} 'unsafe-inline';
+        script-src ${csp} 'nonce-${nonce}';
+        style-src ${csp} 'nonce-${nonce}';
+        font-src ${csp} https:;
     ">
     <link rel="stylesheet" href="${styleUri}">
-    <style>${emergencyStyles}</style>
-    <title>文件树蓝图 - 急救模式</title>
+    <style nonce="${nonce}">${emergencyStyles}</style>
+    <title>文件树蓝图 - CSP修复版</title>
 </head>
 <body>
     <!-- 统计信息工具栏 -->
@@ -919,89 +926,18 @@ export class BlueprintPanel {
     <!-- 🎯 浮动卡片挂载层：绝对定位在顶层 -->
     <div id="card-layer" class="card-layer" aria-live="polite"></div>
     
-    <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
-    <!-- 蓝图卡片系统加载顺序：契约 → 布局引擎 → 卡片组件 → 旧卡片（兼容） → 画布逻辑 -->
-    <script src="${smokeProbeUri}"></script>
-    <script src="${debugBannerUri}"></script>
-    <script src="${messageContractsUri}"></script>
-    <script src="${layoutEngineUri}"></script>
-    <script src="${blueprintCardUri}"></script>
-    <script src="${analysisCardUri}"></script>
-    <script src="${scriptUri}"></script>
-    <script src="${validationTestUri}"></script>
-    
-    <script>
-        console.log('[BOOT] ✅ 所有脚本已加载完成');
-        
-        // 🎯 初始化蓝图卡片系统
-        if (window.blueprintCard && window.messageContracts) {
-            try {
-                // 挂载蓝图卡片到专用层
-                window.blueprintCard.mount('#card-layer');
-                
-                // 设置事件回调
-                window.blueprintCard.setCallbacks({
-                    onOpen: (path, size) => {
-                        console.log('[blueprintCard] 📌 卡片已打开:', path, size);
-                        // TODO: 通知布局引擎节点展开
-                    },
-                    onClose: (path) => {
-                        console.log('[blueprintCard] ❌ 卡片已关闭:', path);
-                        // TODO: 通知布局引擎节点收起
-                    },
-                    onNotesChange: (path, notes) => {
-                        console.log('[blueprintCard] 📝 备注已更改:', path);
-                        const saveMessage = window.messageContracts.createSaveNotesMessage(path, notes);
-                        window.__vscode?.postMessage(saveMessage);
-                    },
-                    onDependencyClick: (depPath) => {
-                        console.log('[blueprintCard] 🔗 依赖点击:', depPath);
-                        // TODO: 导航到依赖文件或显示其卡片
-                    }
-                });
-                
-                console.log('[BOOT] 🎯 蓝图卡片系统初始化成功');
-            } catch (error) {
-                console.error('[BOOT] ❌ 蓝图卡片系统初始化失败:', error);
-            }
-        } else {
-            console.warn('[BOOT] ⚠️ 蓝图卡片系统未加载，将使用旧卡片系统');
-        }
-        
-        // 🎯 初始化旧卡片系统（兼容）
-        if (window.cardManager) {
-            try {
-                window.cardManager.mount('#card-layer');
-                console.log('[BOOT] ✅ 旧卡片系统（兼容）初始化成功');
-            } catch (error) {
-                console.warn('[BOOT] ⚠️ 旧卡片系统初始化失败:', error);
-            }
-        }
-        
-        // 等待DOM + 初始化检查
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('[BOOT] ✅ DOM就绪，开始验证容器');
-            const root = document.getElementById('graph-root');
-            if (root) {
-                const rect = root.getBoundingClientRect();
-                console.log('[BOOT] 📐 容器尺寸:', {
-                    width: rect.width, 
-                    height: rect.height,
-                    top: rect.top,
-                    left: rect.left
-                });
-                
-                if (rect.height === 0) {
-                    console.error('[BOOT] ❌ 容器高度为0，CSS布局问题');
-                    root.style.height = '100vh';
-                    root.style.minHeight = '400px';
-                    console.log('[BOOT] 🔧 已强制设置容器高度');
-                }
-            } else {
-                console.error('[BOOT] ❌ 找不到#graph-root容器');
-            }
-        });
-    </script>
+    <!-- � CSP修复：ELK本地化 + 所有脚本添加nonce -->
+    <!-- 加载顺序：ELK → 基础组件 → 蓝图卡片系统 → 画布逻辑 -->
+    <script nonce="${nonce}" src="${elkUri}"></script>
+    <script nonce="${nonce}" src="${smokeProbeUri}"></script>
+    <script nonce="${nonce}" src="${debugBannerUri}"></script>
+    <script nonce="${nonce}" src="${messageContractsUri}"></script>
+    <script nonce="${nonce}" src="${layoutEngineUri}"></script>
+    <script nonce="${nonce}" src="${blueprintCardUri}"></script>
+    <script nonce="${nonce}" src="${analysisCardUri}"></script>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${validationTestUri}"></script>
+    <script nonce="${nonce}" src="${bootScriptUri}"></script>
 </body>
 </html>`;
     }
