@@ -900,7 +900,7 @@ export class BlueprintPanel {
         default-src 'none'; 
         img-src ${csp} https:; 
         script-src ${csp} 'nonce-${nonce}';
-        style-src ${csp} 'nonce-${nonce}';
+        style-src ${csp} 'nonce-${nonce}' 'unsafe-inline';
         font-src ${csp} https:;
     ">
     <link rel="stylesheet" href="${styleUri}">
