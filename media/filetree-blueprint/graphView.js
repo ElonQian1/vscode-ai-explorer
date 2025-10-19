@@ -19,6 +19,9 @@
     // ✅ 卡片管理器（蓝图卡片系统）
     // window.blueprintCard 和 window.messageContracts 在模块脚本中初始化
     
+    // 🎯 布局引擎（elkjs集成）
+    let layoutEngine = null;
+    
     // 图表数据
     let graph = {
         nodes: [],
@@ -142,9 +145,29 @@
         }[m]));
     }
 
-    // ✅ 初始化启动（按照对症下药方案）
+    // ✅ 初始化启动（按照对症下药方案 + 布局引擎集成）
     function boot() {
-        // 1) mount card layer
+        // 1) 初始化布局引擎
+        if (window.layoutEngine) {
+            layoutEngine = window.layoutEngine.create();
+            
+            // 设置布局事件回调
+            layoutEngine.onLayoutStart = (reason, changedNodes) => {
+                console.log(`[graphView] 🔄 布局开始: ${reason}`, changedNodes);
+                // 可以在这里显示加载指示器
+            };
+            
+            layoutEngine.onLayoutComplete = (layoutResult, reason) => {
+                console.log(`[graphView] ✅ 布局完成: ${reason}`);
+                applyLayoutToDOM(layoutResult);
+            };
+            
+            console.log('[graphView] 🎯 布局引擎已初始化');
+        } else {
+            console.warn('[graphView] ⚠️ 布局引擎未加载，将使用静态布局');
+        }
+
+        // 2) mount card layer
         const layer = document.getElementById('card-layer') || (() => {
             const d = document.createElement('div'); 
             d.id = 'card-layer'; 
@@ -154,14 +177,51 @@
             return d;
         })();
         
-        if (window.cardManager && typeof window.cardManager.mount === 'function') {
+        // 3) 挂载卡片管理器
+        if (window.blueprintCard && typeof window.blueprintCard.mount === 'function') {
+            window.blueprintCard.mount('#card-layer');
+            
+            // 设置卡片事件回调，集成布局联动
+            window.blueprintCard.setCallbacks({
+                onOpen: (path, size) => {
+                    console.log('[graphView] 📌 卡片已打开:', path, size);
+                    if (layoutEngine) {
+                        layoutEngine.markExpanded(path, true);
+                        layoutEngine.reflow('expand', [path]);
+                    }
+                },
+                onClose: (path) => {
+                    console.log('[graphView] ❌ 卡片已关闭:', path);
+                    if (layoutEngine) {
+                        layoutEngine.markExpanded(path, false);
+                        layoutEngine.reflow('collapse', [path]);
+                    }
+                },
+                onNotesChange: (path, notes) => {
+                    console.log('[graphView] 📝 备注已更改:', path);
+                    if (window.messageContracts) {
+                        const saveMessage = window.messageContracts.createSaveNotesMessage(path, notes);
+                        vscode?.postMessage(saveMessage);
+                    }
+                },
+                onDependencyClick: (depPath) => {
+                    console.log('[graphView] 🔗 依赖点击:', depPath);
+                    // 显示依赖文件的卡片
+                    if (window.blueprintCard) {
+                        window.blueprintCard.showCard(depPath, { loading: true });
+                    }
+                }
+            });
+            
+            console.log('[graphView] ✅ 蓝图卡片系统已挂载，布局联动已启用');
+        } else if (window.cardManager && typeof window.cardManager.mount === 'function') {
             window.cardManager.mount('#card-layer');
-            console.log('[graphView] ✅ cardManager 已挂载到 card-layer');
+            console.log('[graphView] ✅ cardManager 已挂载到 card-layer (兼容模式)');
         } else {
-            console.log('[graphView] ⏳ cardManager 暂未就绪，稍后自动挂载');
+            console.log('[graphView] ⏳ 卡片管理器暂未就绪，稍后自动挂载');
         }
 
-        // 2) breadcrumb 兜底
+        // 4) breadcrumb 兜底
         const breadcrumb = document.getElementById('breadcrumb');
         if (!breadcrumb) {
             const bc = document.createElement('div');
@@ -172,7 +232,7 @@
             console.log('[graphView] 📍 创建了缺失的 breadcrumb');
         }
         
-        // 3) 原有初始化
+        // 5) 原有初始化
         setupEventListeners();
         notifyReady();
     }
@@ -279,17 +339,34 @@
     // 暴露给调试横幅的全局状态
     window.__graphState = { nodes: [], edges: [], metadata: { graphType: 'filetree' } };
 
-    // 统一渲染入口 - 按朋友建议添加
+    // 统一渲染入口 - 集成布局引擎
     function renderGraph(g) {
         window.__graphState = g;
         graph = g;
         
         console.log('[graphView] 🎨 统一渲染入口:', `${g.nodes.length} nodes, ${g.edges.length} edges`);
         
-        // 初始化节点与边的可视化
-        renderNodesOnce();
-        initEdgesLayerOnce();
-        drawEdges();
+        // 🎯 设置布局引擎数据并执行初始布局
+        if (layoutEngine) {
+            layoutEngine.setGraph(g.nodes, g.edges);
+            
+            // 异步执行初始布局
+            layoutEngine.reflow('init', []).then(layoutResult => {
+                if (layoutResult) {
+                    console.log('[graphView] ✅ 初始布局完成');
+                    // 布局结果会通过onLayoutComplete回调自动应用
+                } else {
+                    console.warn('[graphView] ⚠️ 初始布局失败，使用静态位置');
+                    renderNodesWithStaticLayout(g);
+                }
+            });
+        } else {
+            // 降级到静态布局
+            console.log('[graphView] 📍 使用静态布局');
+            renderNodesWithStaticLayout(g);
+        }
+        
+        // 其他UI组件更新
         updateStats();
         updateBreadcrumb(g);
         
@@ -297,9 +374,68 @@
         if (window.debugBanner?.setGraphMeta) {
             window.debugBanner.setGraphMeta(g);
         }
-
+    }
+    
+    // 静态布局渲染（兼容旧版本）
+    function renderNodesWithStaticLayout(g) {
+        renderNodesOnce();
+        initEdgesLayerOnce();
+        drawEdges();
+        
         // 自动适应视图
         setTimeout(() => fitView(), 100);
+    }
+    
+    // 应用布局结果到DOM
+    function applyLayoutToDOM(layoutResult) {
+        if (!layoutResult || !layoutResult.nodes) {
+            console.warn('[graphView] ⚠️ 无效的布局结果，跳过应用');
+            return;
+        }
+        
+        console.log('[graphView] 📍 应用布局到DOM:', Object.keys(layoutResult.nodes).length, '个节点');
+        
+        // 更新节点位置
+        Object.entries(layoutResult.nodes).forEach(([nodeId, position]) => {
+            const nodeEl = nodeContainer.querySelector(`[data-id="${nodeId}"]`);
+            if (nodeEl && position.x !== undefined && position.y !== undefined) {
+                // 平滑动画到新位置
+                const currentX = parseInt(nodeEl.style.left) || 0;
+                const currentY = parseInt(nodeEl.style.top) || 0;
+                
+                if (Math.abs(currentX - position.x) > 5 || Math.abs(currentY - position.y) > 5) {
+                    // 使用CSS transition实现平滑动画
+                    nodeEl.style.transition = 'left 0.3s ease-out, top 0.3s ease-out';
+                    nodeEl.style.left = position.x + 'px';
+                    nodeEl.style.top = position.y + 'px';
+                    
+                    // 清除transition避免影响后续拖拽
+                    setTimeout(() => {
+                        nodeEl.style.transition = '';
+                    }, 300);
+                } else {
+                    nodeEl.style.left = position.x + 'px';
+                    nodeEl.style.top = position.y + 'px';
+                }
+                
+                // 更新图数据中的位置
+                const node = graph.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    node.position = { x: position.x, y: position.y };
+                }
+            }
+        });
+        
+        // 重绘边（基于新的节点位置）
+        setTimeout(() => {
+            initEdgesLayerOnce();
+            drawEdges();
+        }, 50);
+        
+        // 更新视图边界
+        if (layoutResult.bounds) {
+            setTimeout(() => fitView(), 350); // 等动画完成后适应视图
+        }
     }
 
     // 处理来自扩展的消息 - 按朋友建议修改

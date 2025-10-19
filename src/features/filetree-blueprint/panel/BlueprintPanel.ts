@@ -311,6 +311,13 @@ export class BlueprintPanel {
                     return;
                 }
                 
+                // ✅ 忽略ACK消息，避免"未知消息类型"警告
+                const msgType = debugMessage.type;
+                if (msgType && typeof msgType === 'string' && msgType.startsWith('ack:')) {
+                    this.logger.debug(`[ACK] 忽略确认消息: ${msgType}`);
+                    return;
+                }
+                
                 // TypeScript 确保所有消息类型都被处理
                 const exhaustiveCheck: never = message;
                 this.logger.warn(`未知消息类型:`, exhaustiveCheck);
@@ -754,6 +761,7 @@ export class BlueprintPanel {
         // 🎯 新增：蓝图卡片系统模块
         const messageContractsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'contracts', 'messageContracts.js'));
         const blueprintCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'blueprintCard.js'));
+        const layoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'layoutEngine.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -888,10 +896,11 @@ export class BlueprintPanel {
     <div id="card-layer" class="card-layer" aria-live="polite"></div>
     
     <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
-    <!-- 蓝图卡片系统加载顺序：契约定义 → 卡片组件 → 旧卡片（兼容） → 画布逻辑 -->
+    <!-- 蓝图卡片系统加载顺序：契约 → 布局引擎 → 卡片组件 → 旧卡片（兼容） → 画布逻辑 -->
     <script src="${smokeProbeUri}"></script>
     <script src="${debugBannerUri}"></script>
     <script src="${messageContractsUri}"></script>
+    <script src="${layoutEngineUri}"></script>
     <script src="${blueprintCardUri}"></script>
     <script src="${analysisCardUri}"></script>
     <script src="${scriptUri}"></script>

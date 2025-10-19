@@ -600,6 +600,7 @@
   "dependencies": {
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
+    "elkjs": "^0.11.0",
     "openai": "^4.20.1",
     "vis-network": "^9.1.6"
   }
