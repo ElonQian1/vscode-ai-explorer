@@ -769,6 +769,9 @@ export class BlueprintPanel {
         
         // 🔧 CSP修复版启动脚本（替代内联script）
         const bootScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'boot-script.js'));
+        
+        // 🔬 ELK加载测试脚本
+        const elkTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'elk-test.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -936,6 +939,7 @@ export class BlueprintPanel {
     <script nonce="${nonce}" src="${blueprintCardUri}"></script>
     <script nonce="${nonce}" src="${analysisCardUri}"></script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${elkTestUri}"></script>
     <script nonce="${nonce}" src="${validationTestUri}"></script>
     <script nonce="${nonce}" src="${bootScriptUri}"></script>
 </body>
