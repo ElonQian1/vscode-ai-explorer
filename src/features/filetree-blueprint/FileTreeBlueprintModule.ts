@@ -10,10 +10,12 @@ import { BaseModule } from '../../shared/base/BaseModule';
 import { DIContainer } from '../../core/di/Container';
 import { GenerateBlueprintUseCase } from './app/usecases/GenerateBlueprintUseCase';
 import { resolveTargetToFileUri } from './utils/resolveTarget';
+import { CacheMonitorManager } from './monitoring/CacheMonitorManager';
 
 export class FileTreeBlueprintModule extends BaseModule {
     private generateUseCase?: GenerateBlueprintUseCase;
     private fileAnalysisService?: any;  // FileAnalysisService
+    private cacheMonitorManager?: CacheMonitorManager;
 
     constructor(container: DIContainer) {
         super(container, 'filetree-blueprint');
@@ -49,6 +51,45 @@ export class FileTreeBlueprintModule extends BaseModule {
             this.fileAnalysisService = this.container.get('fileAnalysisService');
         } catch {
             this.logger.warn('文件分析服务未注册，缓存清除功能将不可用');
+        }
+
+        // 初始化缓存监控管理器
+        this.initializeCacheMonitoring(context);
+    }
+
+    private initializeCacheMonitoring(context: vscode.ExtensionContext): void {
+        try {
+            // 注册缓存管理器（如果未注册）
+            if (!this.container.has('enhancedCapsuleCache')) {
+                const { EnhancedCapsuleCache } = require('./cache/EnhancedCapsuleCache');
+                this.container.registerSingleton('enhancedCapsuleCache', () => {
+                    const cache = new EnhancedCapsuleCache(this.logger, context);
+                    // 异步初始化缓存
+                    cache.initialize().then(() => {
+                        this.logger.info('[FileTreeBlueprint] 缓存管理器初始化完成');
+                    }).catch((error: any) => {
+                        this.logger.error('[FileTreeBlueprint] 缓存管理器初始化失败', error);
+                    });
+                    return cache;
+                });
+            }
+            
+            // 获取缓存管理器
+            const cacheManager = this.container.get<any>('enhancedCapsuleCache');
+            
+            if (cacheManager) {
+                this.cacheMonitorManager = new CacheMonitorManager(
+                    context.extensionUri,
+                    this.logger,
+                    cacheManager
+                );
+                
+                this.logger.info('[FileTreeBlueprint] 🚀 缓存监控系统已启动');
+            } else {
+                this.logger.warn('[FileTreeBlueprint] 缓存管理器获取失败，监控功能将不可用');
+            }
+        } catch (error) {
+            this.logger.warn('[FileTreeBlueprint] 缓存监控初始化失败', error);
         }
     }
 
@@ -251,6 +292,13 @@ export class FileTreeBlueprintModule extends BaseModule {
 
     async deactivate(): Promise<void> {
         this.logger.info('文件树蓝图模块正在停用...');
-        // 清理资源（如果需要）
+        
+        // 清理缓存监控管理器
+        if (this.cacheMonitorManager) {
+            this.cacheMonitorManager.dispose();
+            this.cacheMonitorManager = undefined;
+        }
+        
+        // 清理其他资源（如果需要）
     }
 }

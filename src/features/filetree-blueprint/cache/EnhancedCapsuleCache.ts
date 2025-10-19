@@ -72,6 +72,7 @@ export interface UserNotes {
 }
 
 export interface CacheStats {
+    // 基础统计
     totalCapsules: number;
     memoryHits: number;
     diskHits: number;
@@ -79,6 +80,25 @@ export interface CacheStats {
     writes: number;
     invalidations: number;
     hitRate: number;
+    
+    // 性能统计
+    avgResponseTime: number;
+    totalResponseTime: number;
+    requestCount: number;
+    
+    // 存储统计
+    totalDiskSize: number;
+    totalMemorySize: number;
+    
+    // 时间统计
+    lastHitTime: number;
+    lastMissTime: number;
+    lastWriteTime: number;
+    
+    // 运行时统计
+    uptime: number;
+    memoryHitRate: number;
+    diskHitRate: number;
 }
 
 // ===== 增强缓存管理器 =====
@@ -90,12 +110,30 @@ export class EnhancedCapsuleCache {
     private readonly logger: Logger;
     
     private stats = {
+        // 基础统计
         totalCapsules: 0,
         memoryHits: 0,
         diskHits: 0,
         misses: 0,
         writes: 0,
-        invalidations: 0
+        invalidations: 0,
+        
+        // 性能统计
+        avgResponseTime: 0,
+        totalResponseTime: 0,
+        requestCount: 0,
+        
+        // 存储统计
+        totalDiskSize: 0,
+        totalMemorySize: 0,
+        
+        // 时间统计
+        lastHitTime: 0,
+        lastMissTime: 0,
+        lastWriteTime: 0,
+        
+        // 启动时间
+        startTime: Date.now()
     };
 
     constructor(logger: Logger, private context: vscode.ExtensionContext) {
@@ -119,30 +157,43 @@ export class EnhancedCapsuleCache {
      * @param contentHash 文件内容哈希
      */
     public async getCapsule(filePath: string, contentHash: string): Promise<CapsuleData | null> {
+        const startTime = Date.now();
         const cacheKey = this.getCacheKey(filePath);
         
-        // 1. 检查内存缓存
-        const memoryResult = this.memoryCache.get(cacheKey);
-        if (memoryResult && memoryResult.meta.contentHash === contentHash) {
-            this.stats.memoryHits++;
-            this.logger.debug(`[EnhancedCache] 💾 内存缓存命中: ${path.basename(filePath)}`);
-            return memoryResult;
-        }
+        try {
+            // 1. 检查内存缓存
+            const memoryResult = this.memoryCache.get(cacheKey);
+            if (memoryResult && memoryResult.meta.contentHash === contentHash) {
+                this.stats.memoryHits++;
+                this.stats.lastHitTime = Date.now();
+                this.updateResponseTimeStats(startTime);
+                this.logger.debug(`[EnhancedCache] 💾 内存缓存命中: ${path.basename(filePath)}`);
+                return memoryResult;
+            }
 
-        // 2. 检查磁盘缓存
-        const diskResult = await this.loadFromDisk(filePath, contentHash);
-        if (diskResult) {
-            // 写入内存缓存
-            this.memoryCache.set(cacheKey, diskResult);
-            this.stats.diskHits++;
-            this.logger.debug(`[EnhancedCache] 💿 磁盘缓存命中: ${path.basename(filePath)}`);
-            return diskResult;
-        }
+            // 2. 检查磁盘缓存
+            const diskResult = await this.loadFromDisk(filePath, contentHash);
+            if (diskResult) {
+                // 写入内存缓存
+                this.memoryCache.set(cacheKey, diskResult);
+                this.stats.diskHits++;
+                this.stats.lastHitTime = Date.now();
+                this.updateResponseTimeStats(startTime);
+                this.updateMemorySizeStats();
+                this.logger.debug(`[EnhancedCache] 💿 磁盘缓存命中: ${path.basename(filePath)}`);
+                return diskResult;
+            }
 
-        // 3. 缓存未命中
-        this.stats.misses++;
-        this.logger.debug(`[EnhancedCache] ❌ 缓存未命中: ${path.basename(filePath)}`);
-        return null;
+            // 3. 缓存未命中
+            this.stats.misses++;
+            this.stats.lastMissTime = Date.now();
+            this.updateResponseTimeStats(startTime);
+            this.logger.debug(`[EnhancedCache] ❌ 缓存未命中: ${path.basename(filePath)}`);
+            return null;
+        } catch (error) {
+            this.updateResponseTimeStats(startTime);
+            throw error;
+        }
     }
 
     /**
@@ -174,6 +225,10 @@ export class EnhancedCapsuleCache {
         await this.saveToDisk(existing);
         
         this.stats.writes++;
+        this.stats.lastWriteTime = Date.now();
+        this.stats.totalCapsules = this.memoryCache.size;
+        this.updateMemorySizeStats();
+        await this.updateDiskSizeStats();
         this.logger.info(`[EnhancedCache] 🧠 保存AI分析: ${path.basename(filePath)}`);
     }
 
@@ -206,6 +261,10 @@ export class EnhancedCapsuleCache {
         this.memoryCache.set(cacheKey, existing);
         await this.saveToDisk(existing);
         
+        this.stats.writes++;
+        this.stats.lastWriteTime = Date.now();
+        this.updateMemorySizeStats();
+        await this.updateDiskSizeStats();
         this.logger.info(`[EnhancedCache] 📝 保存用户备注: ${path.basename(filePath)}`);
     }
 
@@ -276,11 +335,38 @@ export class EnhancedCapsuleCache {
     public getStats(): CacheStats {
         const total = this.stats.memoryHits + this.stats.diskHits + this.stats.misses;
         const hitRate = total > 0 ? ((this.stats.memoryHits + this.stats.diskHits) / total) * 100 : 0;
+        const memoryHitRate = total > 0 ? (this.stats.memoryHits / total) * 100 : 0;
+        const diskHitRate = total > 0 ? (this.stats.diskHits / total) * 100 : 0;
+        const uptime = Date.now() - this.stats.startTime;
         
         return {
-            ...this.stats,
+            // 基础统计
             totalCapsules: this.memoryCache.size,
-            hitRate: Math.round(hitRate * 100) / 100
+            memoryHits: this.stats.memoryHits,
+            diskHits: this.stats.diskHits,
+            misses: this.stats.misses,
+            writes: this.stats.writes,
+            invalidations: this.stats.invalidations,
+            hitRate: Math.round(hitRate * 100) / 100,
+            
+            // 性能统计
+            avgResponseTime: Math.round(this.stats.avgResponseTime * 100) / 100,
+            totalResponseTime: this.stats.totalResponseTime,
+            requestCount: this.stats.requestCount,
+            
+            // 存储统计
+            totalDiskSize: this.stats.totalDiskSize,
+            totalMemorySize: this.stats.totalMemorySize,
+            
+            // 时间统计
+            lastHitTime: this.stats.lastHitTime,
+            lastMissTime: this.stats.lastMissTime,
+            lastWriteTime: this.stats.lastWriteTime,
+            
+            // 运行时统计
+            uptime,
+            memoryHitRate: Math.round(memoryHitRate * 100) / 100,
+            diskHitRate: Math.round(diskHitRate * 100) / 100
         };
     }
 
@@ -311,7 +397,16 @@ export class EnhancedCapsuleCache {
             diskHits: 0,
             misses: 0,
             writes: 0,
-            invalidations: 0
+            invalidations: 0,
+            avgResponseTime: 0,
+            totalResponseTime: 0,
+            requestCount: 0,
+            totalDiskSize: 0,
+            totalMemorySize: 0,
+            lastHitTime: 0,
+            lastMissTime: 0,
+            lastWriteTime: 0,
+            startTime: Date.now()
         };
 
         this.logger.info('[EnhancedCache] 🧹 已清理所有缓存');
@@ -515,6 +610,59 @@ export class EnhancedCapsuleCache {
         } catch (error) {
             this.logger.warn(`[EnhancedCache] 无法计算文件哈希: ${filePath}`, error);
             return Date.now().toString(); // 降级到时间戳
+        }
+    }
+
+    /**
+     * 更新响应时间统计
+     */
+    private updateResponseTimeStats(startTime: number): void {
+        const responseTime = Date.now() - startTime;
+        this.stats.requestCount++;
+        this.stats.totalResponseTime += responseTime;
+        this.stats.avgResponseTime = this.stats.totalResponseTime / this.stats.requestCount;
+    }
+
+    /**
+     * 更新内存大小统计
+     */
+    private updateMemorySizeStats(): void {
+        try {
+            let totalSize = 0;
+            this.memoryCache.forEach(capsule => {
+                // 估算对象大小（简化计算）
+                const jsonStr = JSON.stringify(capsule);
+                totalSize += Buffer.byteLength(jsonStr, 'utf8');
+            });
+            this.stats.totalMemorySize = totalSize;
+        } catch (error) {
+            // 忽略计算错误
+        }
+    }
+
+    /**
+     * 更新磁盘大小统计
+     */
+    private async updateDiskSizeStats(): Promise<void> {
+        if (!this.cacheDir) return;
+        
+        try {
+            const files = await vscode.workspace.fs.readDirectory(this.cacheDir);
+            let totalSize = 0;
+            
+            for (const [fileName] of files) {
+                try {
+                    const fileUri = vscode.Uri.joinPath(this.cacheDir, fileName);
+                    const stat = await vscode.workspace.fs.stat(fileUri);
+                    totalSize += stat.size;
+                } catch (error) {
+                    // 忽略单个文件的读取错误
+                }
+            }
+            
+            this.stats.totalDiskSize = totalSize;
+        } catch (error) {
+            // 忽略计算错误
         }
     }
 }

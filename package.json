@@ -141,6 +141,31 @@
         "command": "filetreeBlueprint.toggleHints",
         "title": "蓝图：开关状态栏提示",
         "icon": "$(eye)"
+      },
+      {
+        "command": "aiExplorer.showCacheStats",
+        "title": "显示缓存统计面板",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "aiExplorer.refreshCacheStats",
+        "title": "刷新缓存统计",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "aiExplorer.toggleCacheMonitoring",
+        "title": "切换缓存监控",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "aiExplorer.clearCache",
+        "title": "清空所有缓存",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "aiExplorer.clearExpiredCache",
+        "title": "清理过期缓存",
+        "icon": "$(filter)"
       }
     ],
     "menus": {
@@ -563,6 +588,23 @@
             "grid"
           ],
           "description": "UML图表布局算法"
+        },
+        "aiExplorer.cache.monitoring.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用缓存性能监控和状态栏显示"
+        },
+        "aiExplorer.cache.monitoring.updateInterval": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "缓存监控更新间隔（毫秒，默认5秒）"
+        },
+        "aiExplorer.cache.monitoring.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "在VS Code状态栏显示缓存统计信息"
         }
       }
     }
