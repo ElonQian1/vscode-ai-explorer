@@ -338,9 +338,42 @@
 
     // 暴露给调试横幅的全局状态
     window.__graphState = { nodes: [], edges: [], metadata: { graphType: 'filetree' } };
+    
+    // 🎯 版本控制和去抖机制
+    let currentGraphKey = '';
+    let isLayouting = false;
+    let pendingGraph = null;
+    
+    // 处理待处理的图数据
+    function processPendingGraph() {
+        if (pendingGraph) {
+            const next = pendingGraph;
+            pendingGraph = null;
+            console.log('[graphView] 🔄 处理待处理图数据:', next.__graphKey);
+            renderGraph(next);
+        }
+    }
 
-    // 统一渲染入口 - 集成布局引擎
+    // 统一渲染入口 - 集成布局引擎（带版本控制）
     function renderGraph(g) {
+        // 生成图数据唯一标识
+        const graphKey = `${g.metadata?.graphId || 'default'}@${g.metadata?.version || Date.now()}`;
+        
+        // 相同版本跳过
+        if (graphKey === currentGraphKey) {
+            console.log('[graphView] 🔄 相同版本跳过:', graphKey);
+            return;
+        }
+        
+        // 如果正在布局，缓存最新图数据
+        if (isLayouting) {
+            pendingGraph = { ...g, __graphKey: graphKey };
+            console.log('[graphView] ⏳ 布局中，缓存新图:', graphKey);
+            return;
+        }
+        
+        // 开始处理新图数据
+        currentGraphKey = graphKey;
         window.__graphState = g;
         graph = g;
         
@@ -348,10 +381,13 @@
         
         // 🎯 设置布局引擎数据并执行初始布局
         if (layoutEngine) {
+            isLayouting = true; // 开始布局
             layoutEngine.setGraph(g.nodes, g.edges);
             
             // 异步执行初始布局
             layoutEngine.reflow('init', []).then(layoutResult => {
+                isLayouting = false; // 布局完成
+                
                 if (layoutResult) {
                     console.log('[graphView] ✅ 初始布局完成');
                     // 布局结果会通过onLayoutComplete回调自动应用
@@ -359,6 +395,14 @@
                     console.warn('[graphView] ⚠️ 初始布局失败，使用静态位置');
                     renderNodesWithStaticLayout(g);
                 }
+                
+                // 检查是否有待处理的图数据
+                processPendingGraph();
+            }).catch(err => {
+                isLayouting = false;
+                console.error('[graphView] ❌ 布局异常:', err);
+                renderNodesWithStaticLayout(g);
+                processPendingGraph();
             });
         } else {
             // 降级到静态布局
@@ -974,13 +1018,13 @@
         const modeText = scanMode === 'shallow' ? '📂 当前目录' : '🌳 递归扫描';
 
         el.innerHTML = `
-            <button id="btn-go-up" style="padding: 2px 8px; margin-right: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 3px; cursor: pointer;">
+            <button id="btn-go-up" class="breadcrumb-btn">
                 ⬆️ 返回上级
             </button>
             <span>📍</span>
             <a href="#" onclick="return false;">${escapeHtml(graph.title)}</a>
-            <span style="opacity: 0.5; margin-left: 8px;">${modeText}</span>
-            ${relativePath ? `<span style="opacity: 0.5"> | ${escapeHtml(relativePath)}</span>` : ''}
+            <span class="breadcrumb-mode">${modeText}</span>
+            ${relativePath ? `<span class="breadcrumb-path"> | ${escapeHtml(relativePath)}</span>` : ''}
         `;
 
         // 绑定返回上级按钮

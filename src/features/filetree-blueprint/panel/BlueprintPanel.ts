@@ -767,6 +767,9 @@ export class BlueprintPanel {
         // 🔧 本地ELK引擎（避免CDN CSP拦截）
         const elkUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'vendor', 'elk.bundled.js'));
         
+        // 🎨 运行时样式管理器（CSP兼容的动态样式解决方案）
+        const styleManagerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'styleManager.js'));
+        
         // 🔧 CSP修复版启动脚本（替代内联script）
         const bootScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'boot-script.js'));
         
@@ -932,6 +935,7 @@ export class BlueprintPanel {
     <!-- � CSP修复：ELK本地化 + 所有脚本添加nonce -->
     <!-- 加载顺序：ELK → 基础组件 → 蓝图卡片系统 → 画布逻辑 -->
     <script nonce="${nonce}" src="${elkUri}"></script>
+    <script nonce="${nonce}" src="${styleManagerUri}"></script>
     <script nonce="${nonce}" src="${smokeProbeUri}"></script>
     <script nonce="${nonce}" src="${debugBannerUri}"></script>
     <script nonce="${nonce}" src="${messageContractsUri}"></script>

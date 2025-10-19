@@ -8,6 +8,17 @@
     
     console.log('[BOOT] ✅ CSP修复版启动脚本开始执行');
     
+    // 🎨 初始化StyleManager
+    if (window.StyleManager) {
+        // 从HTML中提取nonce（由扩展注入）
+        const nonceScript = document.querySelector('script[nonce]');
+        const nonce = nonceScript ? nonceScript.getAttribute('nonce') : 'default-nonce';
+        window.styleManager = new window.StyleManager(nonce);
+        console.log('[BOOT] ✅ StyleManager初始化完成');
+    } else {
+        console.error('[BOOT] ❌ StyleManager未加载');
+    }
+    
     // 等待所有依赖加载完成
     function waitForDependencies() {
         return new Promise((resolve) => {
@@ -15,6 +26,7 @@
             const checkInterval = setInterval(() => {
                 checkCount++;
                 const hasELK = !!(window.ELK);
+                const hasStyleManager = !!(window.styleManager);
                 const hasBlueprintCard = !!(window.blueprintCard);
                 const hasMessageContracts = !!(window.messageContracts);
                 const hasLayoutEngine = !!(window.layoutEngine);
@@ -23,6 +35,7 @@
                 if (checkCount % 10 === 0) {
                     console.log(`[BOOT] 依赖检查 #${checkCount}:`, {
                         ELK: hasELK,
+                        StyleManager: hasStyleManager,
                         blueprintCard: hasBlueprintCard,
                         messageContracts: hasMessageContracts,
                         layoutEngine: hasLayoutEngine,
@@ -30,7 +43,7 @@
                     });
                 }
                 
-                if (hasELK && hasBlueprintCard && hasMessageContracts && hasLayoutEngine) {
+                if (hasELK && hasStyleManager && hasBlueprintCard && hasMessageContracts && hasLayoutEngine) {
                     clearInterval(checkInterval);
                     console.log('[BOOT] ✅ 所有依赖已加载完成，ELK类型:', typeof window.ELK);
                     resolve();

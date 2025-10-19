@@ -55,23 +55,40 @@
         create() {
             const card = document.createElement('div');
             card.className = 'blueprint-card';
-            card.style.cssText = `
-                position: absolute;
-                left: ${this.options.x}px;
-                top: ${this.options.y}px;
-                width: ${this.options.width}px;
-                height: ${this.options.height}px;
-                z-index: ${nextZIndex++};
-                pointer-events: auto;
-                background: var(--vscode-editor-background, #1e1e1e);
-                border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12));
-                border-radius: 8px;
-                box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-                transition: transform 0.15s ease-out;
-            `;
+            card.id = `blueprint-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // 使用StyleManager设置位置和z-index
+            if (window.styleManager) {
+                window.styleManager.setRect(card.id, {
+                    x: this.options.x,
+                    y: this.options.y,
+                    w: this.options.width,
+                    h: this.options.height,
+                    position: 'absolute'
+                });
+                window.styleManager.setVars(card.id, {
+                    'z-index': nextZIndex++
+                });
+            } else {
+                console.warn('[BlueprintCard] StyleManager未初始化，使用内联样式降级');
+                card.style.cssText = `
+                    position: absolute;
+                    left: ${this.options.x}px;
+                    top: ${this.options.y}px;
+                    width: ${this.options.width}px;
+                    height: ${this.options.height}px;
+                    z-index: ${nextZIndex++};
+                    pointer-events: auto;
+                    background: var(--vscode-editor-background, #1e1e1e);
+                    border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12));
+                    border-radius: 8px;
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    transition: transform 0.15s ease-out;
+                `;
+            }
             
             // 卡片头部
             const header = document.createElement('div');
@@ -230,9 +247,17 @@
                     cardY: this.options.y
                 };
                 
-                this.dom.style.cursor = 'grabbing';
-                this.dom.style.zIndex = nextZIndex++;
-                this.dom.style.transform = 'scale(1.02)';
+                if (window.styleManager) {
+                    window.styleManager.setElementStyle(this.dom.id, `
+                        cursor: grabbing !important;
+                        z-index: ${nextZIndex++} !important;
+                        transform: scale(1.02) !important;
+                    `);
+                } else {
+                    this.dom.style.cursor = 'grabbing';
+                    this.dom.style.zIndex = nextZIndex++;
+                    this.dom.style.transform = 'scale(1.02)';
+                }
                 
                 e.preventDefault();
                 e.stopPropagation();
@@ -254,15 +279,29 @@
                     this.options.y = Math.round(this.options.y / gridSize) * gridSize;
                 }
                 
-                this.dom.style.left = this.options.x + 'px';
-                this.dom.style.top = this.options.y + 'px';
+                if (window.styleManager) {
+                    window.styleManager.setElementStyle(this.dom.id, `
+                        left: ${this.options.x}px !important;
+                        top: ${this.options.y}px !important;
+                    `);
+                } else {
+                    this.dom.style.left = this.options.x + 'px';
+                    this.dom.style.top = this.options.y + 'px';
+                }
             });
             
             document.addEventListener('mouseup', () => {
                 if (this.dragging) {
                     this.dragging = false;
-                    this.dom.style.cursor = 'move';
-                    this.dom.style.transform = 'scale(1)';
+                    if (window.styleManager) {
+                        window.styleManager.setElementStyle(this.dom.id, `
+                            cursor: move !important;
+                            transform: scale(1) !important;
+                        `);
+                    } else {
+                        this.dom.style.cursor = 'move';
+                        this.dom.style.transform = 'scale(1)';
+                    }
                     
                     // 保存位置
                     this.saveState();
@@ -291,7 +330,7 @@
 
         renderTabContent(tabId) {
             if (!this.data) {
-                this.content.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--vscode-descriptionForeground);">正在加载数据...</div>';
+                this.content.innerHTML = '<div class="loading-message">正在加载数据...</div>';
                 return;
             }
             
@@ -317,8 +356,8 @@
             
             this.content.innerHTML = `
                 <div class="overview-section">
-                    <h4 style="margin: 0 0 12px 0; color: var(--vscode-foreground); font-size: 13px;">📁 文件信息</h4>
-                    <div style="font-size: 12px; color: var(--vscode-descriptionForeground); line-height: 1.4;">
+                    <h4 class="section-title">📁 文件信息</h4>
+                    <div class="section-content">
                         <div>路径: <code>${this.path}</code></div>
                         <div>大小: ${this.formatFileSize(fileInfo.size || 0)}</div>
                         <div>类型: ${fileInfo.extension || data.lang || 'Unknown'}</div>
@@ -327,12 +366,12 @@
                 </div>
                 
                 ${data.static ? `
-                <div class="overview-section" style="margin-top: 16px;">
-                    <h4 style="margin: 0 0 12px 0; color: var(--vscode-foreground); font-size: 13px;">🔍 静态分析</h4>
-                    <div style="font-size: 12px; color: var(--vscode-descriptionForeground);">
+                <div class="overview-section overview-section--spaced">
+                    <h4 class="section-title">🔍 静态分析</h4>
+                    <div class="section-content">
                         <div>导出: ${data.static.exports?.length || 0} 个</div>
                         <div>依赖: ${data.static.deps?.in?.length || 0} 个输入, ${data.static.deps?.out?.length || 0} 个输出</div>
-                        ${data.static.summary ? `<div style="margin-top: 8px; font-style: italic;">"${data.static.summary}"</div>` : ''}
+                        ${data.static.summary ? `<div class="summary-text">"${data.static.summary}"</div>` : ''}
                     </div>
                 </div>
                 ` : ''}
@@ -377,10 +416,10 @@
             this.content.innerHTML = `
                 <div class="ai-section">
                     ${ai.inferences?.length ? `
-                        <h4 style="margin: 0 0 8px 0; color: var(--vscode-foreground); font-size: 13px;">🧠 AI 推断</h4>
-                        <div style="margin-bottom: 16px;">
+                        <h4 class="section-title">🧠 AI 推断</h4>
+                        <div class="ai-inferences">
                             ${ai.inferences.map(inf => `
-                                <div style="font-size: 12px; padding: 8px; margin: 4px 0; background: var(--vscode-textCodeBlock-background); border-radius: 4px; border-left: 3px solid var(--vscode-focusBorder);">
+                                <div class="ai-item ai-item--inference">
                                     ${inf}
                                 </div>
                             `).join('')}
@@ -388,10 +427,10 @@
                     ` : ''}
                     
                     ${ai.suggestions?.length ? `
-                        <h4 style="margin: 0 0 8px 0; color: var(--vscode-foreground); font-size: 13px;">💡 改进建议</h4>
-                        <div>
+                        <h4 class="section-title">💡 改进建议</h4>
+                        <div class="ai-suggestions">
                             ${ai.suggestions.map(sug => `
-                                <div style="font-size: 12px; padding: 8px; margin: 4px 0; background: var(--vscode-textCodeBlock-background); border-radius: 4px; border-left: 3px solid var(--vscode-notificationsWarningIcon-foreground);">
+                                <div class="ai-item ai-item--suggestion">
                                     ${sug}
                                 </div>
                             `).join('')}

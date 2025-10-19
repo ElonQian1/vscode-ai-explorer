@@ -357,3 +357,88 @@ kbd {
     color: var(--vscode-editor-foreground);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
+
+/* 🎨 Blueprint Card - CSP修复版样式类 */
+.blueprint-card {
+    pointer-events: auto;
+    background: var(--vscode-editor-background, #1e1e1e);
+    border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12));
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.15s ease-out;
+}
+
+/* 加载状态样式 */
+.loading-message {
+    text-align: center;
+    padding: 20px;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* 章节标题 */
+.section-title {
+    margin: 0 0 12px 0;
+    color: var(--vscode-foreground);
+    font-size: 13px;
+}
+
+/* 章节内容 */
+.section-content {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    line-height: 1.4;
+}
+
+/* 概述章节间距 */
+.overview-section--spaced {
+    margin-top: 16px;
+}
+
+/* 概述总结文本 */
+.summary-text {
+    margin-top: 8px;
+    font-style: italic;
+}
+
+/* AI分析区域 */
+.ai-inferences {
+    margin-bottom: 16px;
+}
+
+/* AI项目基础样式 */
+.ai-item {
+    font-size: 12px;
+    padding: 8px;
+    margin: 4px 0;
+    background: var(--vscode-textCodeBlock-background);
+    border-radius: 4px;
+}
+
+/* AI推断项目 */
+.ai-item--inference {
+    border-left: 3px solid var(--vscode-focusBorder);
+}
+
+/* AI建议项目 */
+.ai-item--suggestion {
+    border-left: 3px solid var(--vscode-notificationsWarningIcon-foreground);
+}
+
+/* 面包屑样式 */
+.breadcrumb-btn {
+    padding: 2px 8px;
+    margin-right: 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px;
+    cursor: pointer;
+    color: inherit;
+}
+
+.breadcrumb-mode, .breadcrumb-path {
+    opacity: 0.5;
+    margin-left: 8px;
+}
