@@ -16,8 +16,8 @@
     }
     const vscode = window.__vscode;
 
-    // ✅ 卡片管理器（由 ES6 模块加载）
-    // window.cardManager 在模块脚本中初始化
+    // ✅ 卡片管理器（蓝图卡片系统）
+    // window.blueprintCard 和 window.messageContracts 在模块脚本中初始化
     
     // 图表数据
     let graph = {
@@ -336,71 +336,112 @@
             // 响应来自扩展的打开帮助命令
             openHelp();
         } else if (msg?.type === 'show-analysis-card') {
-            // ✅ 强制走卡片流：显示文件分析卡片
+            // 🎯 蓝图卡片流：显示文件分析卡片
             const { path, file } = msg.payload || {};
             const filePath = file || path; // 兼容不同字段名
             
             console.log('[graphView] 📨 收到 show-analysis-card:', filePath, {
                 hasStatic: !!msg.payload?.static,
+                hasAI: !!msg.payload?.ai,
                 loading: msg.payload?.loading,
-                hasCardManager: !!window.cardManager
+                hasBlueprintCard: !!window.blueprintCard
             });
             
-            // ✅ 智能等待并挂载 cardManager
-            function tryShowCard(attempts = 0) {
-                if (window.cardManager) {
+            // 智能等待并挂载蓝图卡片
+            function tryShowBlueprintCard(attempts = 0) {
+                if (window.blueprintCard && window.messageContracts) {
                     try {
-                        // 统一调用 showCard API
-                        window.cardManager.showCard(filePath, msg.payload);
-                        console.log('[graphView] ✅ 卡片渲染成功，发送 ACK');
-                        vscode?.postMessage({
-                            type: 'ack:show-analysis-card',
-                            payload: { path: filePath }
+                        // 使用新的蓝图卡片API
+                        const cardData = window.messageContracts.validateCardData(msg.payload);
+                        window.blueprintCard.showCard(filePath, cardData);
+                        
+                        console.log('[graphView] ✅ 蓝图卡片显示成功，发送 ACK');
+                        
+                        // 发送标准ACK
+                        const ackMsg = window.messageContracts.createAckMessage('show-analysis-card', { 
+                            path: filePath,
+                            success: true
                         });
+                        vscode?.postMessage(ackMsg);
+                        
                     } catch (error) {
-                        console.error('[graphView] ❌ 渲染卡片时异常:', error);
+                        console.error('[graphView] ❌ 显示蓝图卡片异常:', error);
+                        
+                        // 降级到旧卡片系统
+                        if (window.cardManager) {
+                            console.log('[graphView] 🔄 降级到旧卡片系统');
+                            window.cardManager.showCard(filePath, msg.payload);
+                        }
                     }
-                } else if (attempts < 10) {
-                    console.log(`[graphView] ⏳ cardManager 未就绪，等待... (${attempts + 1}/10)`);
-                    setTimeout(() => tryShowCard(attempts + 1), 100);
+                } else if (attempts < 15) {
+                    console.log(`[graphView] ⏳ 蓝图卡片系统未就绪，等待... (${attempts + 1}/15)`);
+                    setTimeout(() => tryShowBlueprintCard(attempts + 1), 100);
                 } else {
-                    console.error('[graphView] ❌ cardManager 初始化超时！请检查 analysisCard.js 加载');
+                    console.error('[graphView] ❌ 蓝图卡片系统初始化超时！降级到旧系统');
+                    // 降级处理
+                    if (window.cardManager) {
+                        window.cardManager.showCard(filePath, msg.payload);
+                    }
                 }
             }
-            tryShowCard();
+            tryShowBlueprintCard();
         } else if (msg?.type === 'update-analysis-card') {
-            // ✅ 强制走卡片流：更新文件分析卡片
+            // 🎯 蓝图卡片流：更新文件分析卡片
             const { path, file } = msg.payload || {};
             const filePath = file || path; // 兼容不同字段名
             
             console.log('[graphView] 📨 收到 update-analysis-card:', filePath, {
-                hasInferences: !!(msg.payload?.inferences?.length),
-                hasRecommendations: !!(msg.payload?.recommendations?.length),
+                hasInferences: !!(msg.payload?.ai?.inferences?.length),
+                hasRecommendations: !!(msg.payload?.ai?.suggestions?.length),
+                hasStatic: !!msg.payload?.static,
                 loading: msg.payload?.loading
             });
             
-            // ✅ 智能等待并更新卡片
-            function tryUpdateCard(attempts = 0) {
-                if (window.cardManager) {
+            // 智能等待并更新蓝图卡片
+            function tryUpdateBlueprintCard(attempts = 0) {
+                if (window.blueprintCard && window.messageContracts) {
                     try {
-                        // 统一调用 updateCard API
-                        window.cardManager.updateCard(filePath, msg.payload);
-                        console.log('[graphView] ✅ 卡片更新成功');
-                        vscode?.postMessage({
-                            type: 'ack:update-analysis-card',
-                            payload: { path: filePath }
-                        });
+                        // 使用增量更新API
+                        const updates = window.messageContracts.validateCardUpdates(msg.payload);
+                        const success = window.blueprintCard.updateCard(filePath, updates);
+                        
+                        if (success) {
+                            console.log('[graphView] ✅ 蓝图卡片更新成功');
+                            
+                            // 发送标准ACK
+                            const ackMsg = window.messageContracts.createAckMessage('update-analysis-card', { 
+                                path: filePath,
+                                success: true
+                            });
+                            vscode?.postMessage(ackMsg);
+                        } else {
+                            console.warn('[graphView] ⚠️ 卡片不存在，尝试创建新卡片');
+                            // 如果卡片不存在，创建一个新的
+                            const cardData = window.messageContracts.validateCardData(msg.payload);
+                            window.blueprintCard.showCard(filePath, cardData);
+                        }
+                        
                     } catch (error) {
-                        console.error('[graphView] ❌ 更新卡片时异常:', error);
+                        console.error('[graphView] ❌ 更新蓝图卡片异常:', error);
+                        
+                        // 降级到旧卡片系统
+                        if (window.cardManager) {
+                            console.log('[graphView] 🔄 降级更新到旧卡片系统');
+                            window.cardManager.updateCard(filePath, msg.payload);
+                        }
                     }
-                } else if (attempts < 10) {
-                    console.log(`[graphView] ⏳ cardManager 未就绪，等待更新... (${attempts + 1}/10)`);
-                    setTimeout(() => tryUpdateCard(attempts + 1), 100);
+                } else if (attempts < 15) {
+                    console.log(`[graphView] ⏳ 蓝图卡片系统未就绪，等待更新... (${attempts + 1}/15)`);
+                    setTimeout(() => tryUpdateBlueprintCard(attempts + 1), 100);
                 } else {
-                    console.error('[graphView] ❌ cardManager 初始化超时！无法更新卡片');
+                    console.error('[graphView] ❌ 蓝图卡片系统初始化超时！降级更新');
+                    // 降级处理
+                    if (window.cardManager) {
+                        window.cardManager.updateCard(filePath, msg.payload);
+                    }
                 }
             }
-            tryUpdateCard();
+            tryUpdateBlueprintCard();
         } else if (msg?.type === 'analysis-error') {
             // ✅ Phase 7: 显示分析错误
             console.error('[graphView] ❌ 分析错误:', msg.payload);
@@ -497,26 +538,67 @@
                 });
             }
 
-            // ✅ 双击文件：展开分析卡片
+            // 🎯 双击文件：展开蓝图分析卡片
             if (
                 n.type === "file" &&
                 n.data?.path &&
                 graph?.metadata?.graphType === "filetree"
             ) {
-                console.log(`[绑定] 为文件 "${n.label}" 绑定双击事件`);
+                console.log(`[绑定] 为文件 "${n.label}" 绑定蓝图卡片双击事件`);
                 el.addEventListener("dblclick", (e) => {
                     e.stopPropagation(); // 防止事件冒泡
+                    
                     // 优先使用 absPath，如果没有则回退到 path
                     const filePath = n.data.absPath || n.data.path;
-                    console.log('[双击] 文件，请求分析:', filePath);
-                    vscode.postMessage({
-                        type: "analyze-file",
-                        payload: {
+                    console.log('[双击] 文件，请求蓝图分析:', filePath);
+                    
+                    // 使用标准消息契约
+                    if (window.messageContracts) {
+                        const message = window.messageContracts.createNodeDoubleClickMessage(n.id, {
                             path: filePath,
-                            nodeId: n.id,
-                            position: n.position
-                        }
-                    });
+                            position: n.position,
+                            type: 'file',
+                            nodeData: n.data
+                        });
+                        vscode.postMessage(message);
+                    } else {
+                        // 降级到旧消息格式
+                        vscode.postMessage({
+                            type: "analyze-file",
+                            payload: {
+                                path: filePath,
+                                nodeId: n.id,
+                                position: n.position
+                            }
+                        });
+                    }
+                    
+                    // 立即在本地预显示卡片（加载状态）
+                    if (window.blueprintCard) {
+                        setTimeout(() => {
+                            const loadingData = {
+                                path: filePath,
+                                meta: {
+                                    size: n.data?.size || 0,
+                                    extension: filePath.split('.').pop() || '',
+                                    lastModified: n.data?.lastModified || new Date().toISOString()
+                                },
+                                static: null,
+                                ai: null,
+                                loading: true
+                            };
+                            
+                            try {
+                                window.blueprintCard.showCard(filePath, loadingData, {
+                                    x: (n.position?.x || 120) + 50,
+                                    y: (n.position?.y || 120) + 30
+                                });
+                                console.log('[双击] ✅ 预显示蓝图卡片（加载态）');
+                            } catch (error) {
+                                console.warn('[双击] ⚠️ 预显示卡片失败:', error);
+                            }
+                        }, 50); // 短暂延迟确保消息已发送
+                    }
                 });
             }
 

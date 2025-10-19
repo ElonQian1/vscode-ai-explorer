@@ -750,6 +750,10 @@ export class BlueprintPanel {
         const smokeProbeUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'SmokeProbe.js'));
         const debugBannerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'DebugBanner.js'));
         const analysisCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'analysisCard.js'));
+        
+        // 🎯 新增：蓝图卡片系统模块
+        const messageContractsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'contracts', 'messageContracts.js'));
+        const blueprintCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'blueprintCard.js'));
 
         // 生成 nonce 用于 CSP
         const nonce = this.getNonce();
@@ -884,14 +888,61 @@ export class BlueprintPanel {
     <div id="card-layer" class="card-layer" aria-live="polite"></div>
     
     <!-- 🚨 VS Code API 单次获取 + DOM等待 -->
-    <!-- 顺序很关键：先卡片，再画布逻辑 -->
+    <!-- 蓝图卡片系统加载顺序：契约定义 → 卡片组件 → 旧卡片（兼容） → 画布逻辑 -->
     <script src="${smokeProbeUri}"></script>
     <script src="${debugBannerUri}"></script>
+    <script src="${messageContractsUri}"></script>
+    <script src="${blueprintCardUri}"></script>
     <script src="${analysisCardUri}"></script>
     <script src="${scriptUri}"></script>
     
     <script>
         console.log('[BOOT] ✅ 所有脚本已加载完成');
+        
+        // 🎯 初始化蓝图卡片系统
+        if (window.blueprintCard && window.messageContracts) {
+            try {
+                // 挂载蓝图卡片到专用层
+                window.blueprintCard.mount('#card-layer');
+                
+                // 设置事件回调
+                window.blueprintCard.setCallbacks({
+                    onOpen: (path, size) => {
+                        console.log('[blueprintCard] 📌 卡片已打开:', path, size);
+                        // TODO: 通知布局引擎节点展开
+                    },
+                    onClose: (path) => {
+                        console.log('[blueprintCard] ❌ 卡片已关闭:', path);
+                        // TODO: 通知布局引擎节点收起
+                    },
+                    onNotesChange: (path, notes) => {
+                        console.log('[blueprintCard] 📝 备注已更改:', path);
+                        const saveMessage = window.messageContracts.createSaveNotesMessage(path, notes);
+                        window.__vscode?.postMessage(saveMessage);
+                    },
+                    onDependencyClick: (depPath) => {
+                        console.log('[blueprintCard] 🔗 依赖点击:', depPath);
+                        // TODO: 导航到依赖文件或显示其卡片
+                    }
+                });
+                
+                console.log('[BOOT] 🎯 蓝图卡片系统初始化成功');
+            } catch (error) {
+                console.error('[BOOT] ❌ 蓝图卡片系统初始化失败:', error);
+            }
+        } else {
+            console.warn('[BOOT] ⚠️ 蓝图卡片系统未加载，将使用旧卡片系统');
+        }
+        
+        // 🎯 初始化旧卡片系统（兼容）
+        if (window.cardManager) {
+            try {
+                window.cardManager.mount('#card-layer');
+                console.log('[BOOT] ✅ 旧卡片系统（兼容）初始化成功');
+            } catch (error) {
+                console.warn('[BOOT] ⚠️ 旧卡片系统初始化失败:', error);
+            }
+        }
         
         // 等待DOM + 初始化检查
         document.addEventListener('DOMContentLoaded', () => {
@@ -910,7 +961,7 @@ export class BlueprintPanel {
                     console.error('[BOOT] ❌ 容器高度为0，CSS布局问题');
                     root.style.height = '100vh';
                     root.style.minHeight = '400px';
-                    console.log('[BOOT] � 已强制设置容器高度');
+                    console.log('[BOOT] 🔧 已强制设置容器高度');
                 }
             } else {
                 console.error('[BOOT] ❌ 找不到#graph-root容器');
