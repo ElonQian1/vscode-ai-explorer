@@ -4,34 +4,41 @@
     // ✅ 卡片存储：path -> { dom, data }
     const store = new Map();
     let layer = null;
+    let runtimeStyles = null; // RuntimeStylesheet 实例 (从外部注入)
 
-    // ✅ 拖拽功能实现
-    function makeDraggable(cardEl, handleEl) {
+    // ✅ 拖拽功能实现 (CSP-safe)
+    function makeDraggable(cardEl, handleEl, path) {
         let dragging = false, sx = 0, sy = 0, ox = 120, oy = 120;
+        const posClass = `pos-card-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        cardEl.classList.add(posClass);
         
         handleEl.addEventListener('mousedown', e => { 
             dragging = true; 
             sx = e.clientX; 
             sy = e.clientY; 
-            ox = parseInt(cardEl.style.left || '120px');
-            oy = parseInt(cardEl.style.top || '120px');
-            cardEl.style.cursor = 'grabbing';
+            
+            // 从 CSS 变量读取当前位置
+            const computedStyle = getComputedStyle(cardEl);
+            ox = parseInt(computedStyle.left || '120px');
+            oy = parseInt(computedStyle.top || '120px');
+            
+            handleEl.style.cursor = 'grabbing';
             e.preventDefault(); 
         });
         
         global.addEventListener('mousemove', e => {
-            if (!dragging) return;
+            if (!dragging || !runtimeStyles) return;
             const dx = e.clientX - sx, dy = e.clientY - sy;
-            cardEl.style.left = `${ox + dx}px`;
-            cardEl.style.top = `${oy + dy}px`;
+            runtimeStyles.setPosition(`.${posClass}`, ox + dx, oy + dy);
         });
         
         global.addEventListener('mouseup', () => { 
             if (dragging) { 
-                ox = parseInt(cardEl.style.left || '0'); 
-                oy = parseInt(cardEl.style.top || '0'); 
+                const computedStyle = getComputedStyle(cardEl);
+                ox = parseInt(computedStyle.left || '0'); 
+                oy = parseInt(computedStyle.top || '0'); 
                 dragging = false; 
-                cardEl.style.cursor = 'move';
+                handleEl.style.cursor = 'move';
             } 
         });
     }
@@ -131,12 +138,18 @@
         }
     }
 
-    // ✅ 创建新卡片
+    // ✅ 创建新卡片 (CSP-safe)
     function createCard(path, data) {
         const card = document.createElement('div');
         card.className = 'analysis-card';
-        card.style.left = `${120 + store.size * 30}px`; 
-        card.style.top = `${120 + store.size * 20}px`;
+        
+        // 使用 RuntimeStylesheet 设置初始位置
+        const posClass = `pos-card-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        card.classList.add(posClass);
+        if (runtimeStyles) {
+            runtimeStyles.setPosition(`.${posClass}`, 120 + store.size * 30, 120 + store.size * 20);
+        }
+        
         card.innerHTML = `
             <div class="header">
                 <span class="title">文件分析</span>
@@ -155,8 +168,8 @@
             console.log('[analysisCard] ✅ 卡片已关闭:', path);
         };
         
-        // 拖拽
-        makeDraggable(card, card.querySelector('.header'));
+        // 拖拽 (传递 path 参数用于 posClass 生成)
+        makeDraggable(card, card.querySelector('.header'), path);
 
         const model = { dom: card, data: { ...data, path } };
         store.set(path, model);
@@ -283,7 +296,7 @@
         return html;
     }
     
-    // ✅ 导出 API（统一签名）
+    // ✅ 导出 API（统一签名 + CSP 支持）
     global.cardManager = { 
         mount, 
         showCard, 
@@ -291,7 +304,12 @@
         close,
         // 兼容旧的方法名
         show, 
-        update
+        update,
+        // RuntimeStylesheet 注入方法
+        setRuntimeStyles(stylesInstance) {
+            runtimeStyles = stylesInstance;
+            console.log('[analysisCard] ✅ RuntimeStylesheet 已注入');
+        }
     };
     
     console.info('[analysisCard] ✅ cardManager 已就绪（UMD/IIFE）- 支持可拖拽卡片');

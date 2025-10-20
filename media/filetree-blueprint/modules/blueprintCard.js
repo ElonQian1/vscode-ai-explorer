@@ -47,6 +47,7 @@
     let mountLayer = null;
     let nextZIndex = 2000;
     let layoutEngine = null; // 外部布局引擎注入
+    let runtimeStyles = null; // RuntimeStylesheet 实例 (从外部注入)
 
     // ===== 卡片实例类 =====
     class CardInstance {
@@ -177,9 +178,13 @@
                     cardY: this.options.y
                 };
                 
-                // CSP-safe: 使用 class 替代 inline style
+                // CSP-safe: 使用 RuntimeStylesheet 设置 z-index
                 this.dom.classList.add('is-dragging');
-                this.dom.style.zIndex = nextZIndex++;
+                if (runtimeStyles) {
+                    const zClass = `zindex-${this.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    this.dom.classList.add(zClass);
+                    runtimeStyles.setZIndex(`.${zClass}`, nextZIndex++);
+                }
                 
                 e.preventDefault();
                 e.stopPropagation();
@@ -986,10 +991,14 @@
          */
         showCard(path, data = null, options = {}) {
             if (cardStore.has(path)) {
-                // 已存在，更新数据并置顶
+                // 已存在，更新数据并置顶 (CSP-safe)
                 const card = cardStore.get(path);
                 if (data) card.updateData(data);
-                card.dom.style.zIndex = nextZIndex++;
+                if (runtimeStyles) {
+                    const zClass = `zindex-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    card.dom.classList.add(zClass);
+                    runtimeStyles.setZIndex(`.${zClass}`, nextZIndex++);
+                }
                 return card;
             }
             
@@ -1053,6 +1062,14 @@
          */
         getAllCards() {
             return Array.from(cardStore.values());
+        },
+
+        /**
+         * 注入 RuntimeStylesheet 实例 (CSP-safe)
+         */
+        setRuntimeStyles(stylesInstance) {
+            runtimeStyles = stylesInstance;
+            console.log('[blueprintCard] ✅ RuntimeStylesheet 已注入');
         },
 
         /**

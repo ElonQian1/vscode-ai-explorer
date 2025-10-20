@@ -190,6 +190,12 @@
         if (window.blueprintCard && typeof window.blueprintCard.mount === 'function') {
             window.blueprintCard.mount('#card-layer');
             
+            // 注入 RuntimeStylesheet 实例 (CSP-safe)
+            if (typeof window.blueprintCard.setRuntimeStyles === 'function') {
+                window.blueprintCard.setRuntimeStyles(runtimeStyles);
+                console.log('[graphView] ✅ RuntimeStylesheet 已注入到 blueprintCard');
+            }
+            
             // 设置卡片事件回调，集成布局联动
             window.blueprintCard.setCallbacks({
                 onOpen: (path, size) => {
@@ -225,6 +231,13 @@
             console.log('[graphView] ✅ 蓝图卡片系统已挂载，布局联动已启用');
         } else if (window.cardManager && typeof window.cardManager.mount === 'function') {
             window.cardManager.mount('#card-layer');
+            
+            // 注入 RuntimeStylesheet 实例 (CSP-safe)
+            if (typeof window.cardManager.setRuntimeStyles === 'function') {
+                window.cardManager.setRuntimeStyles(runtimeStyles);
+                console.log('[graphView] ✅ RuntimeStylesheet 已注入到 cardManager');
+            }
+            
             console.log('[graphView] ✅ cardManager 已挂载到 card-layer (兼容模式)');
         } else {
             console.log('[graphView] ⏳ 卡片管理器暂未就绪，稍后自动挂载');
@@ -459,28 +472,19 @@
         
         console.log('[graphView] 📍 应用布局到DOM:', Object.keys(layoutResult.nodes).length, '个节点');
         
-        // 更新节点位置
+        // 更新节点位置 (CSP-safe: 使用 RuntimeStylesheet)
         Object.entries(layoutResult.nodes).forEach(([nodeId, position]) => {
             const nodeEl = nodeContainer.querySelector(`[data-id="${nodeId}"]`);
             if (nodeEl && position.x !== undefined && position.y !== undefined) {
-                // 平滑动画到新位置
-                const currentX = parseInt(nodeEl.style.left) || 0;
-                const currentY = parseInt(nodeEl.style.top) || 0;
+                // 使用 RuntimeStylesheet 设置位置
+                const posClass = `pos-node-${nodeId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                nodeEl.classList.add(posClass);
                 
-                if (Math.abs(currentX - position.x) > 5 || Math.abs(currentY - position.y) > 5) {
-                    // 使用CSS transition实现平滑动画
-                    nodeEl.style.transition = 'left 0.3s ease-out, top 0.3s ease-out';
-                    nodeEl.style.left = position.x + 'px';
-                    nodeEl.style.top = position.y + 'px';
-                    
-                    // 清除transition避免影响后续拖拽
-                    setTimeout(() => {
-                        nodeEl.style.transition = '';
-                    }, 300);
-                } else {
-                    nodeEl.style.left = position.x + 'px';
-                    nodeEl.style.top = position.y + 'px';
-                }
+                // 通过 CSS 类设置位置和动画
+                runtimeStyles.setPosition(`.${posClass}`, position.x, position.y);
+                runtimeStyles.upsertRule(`.${posClass}`, `
+                    transition: left 0.3s ease-out, top 0.3s ease-out;
+                `);
                 
                 // 更新图数据中的位置
                 const node = graph.nodes.find(n => n.id === nodeId);
@@ -712,12 +716,16 @@
             const el = document.createElement("div");
             el.className = "node";
 
-            // --- 位置整数化，避免 sub-pixel 抖动 ---
+            // --- 位置整数化，避免 sub-pixel 抖动 (CSP-safe) ---
             const ix = Math.round(n.position?.x || 0);
             const iy = Math.round(n.position?.y || 0);
             n.position = { x: ix, y: iy };
-            el.style.left = ix + "px";
-            el.style.top = iy + "px";
+            
+            // 使用 RuntimeStylesheet 设置初始位置
+            const posClass = `pos-node-${n.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            el.classList.add(posClass);
+            runtimeStyles.setPosition(`.${posClass}`, ix, iy);
+            
             el.dataset.id = n.id;
 
             // 节点类型样式
@@ -943,11 +951,14 @@
             
             const scaledDx = dx / scale;
             const scaledDy = dy / scale;
-            // --- 位置取整消抖 ---
+            // --- 位置取整消抖 (CSP-safe) ---
             node.position.x = Math.round(nodeStart.x + scaledDx);
             node.position.y = Math.round(nodeStart.y + scaledDy);
-            el.style.left = node.position.x + "px";
-            el.style.top = node.position.y + "px";
+            
+            // 使用 RuntimeStylesheet 更新位置
+            const posClass = `pos-node-${node.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            runtimeStyles.setPosition(`.${posClass}`, node.position.x, node.position.y);
+            
             // 仅重画边，不重建节点
             scheduleDrawEdges();
         });

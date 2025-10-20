@@ -1230,3 +1230,181 @@ body {
 		width: 100%;
 	}
 }
+
+/* ========== CSP 安全样式补充 ========== */
+
+/* Overview Section 样式 */
+.overview-section {
+	margin-bottom: 16px;
+}
+
+.section-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--vscode-foreground);
+	margin-bottom: 8px;
+	opacity: 0.8;
+}
+
+.section-content {
+	font-size: 12px;
+	color: var(--vscode-foreground);
+	line-height: 1.6;
+}
+
+.file-info-item {
+	display: flex;
+	align-items: center;
+	margin-bottom: 6px;
+	gap: 8px;
+}
+
+.file-info-label {
+	font-weight: 500;
+	color: var(--vscode-descriptionForeground);
+	min-width: 60px;
+}
+
+.file-info-value {
+	color: var(--vscode-foreground);
+	flex: 1;
+}
+
+/* Reasons Badges 样式 */
+.reasons-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.reason-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	background: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	font-weight: 500;
+}
+
+.reason-badge.keyword-match {
+	background: var(--vscode-editorInfo-background);
+	color: var(--vscode-editorInfo-foreground);
+}
+
+.reason-badge.parent-match {
+	background: var(--vscode-editorWarning-background);
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.reason-badge.child-match {
+	background: var(--vscode-charts-green);
+	color: var(--vscode-editor-background);
+}
+
+/* AI Panel 空状态样式 */
+.bp-ai-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 32px 16px;
+	text-align: center;
+	color: var(--vscode-descriptionForeground);
+}
+
+.bp-ai-empty-icon {
+	font-size: 48px;
+	margin-bottom: 16px;
+	opacity: 0.4;
+}
+
+.bp-ai-empty-text {
+	font-size: 13px;
+	margin-bottom: 8px;
+	font-weight: 500;
+}
+
+.bp-ai-empty-hint {
+	font-size: 12px;
+	opacity: 0.7;
+	line-height: 1.5;
+}
+
+/* Breadcrumb 样式增强 */
+.breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	background: var(--vscode-editor-background);
+	border-bottom: 1px solid var(--vscode-panel-border);
+	font-size: 12px;
+}
+
+.breadcrumb-btn {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 8px;
+	background: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.2s ease;
+}
+
+.breadcrumb-btn:hover {
+	background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.breadcrumb-mode {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	background: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 500;
+	margin: 0 4px;
+}
+
+.breadcrumb-path {
+	color: var(--vscode-foreground);
+	opacity: 0.8;
+}
+
+/* 依赖项列表样式 */
+.dep-item {
+	display: flex;
+	align-items: center;
+	padding: 6px 8px;
+	margin-bottom: 4px;
+	background: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.dep-item:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.dep-item-icon {
+	margin-right: 8px;
+	opacity: 0.7;
+}
+
+.dep-item-name {
+	flex: 1;
+	font-size: 12px;
+	color: var(--vscode-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
