@@ -14,6 +14,8 @@
  * - 防御式编程（null 检查、日志记录）
  */
 
+import { hash } from '../core/runtimeStyle.js';
+
 /**
  * 创建卡片层管理器
  * @param {Object} options - 配置选项
@@ -63,9 +65,13 @@ export function createCardLayer({ container, runtimeStyle, onCardMoved }) {
     // 设置基础样式（使用 class）
     cardElement.classList.add('card-opened');
     
-    // 设置固定尺寸（通过 inline style - 不违反 CSP，因为是结构性属性）
-    cardElement.style.width = `${width}px`;
-    cardElement.style.height = `${height}px`;
+    // 生成稳定的位置类名
+    const posClassName = `card-pos-${hash(path)}`;
+    const sizeClassName = `card-size-${hash(path)}`;
+    
+    // 使用 RuntimeStyle 设置尺寸（CSP-safe）
+    runtimeStyle.setProperties(sizeClassName, `width: ${width}px; height: ${height}px;`);
+    cardElement.classList.add(sizeClassName);
 
     // 添加内容
     if (content) {
@@ -76,7 +82,7 @@ export function createCardLayer({ container, runtimeStyle, onCardMoved }) {
     container.appendChild(cardElement);
 
     // 使用 RuntimeStyle 设置位置（CSP-safe）
-    const posClassName = runtimeStyle.setPos(`card-${runtimeStyle.hash(path)}`, position.x, position.y);
+    runtimeStyle.setPos(posClassName, position.x, position.y);
     cardElement.classList.add(posClassName);
 
     // 设置 z-index（提升到最前）
@@ -107,12 +113,11 @@ export function createCardLayer({ container, runtimeStyle, onCardMoved }) {
       return;
     }
 
-    // 更新位置（通过 RuntimeStyle）
-    const posClassName = runtimeStyle.setPos(`card-${runtimeStyle.hash(path)}`, newPosition.x, newPosition.y);
+    // 生成稳定的位置类名（与 openCard 中保持一致）
+    const posClassName = `card-pos-${hash(path)}`;
     
-    // 移除旧的位置类，添加新的
-    card.element.className = card.element.className.replace(/pos-\w+/g, '');
-    card.element.classList.add(posClassName);
+    // 更新位置（通过 RuntimeStyle）
+    runtimeStyle.setPos(posClassName, newPosition.x, newPosition.y);
 
     // 更新缓存
     card.position = { ...newPosition };

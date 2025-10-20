@@ -14,6 +14,8 @@
  * - 性能优化（使用 transform 而非 top/left）
  */
 
+import { hash } from '../core/runtimeStyle.js';
+
 /**
  * 创建拖拽管理器
  * @param {Object} options - 配置选项
@@ -119,16 +121,11 @@ export function createDragManager({
     const boundedX = Math.max(0, newX);
     const boundedY = Math.max(0, newY);
 
+    // 生成稳定的位置类名（与 CardLayer 保持一致）
+    const posClassName = `card-pos-${hash(dragState.path)}`;
+    
     // 使用 RuntimeStyle 更新位置（CSP-safe）
-    const posClassName = runtimeStyle.setPos(
-      `card-${runtimeStyle.hash(dragState.path)}`,
-      boundedX,
-      boundedY
-    );
-
-    // 更新 class（移除旧位置类，添加新位置类）
-    dragState.element.className = dragState.element.className.replace(/pos-\w+/g, '');
-    dragState.element.classList.add(posClassName);
+    runtimeStyle.setPos(posClassName, boundedX, boundedY);
   }
 
   /**

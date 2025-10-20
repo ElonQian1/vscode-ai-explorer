@@ -41,6 +41,7 @@ export function createRuntimeStyle(nonce) {
          * @param {string} className - CSS 类名
          * @param {number} x - X 坐标
          * @param {number} y - Y 坐标
+         * @returns {string} 类名（便于添加到元素）
          */
         setPos(className, x, y) {
             const rule = cssRule(className, Math.round(x), Math.round(y));
@@ -62,6 +63,9 @@ export function createRuntimeStyle(nonce) {
                     console.warn('[RuntimeStyle] 插入规则失败:', e);
                 }
             }
+            
+            // 返回类名便于添加到元素
+            return className;
         },
         
         /**
