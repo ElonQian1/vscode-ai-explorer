@@ -213,9 +213,16 @@ export class BlueprintPanel {
         // ✅ 修复：如果已有 currentGraph，重新发送 init-graph（以防在 ready 之前就调用了 showGraph）
         if (this.currentGraph) {
             this.logger.info('[UI] 🔄 检测到已有图表数据，重新发送 init-graph');
+            
+            // Priority 3: 加载保存的位置信息
+            const savedPositions = await this.loadSavedPositions();
+            
             await this.safePostMessage({
                 type: 'init-graph',
-                payload: this.currentGraph
+                payload: {
+                    ...this.currentGraph,
+                    savedPositions // 附带保存的位置
+                }
             });
         }
     }
@@ -318,6 +325,16 @@ export class BlueprintPanel {
 
             case 'get-enhanced-user-notes':
                 await this.handleGetEnhancedUserNotes(message.payload);
+                break;
+
+            case 'card-moved':
+                // Priority 3: 持久化卡片位置
+                await this.handleCardMoved(message.payload);
+                break;
+
+            case 'save-notes':
+                // Priority 3: 持久化备注 (新版消息协议)
+                await this.handleSaveNotes(message.payload);
                 break;
 
             default:
@@ -1295,6 +1312,146 @@ export class BlueprintPanel {
             this.logger.error('[功能筛选] 重新渲染失败:', error);
             vscode.window.showErrorMessage(`功能筛选失败: ${error}`);
         }
+    }
+
+    /**
+     * Priority 3: 处理卡片移动消息 (持久化位置)
+     */
+    private async handleCardMoved(payload: any): Promise<void> {
+        const { path, position } = payload;
+        
+        if (!path || !position) {
+            this.logger.warn('[持久化] 卡片移动消息缺少必要参数');
+            return;
+        }
+
+        try {
+            // 加载或创建 positions.json
+            const cacheDir = this.getCacheDirectory();
+            const positionsPath = vscode.Uri.joinPath(cacheDir, 'positions.json');
+            
+            let positions: Record<string, { x: number; y: number }> = {};
+            
+            try {
+                const content = await vscode.workspace.fs.readFile(positionsPath);
+                positions = JSON.parse(content.toString());
+            } catch {
+                // 文件不存在，使用空对象
+            }
+            
+            // 更新位置
+            positions[path] = {
+                x: Math.round(position.x),
+                y: Math.round(position.y)
+            };
+            
+            // 保存到文件
+            await vscode.workspace.fs.writeFile(
+                positionsPath,
+                Buffer.from(JSON.stringify(positions, null, 2))
+            );
+            
+            this.logger.debug(`[持久化] 卡片位置已保存: ${path} -> (${position.x}, ${position.y})`);
+            
+        } catch (error) {
+            this.logger.error('[持久化] 保存卡片位置失败:', error);
+        }
+    }
+
+    /**
+     * Priority 3: 加载保存的卡片位置
+     */
+    private async loadSavedPositions(): Promise<Record<string, { x: number; y: number }>> {
+        try {
+            const cacheDir = this.getCacheDirectory();
+            const positionsPath = vscode.Uri.joinPath(cacheDir, 'positions.json');
+            
+            const content = await vscode.workspace.fs.readFile(positionsPath);
+            const positions = JSON.parse(content.toString());
+            
+            this.logger.debug(`[持久化] 已加载 ${Object.keys(positions).length} 个卡片位置`);
+            return positions;
+            
+        } catch {
+            // 文件不存在或解析失败，返回空对象
+            return {};
+        }
+    }
+
+    /**
+     * Priority 3: 处理保存备注消息 (持久化备注)
+     */
+    private async handleSaveNotes(payload: any): Promise<void> {
+        const { path, notes } = payload;
+        
+        if (!path) {
+            this.logger.warn('[持久化] 保存备注消息缺少路径');
+            return;
+        }
+
+        try {
+            // 保存到 notes/ 目录
+            const cacheDir = this.getCacheDirectory();
+            const notesDir = vscode.Uri.joinPath(cacheDir, 'notes');
+            
+            // 确保 notes 目录存在
+            try {
+                await vscode.workspace.fs.createDirectory(notesDir);
+            } catch {
+                // 目录已存在
+            }
+            
+            // 使用文件路径的 hash 作为文件名（避免路径冲突）
+            const hash = this.hashString(path);
+            const notePath = vscode.Uri.joinPath(notesDir, `${hash}.md`);
+            
+            // 构建 Markdown 内容
+            const mdContent = [
+                `# 备注: ${path}`,
+                '',
+                `> 更新时间: ${notes.updatedAt || new Date().toISOString()}`,
+                `> 作者: ${notes.author || 'Current User'}`,
+                `> 版本: ${notes.version || 1}`,
+                '',
+                '---',
+                '',
+                notes.md || ''
+            ].join('\n');
+            
+            await vscode.workspace.fs.writeFile(
+                notePath,
+                Buffer.from(mdContent)
+            );
+            
+            this.logger.info(`[持久化] 备注已保存: ${path} -> ${hash}.md`);
+            
+        } catch (error) {
+            this.logger.error('[持久化] 保存备注失败:', error);
+        }
+    }
+
+    /**
+     * 获取缓存目录
+     */
+    private getCacheDirectory(): vscode.Uri {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            throw new Error('未打开工作区');
+        }
+        return vscode.Uri.joinPath(workspaceFolder.uri, '.ai-explorer-cache', 'filetree-blueprint');
+    }
+
+    /**
+     * 简单字符串 hash 函数
+     */
+    private hashString(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash).toString(36);
     }
 
     /**

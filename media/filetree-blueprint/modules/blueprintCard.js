@@ -217,8 +217,19 @@
                     // CSP-safe: 移除拖拽状态类
                     this.dom.classList.remove('is-dragging');
                     
-                    // 保存位置
+                    // 保存位置到本地存储
                     this.saveState();
+                    
+                    // 发送位置消息到扩展端持久化 (Priority 3)
+                    if (window.messageContracts && typeof window.messageContracts.createCardMovedMessage === 'function') {
+                        const moveMessage = window.messageContracts.createCardMovedMessage(
+                            this.path, 
+                            { x: this.options.x, y: this.options.y }
+                        );
+                        if (window.vscode) {
+                            window.vscode.postMessage(moveMessage);
+                        }
+                    }
                     
                     console.log(`[blueprintCard] 📍 拖拽完成: ${this.path} -> (${this.options.x}, ${this.options.y})`);
                 }
@@ -1000,6 +1011,14 @@
                     runtimeStyles.setZIndex(`.${zClass}`, nextZIndex++);
                 }
                 return card;
+            }
+            
+            // Priority 3: 优先使用持久化位置
+            const savedPositions = window.__savedPositions || {};
+            if (savedPositions[path]) {
+                options.x = savedPositions[path].x;
+                options.y = savedPositions[path].y;
+                console.log('[blueprintCard] 📍 恢复保存的位置:', path, savedPositions[path]);
             }
             
             // 创建新卡片

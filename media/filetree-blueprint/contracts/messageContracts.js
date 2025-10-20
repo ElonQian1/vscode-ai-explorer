@@ -222,6 +222,24 @@
         };
     }
 
+    /**
+     * 创建卡片移动消息 (持久化位置)
+     */
+    function createCardMovedMessage(path, position) {
+        return {
+            type: WebviewToExtensionTypes.CARD_MOVED,
+            payload: {
+                path,
+                position: {
+                    x: Math.round(position.x),
+                    y: Math.round(position.y)
+                },
+                timestamp: Date.now(),
+                messageId: generateMessageId()
+            }
+        };
+    }
+
     // ===== 数据验证函数 =====
 
     /**
@@ -397,6 +415,7 @@
         createAckMessage,
         createNodeDoubleClickMessage,
         createSaveNotesMessage,
+        createCardMovedMessage,
         
         // 验证函数
         validateCardData,

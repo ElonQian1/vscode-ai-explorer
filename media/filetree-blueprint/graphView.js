@@ -373,6 +373,13 @@
         // 生成图数据唯一标识
         const graphKey = `${g.metadata?.graphId || 'default'}@${g.metadata?.version || Date.now()}`;
         
+        // Priority 3: 保存持久化位置信息（如果有）
+        const savedPositions = g.savedPositions || {};
+        if (Object.keys(savedPositions).length > 0) {
+            console.log('[graphView] 📍 加载了', Object.keys(savedPositions).length, '个保存的卡片位置');
+            window.__savedPositions = savedPositions;
+        }
+        
         // 相同版本跳过
         if (graphKey === currentGraphKey) {
             console.log('[graphView] 🔄 相同版本跳过:', graphKey);
