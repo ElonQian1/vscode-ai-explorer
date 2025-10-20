@@ -55,39 +55,20 @@
             // 清空原有内容
             graphRoot.innerHTML = '';
             
-            // 创建画布结构
+            // 创建画布结构 (CSP-safe: 所有样式通过 CSS 类)
             wrap = document.createElement('div');
             wrap.id = 'canvasWrap';
-            wrap.style.width = '100%';
-            wrap.style.height = '100%';
-            wrap.style.position = 'relative';
             
             canvas = document.createElement('div');
             canvas.id = 'canvas';
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            canvas.style.position = 'relative';
             
             // 创建边的SVG层
             edgeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             edgeSvg.classList.add('edges');
-            edgeSvg.style.position = 'absolute';
-            edgeSvg.style.top = '0';
-            edgeSvg.style.left = '0';
-            edgeSvg.style.width = '100%';
-            edgeSvg.style.height = '100%';
-            edgeSvg.style.pointerEvents = 'none';
-            edgeSvg.style.zIndex = '1';
             
             // 创建节点容器
             nodeContainer = document.createElement('div');
             nodeContainer.id = 'nodes';
-            nodeContainer.style.position = 'absolute';
-            nodeContainer.style.top = '0';
-            nodeContainer.style.left = '0';
-            nodeContainer.style.width = '100%';
-            nodeContainer.style.height = '100%';
-            nodeContainer.style.zIndex = '2';
             
             // 组装结构
             canvas.appendChild(edgeSvg);
@@ -1001,9 +982,11 @@
 
     // 应用变换
     function applyTransform() {
-        canvas.style.transform = `translate(${Math.round(offset.x)}px, ${Math.round(
+        // CSP-safe: 使用 RuntimeStylesheet 设置 transform
+        const transformValue = `translate(${Math.round(offset.x)}px, ${Math.round(
             offset.y
         )}px) scale(${scale})`;
+        runtimeStyles.setProperties('#canvas', `transform: ${transformValue};`);
     }
 
     // 重置视图

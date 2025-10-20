@@ -135,9 +135,9 @@
             
             if (rect.height === 0) {
                 console.error('[BOOT] ❌ 容器高度为0，CSS布局问题');
-                root.style.height = '100vh';
-                root.style.minHeight = '400px';
-                console.log('[BOOT] 🔧 已强制设置容器高度');
+                // CSP-safe: 使用类名替代 inline style
+                root.classList.add('fallback-height');
+                console.log('[BOOT] 🔧 已应用 fallback-height 类');
             }
         } else {
             console.error('[BOOT] ❌ 找不到#graph-root容器');

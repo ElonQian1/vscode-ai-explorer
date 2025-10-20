@@ -106,8 +106,9 @@
         const toggle = document.getElementById('banner-toggle');
 
         header.addEventListener('click', () => {
-            const isHidden = details.style.display === 'none';
-            details.style.display = isHidden ? 'block' : 'none';
+            // CSP-safe: 使用 classList 切换状态
+            const isHidden = details.classList.contains('hidden');
+            details.classList.toggle('hidden', !isHidden);
             toggle.textContent = isHidden ? '▲ 收起详情' : '▼ 展开详情';
         });
 
@@ -121,12 +122,13 @@
         state.channel = status;
         const statusEl = document.getElementById('banner-channel-status');
         if (statusEl) {
+            // CSP-safe: 使用类名控制样式
             if (status === 'connected') {
                 statusEl.textContent = '✅ Connected';
-                statusEl.style.color = '#4ade80';
+                statusEl.className = 'status-connected';
             } else {
                 statusEl.textContent = '🔌 Disconnected';
-                statusEl.style.color = '#fbbf24';
+                statusEl.className = 'status-disconnected';
             }
         }
     }
