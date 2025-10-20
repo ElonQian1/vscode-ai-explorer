@@ -16,6 +16,15 @@
     }
     const vscode = window.__vscode;
 
+    // 🔒 CSP安全：初始化运行时样式表
+    let runtimeStyles = null;
+    if (window.RuntimeStylesheet && window.__NONCE__) {
+        runtimeStyles = new window.RuntimeStylesheet(window.__NONCE__);
+        console.log('[graphView] ✅ 运行时样式表已初始化');
+    } else {
+        console.warn('[graphView] ⚠️ RuntimeStylesheet 或 nonce 未就绪');
+    }
+
     // ✅ 卡片管理器（蓝图卡片系统）
     // window.blueprintCard 和 window.messageContracts 在模块脚本中初始化
     

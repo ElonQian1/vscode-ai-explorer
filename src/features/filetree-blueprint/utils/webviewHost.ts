@@ -45,6 +45,7 @@ export function getWebviewHtml(
 	const blueprintCardUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'blueprintCard.js');
 	const enhancedUserNotesUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'enhancedUserNotes.js');
 	const featureToolbarUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'featureToolbar.js');
+	const runtimeStylesheetUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'runtimeStylesheet.js');
 	
 	return /* html */ `
 <!DOCTYPE html>
@@ -63,6 +64,10 @@ export function getWebviewHtml(
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">
 	<title>AI Explorer - Blueprint</title>
+	<script nonce="${nonce}">
+		// ✅ 全局nonce，供运行时样式表使用
+		window.__NONCE__ = '${nonce}';
+	</script>
 </head>
 <body>
 	<!-- 蓝图卡片层 -->
@@ -84,6 +89,7 @@ export function getWebviewHtml(
 	
 	<!-- 依赖加载顺序: ELK → 模块 → 主应用 -->
 	<script nonce="${nonce}" src="${elkBundledUri}"></script>
+	<script nonce="${nonce}" src="${runtimeStylesheetUri}"></script>
 	<script nonce="${nonce}" src="${blueprintCardUri}"></script>
 	<script nonce="${nonce}" src="${enhancedUserNotesUri}"></script>
 	<script nonce="${nonce}" src="${featureToolbarUri}"></script>
