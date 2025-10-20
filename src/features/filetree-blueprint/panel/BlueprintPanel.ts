@@ -979,12 +979,13 @@ export class BlueprintPanel {
     <!-- 🎯 浮动卡片挂载层：绝对定位在顶层 -->
     <div id="card-layer" class="card-layer" aria-live="polite"></div>
     
-    <!-- � CSP修复：ELK本地化 + 所有脚本添加nonce -->
+    <!-- 🎯 CSP修复：ELK本地化 + 所有脚本添加nonce -->
     <!-- 加载顺序：ELK → 基础组件 → 蓝图卡片系统 → 画布逻辑 -->
     <script nonce="${nonce}" src="${elkUri}"></script>
     <script nonce="${nonce}" src="${styleManagerUri}"></script>
-    <script nonce="${nonce}" src="${smokeProbeUri}"></script>
-    <script nonce="${nonce}" src="${debugBannerUri}"></script>
+    <!-- Priority 7: 禁用调试组件（避免CSP违规） -->
+    <!-- <script nonce="${nonce}" src="${smokeProbeUri}"></script> -->
+    <!-- <script nonce="${nonce}" src="${debugBannerUri}"></script> -->
     <script nonce="${nonce}" src="${messageContractsUri}"></script>
     <script nonce="${nonce}" src="${layoutEngineUri}"></script>
     <script nonce="${nonce}" src="${blueprintCardUri}"></script>
