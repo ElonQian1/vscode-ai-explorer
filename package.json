@@ -333,6 +333,11 @@
           "default": true,
           "description": "首次打开蓝图时自动显示帮助浮层"
         },
+        "filetreeBlueprint.useNewArchitecture": {
+          "type": "boolean",
+          "default": true,
+          "description": "✨ Phase 2: 使用新的模块化架构（graphView-slim.js + 8个核心模块）。设为false可回退到旧版本（graphView.js）"
+        },
         "aiExplorer.provider.primary": {
           "type": "string",
           "enum": [

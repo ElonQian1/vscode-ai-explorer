@@ -815,40 +815,97 @@ export class BlueprintPanel {
 
     /**
      * 🚨 紧急修复：生成简化的HTML内容，确保画布能显示
+     * ✨ Phase 2: 支持新架构切换（通过配置项控制）
      */
     private getEmergencyHtml(extensionUri: vscode.Uri): string {
         const webview = this.panel.webview;
         const csp = webview.cspSource;
 
+        // ✨ Phase 2: 读取配置，决定使用新架构还是旧架构
+        const useNewArchitecture = vscode.workspace.getConfiguration('filetreeBlueprint').get<boolean>('useNewArchitecture', true);
+        this.logger.info(`[Phase 2] 使用架构: ${useNewArchitecture ? '新架构 (graphView-slim.js)' : '旧架构 (graphView.js)'}`);
+
         // 🚨 修复：确保所有资源都用asWebviewUri转换
         const mediaBase = vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint');
         
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView.js'));
-        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'index.css'));
-        const smokeProbeUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'SmokeProbe.js'));
-        const debugBannerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'DebugBanner.js'));
-        const analysisCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'analysisCard.js'));
+        // ✨ Phase 2: 根据配置选择主脚本
+        const mainScriptUri = useNewArchitecture
+            ? webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView-slim.js'))
+            : webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView.js'));
         
-        // 🎯 新增：蓝图卡片系统模块
-        const messageContractsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'contracts', 'messageContracts.js'));
-        const blueprintCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'blueprintCard.js'));
-        const layoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'layoutEngine.js'));
-        const validationTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'validation-test.js'));
+        const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'index.css'));
+        
+        // 生成 nonce 用于 CSP（必须在scriptTags之前定义）
+        const nonce = getNonce();
         
         // 🔧 本地ELK引擎（避免CDN CSP拦截）
         const elkUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'vendor', 'elk.bundled.js'));
-        
-        // 🎨 运行时样式管理器（CSP兼容的动态样式解决方案）
-        const styleManagerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'styleManager.js'));
-        
-        // 🔧 CSP修复版启动脚本（替代内联script）
-        const bootScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'boot-script.js'));
-        
-        // 🔬 ELK加载测试脚本
-        const elkTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'elk-test.js'));
 
-        // 生成 nonce 用于 CSP
-        const nonce = getNonce();
+        // ✨ Phase 2: 新架构所需模块（ES6模块化）
+        let scriptTags = '';
+        if (useNewArchitecture) {
+            // 新架构：8个ES6模块 + graphView-slim.js 编排层
+            const coreRuntimeStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'runtimeStyle.js'));
+            const coreMessageHubUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'messageHub.js'));
+            const coreLayoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'layoutEngine.js'));
+            const coreRendererUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'renderer.js'));
+            const componentsBreadcrumbUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'components', 'Breadcrumb.js'));
+            const componentsCardLayerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'components', 'CardLayer.js'));
+            const interactionsDragManagerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'interactions', 'DragManager.js'));
+            const interactionsZoomPanUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'interactions', 'ZoomPan.js'));
+
+            scriptTags = `
+    <!-- ✨ Phase 2: 新架构 - ES6模块化 -->
+    <!-- ELK布局引擎（全局UMD） -->
+    <script nonce="${nonce}" src="${elkUri}"></script>
+    
+    <!-- 新架构：Core层模块 -->
+    <script nonce="${nonce}" type="module" src="${coreRuntimeStyleUri}"></script>
+    <script nonce="${nonce}" type="module" src="${coreMessageHubUri}"></script>
+    <script nonce="${nonce}" type="module" src="${coreLayoutEngineUri}"></script>
+    <script nonce="${nonce}" type="module" src="${coreRendererUri}"></script>
+    
+    <!-- 新架构：Components层模块 -->
+    <script nonce="${nonce}" type="module" src="${componentsBreadcrumbUri}"></script>
+    <script nonce="${nonce}" type="module" src="${componentsCardLayerUri}"></script>
+    
+    <!-- 新架构：Interactions层模块 -->
+    <script nonce="${nonce}" type="module" src="${interactionsDragManagerUri}"></script>
+    <script nonce="${nonce}" type="module" src="${interactionsZoomPanUri}"></script>
+    
+    <!-- 新架构：编排层（启动入口） -->
+    <script nonce="${nonce}" type="module" src="${mainScriptUri}"></script>
+`;
+        } else {
+            // 旧架构：单文件 + UMD模块
+            const smokeProbeUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'SmokeProbe.js'));
+            const debugBannerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'DebugBanner.js'));
+            const analysisCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'analysisCard.js'));
+            const messageContractsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'contracts', 'messageContracts.js'));
+            const blueprintCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'blueprintCard.js'));
+            const oldLayoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'layoutEngine.js'));
+            const validationTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'validation-test.js'));
+            const styleManagerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'styleManager.js'));
+            const bootScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'boot-script.js'));
+            const elkTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'elk-test.js'));
+
+            scriptTags = `
+    <!-- 🔧 旧架构 - 保持向后兼容 -->
+    <!-- ELK + 基础组件 + 蓝图卡片系统 + 画布逻辑 -->
+    <script nonce="${nonce}" src="${elkUri}"></script>
+    <script nonce="${nonce}" src="${styleManagerUri}"></script>
+    <!-- <script nonce="${nonce}" src="${smokeProbeUri}"></script> -->
+    <!-- <script nonce="${nonce}" src="${debugBannerUri}"></script> -->
+    <script nonce="${nonce}" src="${messageContractsUri}"></script>
+    <script nonce="${nonce}" src="${oldLayoutEngineUri}"></script>
+    <script nonce="${nonce}" src="${blueprintCardUri}"></script>
+    <script nonce="${nonce}" src="${analysisCardUri}"></script>
+    <script nonce="${nonce}" src="${mainScriptUri}"></script>
+    <script nonce="${nonce}" src="${elkTestUri}"></script>
+    <script nonce="${nonce}" src="${validationTestUri}"></script>
+    <script nonce="${nonce}" src="${bootScriptUri}"></script>
+`;
+        }
 
         // 🚨 急救CSS：确保容器有高度，兼容原有的图表结构 + 卡片层
         const emergencyStyles = `
@@ -1003,21 +1060,7 @@ export class BlueprintPanel {
     <!-- 🎯 浮动卡片挂载层：绝对定位在顶层 -->
     <div id="card-layer" class="card-layer" aria-live="polite"></div>
     
-    <!-- 🎯 CSP修复：ELK本地化 + 所有脚本添加nonce -->
-    <!-- 加载顺序：ELK → 基础组件 → 蓝图卡片系统 → 画布逻辑 -->
-    <script nonce="${nonce}" src="${elkUri}"></script>
-    <script nonce="${nonce}" src="${styleManagerUri}"></script>
-    <!-- Priority 7: 禁用调试组件（避免CSP违规） -->
-    <!-- <script nonce="${nonce}" src="${smokeProbeUri}"></script> -->
-    <!-- <script nonce="${nonce}" src="${debugBannerUri}"></script> -->
-    <script nonce="${nonce}" src="${messageContractsUri}"></script>
-    <script nonce="${nonce}" src="${layoutEngineUri}"></script>
-    <script nonce="${nonce}" src="${blueprintCardUri}"></script>
-    <script nonce="${nonce}" src="${analysisCardUri}"></script>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-    <script nonce="${nonce}" src="${elkTestUri}"></script>
-    <script nonce="${nonce}" src="${validationTestUri}"></script>
-    <script nonce="${nonce}" src="${bootScriptUri}"></script>
+    ${scriptTags}
 </body>
 </html>`;
     }
