@@ -232,7 +232,10 @@
             console.log('[graphView] 📍 创建了缺失的 breadcrumb');
         }
         
-        // 5) 原有初始化
+        // 6) 初始化功能筛选工具条
+        initFeatureToolbar();
+        
+        // 7) 原有初始化
         setupEventListeners();
         notifyReady();
     }
@@ -1686,6 +1689,141 @@
             console.log('   是否冒泡:', e.bubbles);
         }, true); // capture 捕获阶段，能看到事件被谁拦截
     })();
+
+    // ========== 功能筛选工具条 ==========
+    let currentFilters = null; // 当前筛选条件
+    let originalGraph = null; // 原始完整图数据
+    
+    /**
+     * 初始化功能筛选工具条
+     */
+    function initFeatureToolbar() {
+        const container = document.getElementById('feature-toolbar-container');
+        if (!container) {
+            console.warn('[graphView] ⚠️ 未找到工具条容器: #feature-toolbar-container');
+            return;
+        }
+        
+        if (!window.featureToolbar) {
+            console.warn('[graphView] ⚠️ featureToolbar 模块未加载');
+            return;
+        }
+        
+        // 从图数据获取初始配置
+        const metadata = graph?.metadata || {};
+        const initialConfig = {
+            relevanceThreshold: metadata.relevanceThreshold || 30,
+            keywords: metadata.keywords || [],
+            maxHops: metadata.maxHops || 3,
+            onFilterChange: handleFilterChange
+        };
+        
+        // 创建工具条
+        const toolbar = window.featureToolbar.create(initialConfig);
+        container.appendChild(toolbar);
+        
+        console.log('[graphView] ✅ 功能筛选工具条已初始化');
+    }
+    
+    /**
+     * 处理筛选条件变化
+     */
+    function handleFilterChange(filters) {
+        console.log('[graphView] 🔄 筛选条件变化:', filters);
+        currentFilters = filters;
+        
+        // 保存原始图数据
+        if (!originalGraph && graph) {
+            originalGraph = { ...graph };
+        }
+        
+        // 应用筛选
+        const filteredGraph = applyFilters(originalGraph || graph, filters);
+        
+        // 通知后端重新渲染(携带新筛选条件)
+        vscode.postMessage({
+            type: 'filter-change',
+            payload: {
+                featureId: graph?.metadata?.featureId,
+                relevanceThreshold: filters.relevanceThreshold,
+                keywords: filters.keywords,
+                maxHops: filters.maxHops
+            }
+        });
+        
+        // 本地立即应用筛选(快速响应)
+        renderGraph(filteredGraph);
+    }
+    
+    /**
+     * 应用筛选条件到图数据
+     */
+    function applyFilters(sourceGraph, filters) {
+        if (!sourceGraph || !sourceGraph.nodes) {
+            return sourceGraph;
+        }
+        
+        const {
+            relevanceThreshold,
+            keywords,
+            maxHops
+        } = filters;
+        
+        // 筛选节点
+        let filteredNodes = sourceGraph.nodes.filter(node => {
+            const metadata = node.data || node.metadata || {};
+            
+            // 1. 阈值筛选
+            if (metadata.score !== undefined && metadata.score < relevanceThreshold) {
+                return false;
+            }
+            
+            // 2. 跳数筛选
+            if (metadata.hops !== undefined && metadata.hops > maxHops) {
+                return false;
+            }
+            
+            // 3. 关键词筛选(如果有关键词)
+            if (keywords && keywords.length > 0) {
+                const nodePath = (metadata.path || node.id || '').toLowerCase();
+                const nodeLabel = (node.label || '').toLowerCase();
+                const nodeContent = `${nodePath} ${nodeLabel}`;
+                
+                // 至少匹配一个关键词
+                const matchKeyword = keywords.some(kw => 
+                    nodeContent.includes(kw.toLowerCase())
+                );
+                
+                if (!matchKeyword) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        const nodeIds = new Set(filteredNodes.map(n => n.id));
+        
+        // 筛选边(只保留两端都存在的边)
+        const filteredEdges = sourceGraph.edges.filter(edge => {
+            return nodeIds.has(edge.source) && nodeIds.has(edge.target);
+        });
+        
+        console.log(`[graphView] 📊 筛选结果: ${filteredNodes.length}/${sourceGraph.nodes.length} 节点, ${filteredEdges.length}/${sourceGraph.edges.length} 边`);
+        
+        return {
+            ...sourceGraph,
+            nodes: filteredNodes,
+            edges: filteredEdges,
+            metadata: {
+                ...sourceGraph.metadata,
+                filtered: true,
+                relevanceThreshold,
+                keywords,
+                maxHops
+            }
+        };
+    }
 
     // 启动
     init();

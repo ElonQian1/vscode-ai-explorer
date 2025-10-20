@@ -1015,6 +1015,188 @@ body {
 	background: rgba(255, 255, 255, 0.15);
 }
 
+/* ========== 功能筛选工具条 ========== */
+
+.feature-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 24px;
+	padding: 16px;
+	background: var(--vscode-editor-background);
+	border-bottom: 1px solid var(--vscode-panel-border);
+	align-items: center;
+}
+
+.toolbar-section {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.toolbar-label {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--vscode-foreground);
+	white-space: nowrap;
+}
+
+/* 阈值滑块 */
+.threshold-section {
+	min-width: 250px;
+}
+
+.slider-container {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1;
+}
+
+.threshold-slider {
+	flex: 1;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--vscode-input-background);
+	outline: none;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.threshold-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--vscode-button-background);
+	cursor: pointer;
+	border: 2px solid var(--vscode-button-foreground);
+}
+
+.threshold-slider::-webkit-slider-thumb:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+.threshold-slider::-moz-range-thumb {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--vscode-button-background);
+	cursor: pointer;
+	border: 2px solid var(--vscode-button-foreground);
+}
+
+.threshold-value {
+	min-width: 32px;
+	text-align: right;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--vscode-button-background);
+}
+
+/* 关键词chips */
+.keywords-section {
+	flex: 1;
+	min-width: 300px;
+}
+
+.keywords-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.keyword-chip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px 4px 12px;
+	background: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	border-radius: 12px;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.chip-text {
+	font-weight: 500;
+}
+
+.chip-remove {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	background: transparent;
+	border: none;
+	color: var(--vscode-badge-foreground);
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	border-radius: 50%;
+	opacity: 0.7;
+	transition: opacity 0.2s, background 0.2s;
+}
+
+.chip-remove:hover {
+	opacity: 1;
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.chip-input-wrapper {
+	display: inline-flex;
+}
+
+.chip-input {
+	width: 140px;
+	padding: 4px 8px;
+	background: var(--vscode-input-background);
+	border: 1px solid var(--vscode-input-border);
+	color: var(--vscode-input-foreground);
+	font-size: 12px;
+	border-radius: 4px;
+	outline: none;
+}
+
+.chip-input:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+.chip-input::placeholder {
+	color: var(--vscode-input-placeholderForeground);
+}
+
+/* 跳数选择器 */
+.hops-section {
+	min-width: 150px;
+}
+
+.hops-select-container {
+	display: flex;
+}
+
+.hops-select {
+	padding: 4px 8px;
+	background: var(--vscode-dropdown-background);
+	border: 1px solid var(--vscode-dropdown-border);
+	color: var(--vscode-dropdown-foreground);
+	font-size: 13px;
+	border-radius: 4px;
+	cursor: pointer;
+	outline: none;
+}
+
+.hops-select:hover {
+	background: var(--vscode-dropdown-listBackground);
+}
+
+.hops-select:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
 /* ========== 响应式 ========== */
 
 @media (max-width: 768px) {
@@ -1026,5 +1208,25 @@ body {
 	.bp-toolbar {
 		flex-direction: column;
 		align-items: stretch;
+	}
+	
+	/* 工具条响应式 */
+	.feature-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 16px;
+	}
+	
+	.toolbar-section {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
+	}
+	
+	.threshold-section,
+	.keywords-section,
+	.hops-section {
+		min-width: unset;
+		width: 100%;
 	}
 }

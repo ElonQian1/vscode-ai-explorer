@@ -321,6 +321,12 @@ export class BlueprintPanel {
                 break;
 
             default:
+                // ✅ 处理功能筛选变化 (临时绕过类型检查)
+                if ((message as any).type === 'filter-change') {
+                    await this.handleFilterChange((message as any).payload);
+                    break;
+                }
+                
                 // 🔍 处理调试消息（开发模式专用）
                 const debugMessage = message as any;
                 if (debugMessage.type === 'PING') {
@@ -1246,6 +1252,49 @@ export class BlueprintPanel {
             customFields: notes.customFields || {},
             metadata: notes.metadata
         };
+    }
+
+    /**
+     * 处理功能筛选条件变化
+     * 从FeatureRenderer模块调用，重新渲染功能子图
+     */
+    private async handleFilterChange(payload: any): Promise<void> {
+        const { featureId, relevanceThreshold, keywords, maxHops } = payload;
+        
+        this.logger.info(`[功能筛选] 筛选条件变化:`, {
+            featureId,
+            relevanceThreshold,
+            keywords,
+            maxHops
+        });
+        
+        // 🎯 触发 FeatureRenderer 重新渲染
+        try {
+            // 动态导入 FeatureRenderer
+            const { FeatureRenderer } = await import('../app/FeatureRenderer');
+            
+            // 创建渲染器实例
+            const renderer = new FeatureRenderer();
+            
+            // 构建 FeaturePayload
+            const featurePayload = {
+                featureId: featureId || 'default-feature',
+                seeds: [], // TODO: 从当前图数据提取种子文件
+                keywords: keywords || [],
+                relevanceThreshold: relevanceThreshold || 30,
+                maxHops: maxHops || 3,
+                returnGraph: false // 直接渲染，不返回
+            };
+            
+            // 重新渲染功能子图
+            await renderer.renderFeature(featurePayload);
+            
+            this.logger.info('[功能筛选] 功能子图重新渲染完成');
+            
+        } catch (error) {
+            this.logger.error('[功能筛选] 重新渲染失败:', error);
+            vscode.window.showErrorMessage(`功能筛选失败: ${error}`);
+        }
     }
 
     /**

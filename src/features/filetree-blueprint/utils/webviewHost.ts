@@ -44,6 +44,7 @@ export function getWebviewHtml(
 	// 模块URI
 	const blueprintCardUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'blueprintCard.js');
 	const enhancedUserNotesUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'enhancedUserNotes.js');
+	const featureToolbarUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'featureToolbar.js');
 	
 	return /* html */ `
 <!DOCTYPE html>
@@ -72,34 +73,8 @@ export function getWebviewHtml(
 		<svg id="graph-svg" class="bp-graph-svg"></svg>
 	</div>
 	
-	<!-- 控制工具条 -->
-	<div id="toolbar" class="bp-toolbar">
-		<div class="bp-toolbar-section">
-			<label class="bp-toolbar-label">关键词:</label>
-			<div id="keyword-chips" class="bp-keyword-chips"></div>
-		</div>
-		<div class="bp-toolbar-section">
-			<label class="bp-toolbar-label">阈值:</label>
-			<input type="range" id="threshold-slider" class="bp-slider" min="0" max="100" value="30" />
-			<span id="threshold-value" class="bp-value">30</span>
-		</div>
-		<div class="bp-toolbar-section">
-			<label class="bp-toolbar-label">层级:</label>
-			<select id="hops-select" class="bp-select">
-				<option value="1">1跳</option>
-				<option value="2" selected>2跳</option>
-				<option value="3">3跳</option>
-			</select>
-		</div>
-		<div class="bp-toolbar-section">
-			<button id="toggle-relevant" class="bp-btn bp-btn-toggle is-active">
-				只看相关
-			</button>
-			<button id="toggle-bridge" class="bp-btn bp-btn-toggle">
-				桥接节点
-			</button>
-		</div>
-	</div>
+	<!-- 功能筛选工具条(由featureToolbar.js动态生成) -->
+	<div id="feature-toolbar-container"></div>
 	
 	<!-- 加载状态提示 -->
 	<div id="loading" class="bp-loading" style="display: none;">
@@ -111,6 +86,7 @@ export function getWebviewHtml(
 	<script nonce="${nonce}" src="${elkBundledUri}"></script>
 	<script nonce="${nonce}" src="${blueprintCardUri}"></script>
 	<script nonce="${nonce}" src="${enhancedUserNotesUri}"></script>
+	<script nonce="${nonce}" src="${featureToolbarUri}"></script>
 	<script nonce="${nonce}" src="${graphViewJsUri}"></script>
 </body>
 </html>`;
