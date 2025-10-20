@@ -878,37 +878,16 @@ export class BlueprintPanel {
         // ✨ Phase 2: 新架构所需模块（ES6模块化）
         let scriptTags = '';
         if (useNewArchitecture) {
-            // 新架构：8个ES6模块 + graphView-slim.js 编排层
-            const coreRuntimeStyleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'runtimeStyle.js'));
-            const coreMessageHubUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'messageHub.js'));
-            const coreLayoutEngineUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'layoutEngine.js'));
-            const coreRendererUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'core', 'renderer.js'));
-            const componentsBreadcrumbUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'components', 'Breadcrumb.js'));
-            const componentsCardLayerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'components', 'CardLayer.js'));
-            const interactionsDragManagerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'interactions', 'DragManager.js'));
-            const interactionsZoomPanUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'interactions', 'ZoomPan.js'));
-
+            // ✨ M8: 使用打包后的 bundle.js（单文件，包含所有模块 + elk）
+            const bundleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'dist', 'bundle.js'));
+            
             scriptTags = `
-    <!-- ✨ Phase 2: 新架构 - ES6模块化 -->
+    <!-- ✨ M8: 新架构 - 打包版本（bundle.js） -->
     <!-- ELK布局引擎（全局UMD） -->
     <script nonce="${nonce}" src="${elkUri}"></script>
     
-    <!-- 新架构：Core层模块 -->
-    <script nonce="${nonce}" type="module" src="${coreRuntimeStyleUri}"></script>
-    <script nonce="${nonce}" type="module" src="${coreMessageHubUri}"></script>
-    <script nonce="${nonce}" type="module" src="${coreLayoutEngineUri}"></script>
-    <script nonce="${nonce}" type="module" src="${coreRendererUri}"></script>
-    
-    <!-- 新架构：Components层模块 -->
-    <script nonce="${nonce}" type="module" src="${componentsBreadcrumbUri}"></script>
-    <script nonce="${nonce}" type="module" src="${componentsCardLayerUri}"></script>
-    
-    <!-- 新架构：Interactions层模块 -->
-    <script nonce="${nonce}" type="module" src="${interactionsDragManagerUri}"></script>
-    <script nonce="${nonce}" type="module" src="${interactionsZoomPanUri}"></script>
-    
-    <!-- 新架构：编排层（启动入口） -->
-    <script nonce="${nonce}" type="module" src="${mainScriptUri}"></script>
+    <!-- 新架构打包文件（包含所有ES6模块） -->
+    <script nonce="${nonce}" type="module" src="${bundleUri}"></script>
 `;
         } else {
             // 旧架构：单文件 + UMD模块

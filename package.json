@@ -615,7 +615,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && npm run build:webview",
     "compile": "tsc -p ./",
     "compile:watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
@@ -625,6 +625,8 @@
     "build:explorer": "tsc -b src/features/explorer-alias",
     "build:uml": "tsc -b src/features/uml-canvas",
     "build:core": "tsc -b src/core",
+    "build:webview": "node scripts/build-webview.js",
+    "test:smoke": "node scripts/smoke-test.js",
     "dev": "npm run compile:watch",
     "grep:alias": "npx rg -t ts 'explorer-alias|别名|资源管理器' src/features/explorer-alias",
     "grep:uml": "npx rg -t ts 'uml-canvas|UML|图表' src/features/uml-canvas"
@@ -636,6 +638,7 @@
     "@typescript-eslint/eslint-plugin": "^6.4.0",
     "@typescript-eslint/parser": "^6.4.0",
     "@vscode/test-electron": "^2.3.4",
+    "esbuild": "^0.25.11",
     "eslint": "^8.47.0",
     "eslint-plugin-boundaries": "^4.0.0",
     "eslint-plugin-import": "^2.28.1",

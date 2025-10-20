@@ -22,7 +22,7 @@ import { createMessageHub, setupMessageListener } from './core/messageHub.js';
 import { createLayoutEngine, NODE_SIZE } from './core/layoutEngine.js';
 import { createRenderer } from './core/renderer.js';
 import { createCardLayer } from './components/CardLayer.js';
-import { createBreadcrumb } from './components/Breadcrumb.js';
+import { mountBreadcrumb } from './components/Breadcrumb.js';
 import { createDragManager } from './interactions/DragManager.js';
 import { createZoomPan } from './interactions/ZoomPan.js';
 
@@ -145,7 +145,7 @@ import { createZoomPan } from './interactions/ZoomPan.js';
     // 6. Breadcrumb（面包屑）
     const breadcrumbContainer = document.getElementById('breadcrumb');
     if (breadcrumbContainer) {
-      breadcrumb = createBreadcrumb(breadcrumbContainer);
+      breadcrumb = mountBreadcrumb(breadcrumbContainer);
       console.log('[graphView] ✅ Breadcrumb 已初始化');
     }
 
