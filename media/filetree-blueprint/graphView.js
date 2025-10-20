@@ -25,6 +25,42 @@
         console.warn('[graphView] ⚠️ RuntimeStylesheet 或 nonce 未就绪');
     }
 
+    // Priority 6: 布局稳定性 - 防抖队列
+    let layoutQueue = [];
+    let layoutDebounceTimer = null;
+    const LAYOUT_DEBOUNCE_DELAY = 300; // 300ms 防抖延迟
+
+    /**
+     * 防抖布局调用
+     */
+    function debouncedReflow(reason, affectedPaths) {
+        // 添加到队列
+        layoutQueue.push({ reason, affectedPaths, timestamp: Date.now() });
+        
+        // 清除之前的定时器
+        if (layoutDebounceTimer) {
+            clearTimeout(layoutDebounceTimer);
+        }
+        
+        // 设置新的定时器
+        layoutDebounceTimer = setTimeout(() => {
+            // 合并队列中的操作
+            const mergedPaths = [...new Set(layoutQueue.flatMap(item => item.affectedPaths))];
+            const lastReason = layoutQueue[layoutQueue.length - 1].reason;
+            
+            console.log(`[布局] 🎯 执行合并布局: ${lastReason}, 影响 ${mergedPaths.length} 个节点`);
+            
+            // 执行布局
+            if (layoutEngine) {
+                layoutEngine.reflow(lastReason, mergedPaths);
+            }
+            
+            // 清空队列
+            layoutQueue = [];
+            layoutDebounceTimer = null;
+        }, LAYOUT_DEBOUNCE_DELAY);
+    }
+
     // ✅ 卡片管理器（蓝图卡片系统）
     // window.blueprintCard 和 window.messageContracts 在模块脚本中初始化
     
@@ -183,14 +219,14 @@
                     console.log('[graphView] 📌 卡片已打开:', path, size);
                     if (layoutEngine) {
                         layoutEngine.markExpanded(path, true);
-                        layoutEngine.reflow('expand', [path]);
+                        debouncedReflow('expand', [path]); // Priority 6: 使用防抖
                     }
                 },
                 onClose: (path) => {
                     console.log('[graphView] ❌ 卡片已关闭:', path);
                     if (layoutEngine) {
                         layoutEngine.markExpanded(path, false);
-                        layoutEngine.reflow('collapse', [path]);
+                        debouncedReflow('collapse', [path]); // Priority 6: 使用防抖
                     }
                 },
                 onNotesChange: (path, notes) => {
