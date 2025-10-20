@@ -11,6 +11,7 @@ import { DIContainer } from '../../core/di/Container';
 import { GenerateBlueprintUseCase } from './app/usecases/GenerateBlueprintUseCase';
 import { resolveTargetToFileUri } from './utils/resolveTarget';
 import { CacheMonitorManager } from './monitoring/CacheMonitorManager';
+import { registerFeatureCommands } from './app/FeatureRenderer';
 
 export class FileTreeBlueprintModule extends BaseModule {
     private generateUseCase?: GenerateBlueprintUseCase;
@@ -29,6 +30,9 @@ export class FileTreeBlueprintModule extends BaseModule {
 
         // 注册命令
         this.registerCommands(context);
+        
+        // 注册功能渲染命令(按功能筛选相关文件)
+        registerFeatureCommands(context);
 
         // 检查版本更新并显示提示
         this.checkVersionUpdate(context);
@@ -241,7 +245,7 @@ export class FileTreeBlueprintModule extends BaseModule {
             )
         );
 
-        this.logger.info('已注册 5 个命令');
+        this.logger.info('已注册 6 个命令 + 功能渲染命令');
     }
 
     /**
