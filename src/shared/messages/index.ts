@@ -195,7 +195,7 @@ export interface ErrorMessage {
 }
 
 /**
- * 保存用户备注
+ * 保存用户备注 (旧版)
  */
 export interface SaveUserNotesMessage {
     type: 'save-user-notes';
@@ -210,10 +210,78 @@ export interface SaveUserNotesMessage {
 }
 
 /**
- * 获取用户备注
+ * 获取用户备注 (旧版)
  */
 export interface GetUserNotesMessage {
     type: 'get-user-notes';
+    payload: {
+        filePath: string;
+    };
+}
+
+/**
+ * 保存增强版用户备注
+ */
+export interface SaveEnhancedUserNotesMessage {
+    type: 'save-enhanced-user-notes';
+    payload: {
+        filePath: string;
+        notes: {
+            filePath: string;
+            priority: 'critical' | 'high' | 'medium' | 'low' | 'none';
+            status: 'active' | 'review' | 'deprecated' | 'archive' | 'testing' | 'done';
+            tags: Array<{
+                name: string;
+                color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'gray';
+                description?: string;
+                createdAt: number;
+            }>;
+            comments: Array<{
+                id: string;
+                content: string;
+                createdAt: number;
+                pinned: boolean;
+                tags: string[];
+            }>;
+            todos: Array<{
+                id: string;
+                content: string;
+                completed: boolean;
+                createdAt: number;
+                completedAt?: number;
+                priority?: 'critical' | 'high' | 'medium' | 'low';
+                tags?: string[];
+            }>;
+            links: Array<{
+                id: string;
+                title: string;
+                url: string;
+                description?: string;
+                category: 'documentation' | 'reference' | 'example' | 'issue' | 'other';
+                createdAt: number;
+            }>;
+            rating?: {
+                codeQuality: number; // 1-5
+                importance: number; // 1-5  
+                complexity: number; // 1-5
+                ratedAt: number;
+            };
+            customFields: Record<string, any>;
+            metadata: {
+                createdAt: number;
+                lastEditedAt: number;
+                editCount: number;
+                version: string;
+            };
+        };
+    };
+}
+
+/**
+ * 获取增强版用户备注
+ */
+export interface GetEnhancedUserNotesMessage {
+    type: 'get-enhanced-user-notes';
     payload: {
         filePath: string;
     };
@@ -239,7 +307,9 @@ export type WebviewToExtension =
     | NodeMovedMessage
     | ErrorMessage
     | SaveUserNotesMessage
-    | GetUserNotesMessage;
+    | GetUserNotesMessage
+    | SaveEnhancedUserNotesMessage
+    | GetEnhancedUserNotesMessage;
 
 // ============================================================================
 // Extension → Webview (后端发给前端的消息)
@@ -298,7 +368,7 @@ export interface OpenHelpMessage {
 }
 
 /**
- * 用户备注数据响应
+ * 用户备注数据响应 (旧版)
  */
 export interface UserNotesDataMessage {
     type: 'user-notes-data';
@@ -314,10 +384,82 @@ export interface UserNotesDataMessage {
 }
 
 /**
- * 用户备注保存成功确认
+ * 用户备注保存成功确认 (旧版)
  */
 export interface UserNotesSavedMessage {
     type: 'user-notes-saved';
+    payload: {
+        filePath: string;
+        success: boolean;
+        error?: string;
+    };
+}
+
+/**
+ * 增强版用户备注数据响应
+ */
+export interface EnhancedUserNotesDataMessage {
+    type: 'enhanced-user-notes-data';
+    payload: {
+        filePath: string;
+        notes: {
+            filePath: string;
+            priority: 'critical' | 'high' | 'medium' | 'low' | 'none';
+            status: 'active' | 'review' | 'deprecated' | 'archive' | 'testing' | 'done';
+            tags: Array<{
+                name: string;
+                color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'gray';
+                description?: string;
+                createdAt: number;
+            }>;
+            comments: Array<{
+                id: string;
+                content: string;
+                createdAt: number;
+                pinned: boolean;
+                tags: string[];
+            }>;
+            todos: Array<{
+                id: string;
+                content: string;
+                completed: boolean;
+                createdAt: number;
+                completedAt?: number;
+                priority?: 'critical' | 'high' | 'medium' | 'low';
+                tags?: string[];
+            }>;
+            links: Array<{
+                id: string;
+                title: string;
+                url: string;
+                description?: string;
+                category: 'documentation' | 'reference' | 'example' | 'issue' | 'other';
+                createdAt: number;
+            }>;
+            rating?: {
+                codeQuality: number;
+                importance: number;
+                complexity: number;
+                ratedAt: number;
+            };
+            customFields: Record<string, any>;
+            metadata: {
+                createdAt: number;
+                lastEditedAt: number;
+                editCount: number;
+                version: string;
+            };
+        };
+        success?: boolean;
+        error?: string;
+    };
+}
+
+/**
+ * 增强版用户备注保存成功确认
+ */
+export interface EnhancedUserNotesSavedMessage {
+    type: 'enhanced-user-notes-saved';
     payload: {
         filePath: string;
         success: boolean;
@@ -335,7 +477,9 @@ export type ExtensionToWebview =
     | AnalysisErrorMessage
     | OpenHelpMessage
     | UserNotesDataMessage
-    | UserNotesSavedMessage;
+    | UserNotesSavedMessage
+    | EnhancedUserNotesDataMessage
+    | EnhancedUserNotesSavedMessage;
 
 // ============================================================================
 // 类型守卫 (Type Guards)

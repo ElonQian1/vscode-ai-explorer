@@ -277,8 +277,12 @@ export class EnhancedCapsuleCache {
         filePath: string,
         notes: EnhancedUserNotes
     ): Promise<void> {
+        if (!this.cacheDir) {
+            throw new Error('Cache directory not initialized');
+        }
+        
         const cacheKey = this.getCacheKey(filePath);
-        const notesPath = path.join(this.cacheDir, `${cacheKey}.notes.json`);
+        const notesPath = path.join(this.cacheDir.fsPath, `${cacheKey}.notes.json`);
         
         try {
             // 保存到专门的notes文件
@@ -325,8 +329,12 @@ export class EnhancedCapsuleCache {
      * 获取增强版用户备注
      */
     public async getEnhancedUserNotes(filePath: string): Promise<EnhancedUserNotes | null> {
+        if (!this.cacheDir) {
+            throw new Error('Cache directory not initialized');
+        }
+        
         const cacheKey = this.getCacheKey(filePath);
-        const notesPath = path.join(this.cacheDir, `${cacheKey}.notes.json`);
+        const notesPath = path.join(this.cacheDir.fsPath, `${cacheKey}.notes.json`);
         
         try {
             const notesUri = vscode.Uri.file(notesPath);

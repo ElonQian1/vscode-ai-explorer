@@ -455,7 +455,13 @@
         }
 
         renderNotes() {
-            // 获取用户备注数据（来自S3缓存系统）
+            // 检测是否有增强版用户备注数据
+            if (this.data?.enhancedUserNotes || this.shouldUseEnhancedNotes()) {
+                this.renderEnhancedNotes();
+                return;
+            }
+            
+            // 兼容旧版用户备注（来自S3缓存系统）
             const userNotes = this.data?.userNotes || {};
             const comments = userNotes.comments || [];
             const tags = userNotes.tags || [];
@@ -465,7 +471,28 @@
             const safeId = this.path.replace(/[^a-zA-Z0-9]/g, '_');
             
             this.content.innerHTML = `
-                <div class="user-notes-container" style="padding: 8px;">
+                <div class="user-notes-container legacy-notes" style="padding: 8px;">
+                    <!-- 升级提示 -->
+                    <div class="upgrade-prompt" style="
+                        background: var(--vscode-textCodeBlock-background);
+                        border: 1px solid var(--vscode-focusBorder);
+                        border-radius: 6px;
+                        padding: 8px;
+                        margin-bottom: 12px;
+                        text-align: center;
+                    ">
+                        <div style="font-size: 11px; margin-bottom: 6px;">🎉 新版备注系统已上线！</div>
+                        <button id="upgrade-notes-${safeId}" style="
+                            background: var(--vscode-button-background);
+                            color: var(--vscode-button-foreground);
+                            border: none;
+                            padding: 4px 8px;
+                            border-radius: 3px;
+                            cursor: pointer;
+                            font-size: 10px;
+                        ">🚀 升级到增强版备注</button>
+                    </div>
+                    
                     <!-- 优先级选择 -->
                     <div class="notes-section" style="margin-bottom: 12px;">
                         <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">⚡ 优先级</h4>
@@ -538,7 +565,7 @@
                     <div class="notes-footer" style="display: flex; justify-content: space-between; align-items: center; 
                          border-top: 1px solid var(--vscode-input-border); padding-top: 8px;">
                         <div style="font-size: 10px; color: var(--vscode-descriptionForeground);">
-                            ${lastEdited ? `最后编辑: ${new Date(lastEdited).toLocaleString()}` : '尚未保存'}
+                            ${lastEdited ? `最后编辑: ${new Date(lastEdited).toLocaleString()}` : '尚未保存'} (旧版)
                         </div>
                         <button id="save-all-notes-${safeId}" style="background: var(--vscode-button-background); 
                                 color: var(--vscode-button-foreground); border: none; padding: 6px 12px; 
@@ -549,6 +576,299 @@
             
             // 设置事件监听器
             this.setupNotesEventListeners(safeId);
+            
+            // 设置升级按钮
+            this.setupUpgradeButton(safeId);
+        }
+        
+        /**
+         * 渲染增强版用户备注界面
+         */
+        renderEnhancedNotes() {
+            // 清空容器并创建增强版UI
+            this.content.innerHTML = '<div id="enhanced-notes-container" style="height: 100%; overflow: hidden;"></div>';
+            
+            // 请求获取增强版用户备注数据
+            this.requestEnhancedUserNotes();
+        }
+        
+        /**
+         * 检查是否应该使用增强版备注
+         */
+        shouldUseEnhancedNotes() {
+            // 检查localStorage中的用户偏好设置
+            const preference = localStorage.getItem('user-notes-preference');
+            return preference === 'enhanced';
+        }
+        
+        /**
+         * 设置升级按钮事件
+         */
+        setupUpgradeButton(safeId) {
+            const upgradeBtn = this.content.querySelector(`#upgrade-notes-${safeId}`);
+            if (upgradeBtn) {
+                upgradeBtn.addEventListener('click', () => {
+                    // 保存用户偏好
+                    localStorage.setItem('user-notes-preference', 'enhanced');
+                    
+                    // 迁移现有数据到增强版格式
+                    this.migrateToEnhancedNotes();
+                    
+                    // 重新渲染增强版界面
+                    this.renderEnhancedNotes();
+                });
+            }
+        }
+        
+        /**
+         * 迁移旧版数据到增强版格式
+         */
+        migrateToEnhancedNotes() {
+            const userNotes = this.data?.userNotes || {};
+            
+            // 创建增强版数据结构
+            const enhancedNotes = {
+                filePath: this.path,
+                priority: this.mapPriorityToEnhanced(userNotes.priority),
+                status: 'active',
+                tags: (userNotes.tags || []).map(tag => ({
+                    name: tag,
+                    color: 'blue',
+                    createdAt: Date.now()
+                })),
+                comments: (userNotes.comments || []).map((content, index) => ({
+                    id: `migrated-${index}-${Date.now()}`,
+                    content,
+                    createdAt: userNotes.lastEditedAt || Date.now(),
+                    pinned: false,
+                    tags: []
+                })),
+                todos: [],
+                links: [],
+                customFields: {},
+                metadata: {
+                    createdAt: userNotes.lastEditedAt || Date.now(),
+                    lastEditedAt: Date.now(),
+                    editCount: 1,
+                    version: '1.0.0'
+                }
+            };
+            
+            // 保存到增强版格式
+            this.data.enhancedUserNotes = enhancedNotes;
+            
+            console.log('[BlueprintCard] 数据迁移完成', { 
+                from: userNotes, 
+                to: enhancedNotes 
+            });
+        }
+        
+        /**
+         * 映射旧版优先级到增强版格式
+         */
+        mapPriorityToEnhanced(oldPriority) {
+            const priorityMap = {
+                'high': 'high',
+                'medium': 'medium',
+                'low': 'low'
+            };
+            return priorityMap[oldPriority] || 'none';
+        }
+        
+        /**
+         * 请求增强版用户备注数据
+         */
+        requestEnhancedUserNotes() {
+            // 请求后端获取增强版用户备注
+            if (window.vscode) {
+                console.log('[BlueprintCard] 请求增强版用户备注:', this.path);
+                
+                window.vscode.postMessage({
+                    type: 'get-enhanced-user-notes',
+                    payload: {
+                        filePath: this.path
+                    }
+                });
+            }
+        }
+        
+        /**
+         * 处理增强版用户备注数据响应
+         */
+        handleEnhancedUserNotesData(data) {
+            console.log('[BlueprintCard] 收到增强版用户备注数据:', data);
+            
+            // 更新本地数据
+            this.data.enhancedUserNotes = data.notes;
+            
+            // 初始化增强版UI组件
+            this.initEnhancedNotesUI(data.notes);
+        }
+        
+        /**
+         * 初始化增强版备注UI组件
+         */
+        initEnhancedNotesUI(notesData) {
+            const container = this.content.querySelector('#enhanced-notes-container');
+            if (!container) {
+                console.error('[BlueprintCard] 增强版备注容器未找到');
+                return;
+            }
+            
+            // 检查是否已加载增强版UI模块
+            if (typeof window.enhancedUserNotes !== 'undefined') {
+                // 创建增强版UI实例
+                const enhancedUI = window.enhancedUserNotes.create(
+                    container,
+                    this.path,
+                    notesData
+                );
+                
+                // 保存UI实例引用
+                this.enhancedNotesUI = enhancedUI;
+                
+                console.log('[BlueprintCard] 增强版备注UI初始化完成');
+                
+            } else {
+                // 动态加载增强版UI模块
+                this.loadEnhancedNotesModule().then(() => {
+                    this.initEnhancedNotesUI(notesData);
+                }).catch(error => {
+                    console.error('[BlueprintCard] 增强版备注模块加载失败:', error);
+                    // 降级到简化界面
+                    this.renderSimplifiedEnhancedNotes(notesData);
+                });
+            }
+        }
+        
+        /**
+         * 动态加载增强版备注模块
+         */
+        loadEnhancedNotesModule() {
+            return new Promise((resolve, reject) => {
+                if (typeof window.enhancedUserNotes !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'modules/enhancedUserNotes.js';
+                script.onload = () => {
+                    console.log('[BlueprintCard] 增强版备注模块加载成功');
+                    resolve();
+                };
+                script.onerror = (error) => {
+                    console.error('[BlueprintCard] 增强版备注模块加载失败:', error);
+                    reject(error);
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        /**
+         * 渲染简化的增强版备注界面（降级方案）
+         */
+        renderSimplifiedEnhancedNotes(notesData) {
+            const container = this.content.querySelector('#enhanced-notes-container');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <div style="padding: 12px; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
+                    <div style="font-size: 12px; margin-bottom: 12px;">增强版备注组件加载失败</div>
+                    <div style="font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 12px;">
+                        正在使用简化模式显示备注数据
+                    </div>
+                    
+                    <div style="text-align: left; background: var(--vscode-editor-background); 
+                                border: 1px solid var(--vscode-input-border); border-radius: 6px; padding: 8px;">
+                        <div style="margin-bottom: 8px;">
+                            <strong>优先级:</strong> ${this.getPriorityDisplay(notesData.priority)}
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>状态:</strong> ${this.getStatusDisplay(notesData.status)}
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>评论:</strong> ${notesData.comments?.length || 0} 条
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>待办:</strong> ${notesData.todos?.length || 0} 项
+                        </div>
+                        <div>
+                            <strong>标签:</strong> ${notesData.tags?.length || 0} 个
+                        </div>
+                    </div>
+                    
+                    <button onclick="location.reload()" style="
+                        margin-top: 12px;
+                        background: var(--vscode-button-background);
+                        color: var(--vscode-button-foreground);
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 3px;
+                        cursor: pointer;
+                        font-size: 10px;
+                    ">🔄 重新加载</button>
+                </div>
+            `;
+        }
+        
+        /**
+         * 获取优先级显示文本
+         */
+        getPriorityDisplay(priority) {
+            const displays = {
+                'critical': '🔴 紧急',
+                'high': '🟠 高',
+                'medium': '🟡 中',
+                'low': '🟢 低',
+                'none': '⚪ 无'
+            };
+            return displays[priority] || '❓ 未知';
+        }
+        
+        /**
+         * 获取状态显示文本
+         */
+        getStatusDisplay(status) {
+            const displays = {
+                'active': '🚀 活跃',
+                'review': '👀 Review',
+                'deprecated': '⚠️ 废弃',
+                'archive': '📦 归档',
+                'testing': '🧪 测试',
+                'done': '✅ 完成'
+            };
+            return displays[status] || '❓ 未知';
+        }
+        
+        /**
+         * 显示增强版备注错误
+         */
+        showEnhancedNotesError(error) {
+            const container = this.content.querySelector('#enhanced-notes-container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 12px;">❌</div>
+                        <div style="font-size: 14px; margin-bottom: 8px; color: var(--vscode-errorForeground);">
+                            增强版备注加载失败
+                        </div>
+                        <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 16px;">
+                            ${error || '未知错误'}
+                        </div>
+                        <button onclick="location.reload()" style="
+                            background: var(--vscode-button-background);
+                            color: var(--vscode-button-foreground);
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 11px;
+                        ">🔄 重新加载</button>
+                    </div>
+                `;
+            }
         }
         
         escapeHtml(text) {
@@ -945,6 +1265,55 @@
          */
         getCard(path) {
             return cardStore.get(path);
+        },
+        
+        /**
+         * 处理增强版用户备注数据消息
+         */
+        handleEnhancedUserNotesData(message) {
+            const { filePath, notes, success, error } = message.payload;
+            const card = cardStore.get(filePath);
+            
+            if (card) {
+                console.log('[BlueprintCard] 处理增强版用户备注数据:', filePath, success);
+                
+                if (success) {
+                    card.handleEnhancedUserNotesData(message.payload);
+                } else {
+                    console.error('[BlueprintCard] 获取增强版用户备注失败:', error);
+                    // 显示错误信息或降级处理
+                    card.showEnhancedNotesError(error);
+                }
+            } else {
+                console.warn('[BlueprintCard] 未找到对应的卡片实例:', filePath);
+            }
+        },
+        
+        /**
+         * 处理增强版用户备注保存结果消息
+         */
+        handleEnhancedUserNotesSaved(message) {
+            const { filePath, success, error } = message.payload;
+            const card = cardStore.get(filePath);
+            
+            if (card) {
+                console.log('[BlueprintCard] 增强版用户备注保存结果:', filePath, success);
+                
+                if (success) {
+                    // 通知UI保存成功
+                    if (card.enhancedNotesUI && typeof card.enhancedNotesUI.onSaveSuccess === 'function') {
+                        card.enhancedNotesUI.onSaveSuccess();
+                    }
+                } else {
+                    console.error('[BlueprintCard] 增强版用户备注保存失败:', error);
+                    // 通知UI保存失败
+                    if (card.enhancedNotesUI && typeof card.enhancedNotesUI.onSaveError === 'function') {
+                        card.enhancedNotesUI.onSaveError(error);
+                    }
+                }
+            } else {
+                console.warn('[BlueprintCard] 未找到对应的卡片实例:', filePath);
+            }
         }
     };
 

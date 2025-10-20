@@ -1,4 +1,4 @@
- src/features/filetree-blueprint/panel/BlueprintPanel.ts
+// src/features/filetree-blueprint/panel/BlueprintPanel.ts
 // [module: filetree-blueprint] [tags: Webview, Panel]
 /**
  * 蓝图面板管理器

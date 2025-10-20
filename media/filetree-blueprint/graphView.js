@@ -656,6 +656,26 @@
                 console.error(`[graphView] ❌ 用户备注保存失败: ${filePath}`, error);
                 // 可以显示错误提示
             }
+        } else if (msg?.type === 'enhanced-user-notes-data') {
+            // 🎯 增强版用户备注数据响应
+            console.log('[graphView] 📝 收到增强版用户备注数据:', msg.payload);
+            
+            if (window.blueprintCard) {
+                // 委托给蓝图卡片处理增强版用户备注数据
+                window.blueprintCard.handleEnhancedUserNotesData(msg);
+            } else {
+                console.warn('[graphView] 蓝图卡片系统未就绪，无法处理增强版用户备注');
+            }
+        } else if (msg?.type === 'enhanced-user-notes-saved') {
+            // 💾 增强版用户备注保存确认
+            console.log('[graphView] 💾 增强版用户备注保存结果:', msg.payload);
+            
+            if (window.blueprintCard) {
+                // 委托给蓝图卡片处理保存结果
+                window.blueprintCard.handleEnhancedUserNotesSaved(msg);
+            } else {
+                console.warn('[graphView] 蓝图卡片系统未就绪，无法处理增强版用户备注保存结果');
+            }
         }
     }
 
