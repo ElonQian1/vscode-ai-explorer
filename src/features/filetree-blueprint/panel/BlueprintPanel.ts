@@ -801,7 +801,7 @@ export class BlueprintPanel {
         const elkTestUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'elk-test.js'));
 
         // 生成 nonce 用于 CSP
-        const nonce = this.getNonce();
+        const nonce = getNonce();
 
         // 🚨 急救CSS：确保容器有高度，兼容原有的图表结构 + 卡片层
         const emergencyStyles = `

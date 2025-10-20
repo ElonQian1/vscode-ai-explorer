@@ -25,6 +25,9 @@ export class FileTreeBlueprintModule extends BaseModule {
     async activate(context: vscode.ExtensionContext): Promise<void> {
         this.logger.info('文件树蓝图模块正在激活...');
 
+        // ✅ 设置全局 context (供 FeatureRenderer 使用)
+        (global as any).extensionContext = context;
+
         // 注册服务
         this.registerServices(context);
 

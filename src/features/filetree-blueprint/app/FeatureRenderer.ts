@@ -256,18 +256,110 @@ export class FeatureRenderer {
 	}
 	
 	/**
-	 * 渲染到Webview
+	 * 渲染到Webview(集成BlueprintPanel)
 	 */
 	private async renderToWebview(subGraph: FeatureSubGraph): Promise<void> {
-		// TODO: 集成到现有的BlueprintPanel
-		// 可以复用现有的graphView.js,只是数据源从全仓库变为subGraph
-		
 		this.logger.info(`[FeatureRenderer] Rendering ${subGraph.files.length} files to webview`);
 		
-		// 临时:显示通知
-		vscode.window.showInformationMessage(
-			`Feature "${subGraph.featureName}": Found ${subGraph.files.length} relevant files`
-		);
+		try {
+			// ✅ 将 FeatureSubGraph 转换为 Graph 格式
+			const graph = this.convertSubGraphToGraph(subGraph);
+			
+			// ✅ 获取 Extension Context (从全局状态或传参)
+			const context = (global as any).extensionContext as vscode.ExtensionContext;
+			if (!context) {
+				throw new Error('Extension context not available');
+			}
+			
+			// ✅ 创建或显示 BlueprintPanel
+			const { BlueprintPanel } = await import('../panel/BlueprintPanel');
+			const extensionUri = context.extensionUri;
+			
+			const panel = BlueprintPanel.createOrShow(
+				extensionUri,
+				this.logger,
+				context,
+				undefined,  // targetUri (使用默认工作区根)
+				`功能: ${subGraph.featureName}`  // 标题
+			);
+			
+			// ✅ 显示功能子图
+			panel.showGraph(graph);
+			
+			this.logger.info(`[FeatureRenderer] Successfully rendered feature graph to BlueprintPanel`);
+			
+			// 显示成功通知
+			vscode.window.showInformationMessage(
+				`Feature "${subGraph.featureName}": ${subGraph.files.length} relevant files`
+			);
+			
+		} catch (error) {
+			this.logger.error(`[FeatureRenderer] Failed to render to webview: ${error}`);
+			throw error;
+		}
+	}
+	
+	/**
+	 * 将 FeatureSubGraph 转换为 BlueprintPanel 的 Graph 格式
+	 */
+	private convertSubGraphToGraph(subGraph: FeatureSubGraph): any {
+		const nodes: any[] = [];
+		const edges: any[] = [];
+		
+		// 1. 创建文件节点
+		subGraph.files.forEach((fileScore, index) => {
+			const fileName = fileScore.path.split(/[\\/]/).pop() || fileScore.path;
+			const isSeed = subGraph.seeds.includes(fileScore.path);
+			
+			nodes.push({
+				id: fileScore.path,
+				label: fileName,
+				type: 'file',
+				position: { x: 0, y: 0 }, // 将由布局引擎计算
+				data: {
+					path: fileScore.path,
+					absPath: fileScore.path,
+					score: fileScore.score,
+					reasons: fileScore.reasons,
+					hops: fileScore.hops,
+					isSeed,
+					isBridge: fileScore.isBridge,
+					kind: fileScore.kind
+				}
+			});
+		});
+		
+		// 2. 创建依赖边
+		let edgeId = 0;
+		Object.entries(subGraph.edges).forEach(([from, targets]) => {
+			targets.forEach(to => {
+				const edgeType = subGraph.edgeTypes[`${from}->${to}`] || 'import';
+				edges.push({
+					id: `edge-${edgeId++}`,
+					label: edgeType,
+					from: { node: from },
+					to: { node: to },
+					data: { type: edgeType }
+				});
+			});
+		});
+		
+		// 3. 构建 Graph 对象
+		return {
+			id: subGraph.featureId,
+			title: subGraph.featureName,
+			nodes,
+			edges,
+			metadata: {
+				graphType: 'feature-subgraph',  // 标识为功能子图
+				featureId: subGraph.featureId,
+				seeds: subGraph.seeds,
+				keywords: subGraph.keywords,
+				timestamp: subGraph.timestamp,
+				toolVersion: subGraph.toolVersion,
+				commitHash: subGraph.commitHash
+			}
+		};
 	}
 }
 

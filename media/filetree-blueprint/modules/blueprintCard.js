@@ -24,6 +24,24 @@
 })(typeof window !== 'undefined' ? window : this, function () {
     'use strict';
 
+    // ===== CSP安全的DOM创建辅助函数 =====
+    function el(tag, className, attrs = {}) {
+        const element = document.createElement(tag);
+        if (className) {
+            element.className = className;
+        }
+        for (const [key, value] of Object.entries(attrs)) {
+            if (key === 'text') {
+                element.textContent = value;
+            } else if (key === 'html') {
+                element.innerHTML = value;
+            } else {
+                element.setAttribute(key, String(value));
+            }
+        }
+        return element;
+    }
+
     // ===== 状态管理 =====
     const cardStore = new Map(); // path -> CardInstance
     let mountLayer = null;
@@ -53,111 +71,42 @@
         }
 
         create() {
-            const card = document.createElement('div');
-            card.className = 'blueprint-card';
-            card.id = `blueprint-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const card = el('div', 'bp-card');
+            card.id = `bp-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
-            // 使用StyleManager设置位置和z-index
-            if (window.styleManager) {
-                window.styleManager.setRect(card.id, {
-                    x: this.options.x,
-                    y: this.options.y,
-                    w: this.options.width,
-                    h: this.options.height,
-                    position: 'absolute'
-                });
-                window.styleManager.setVars(card.id, {
-                    'z-index': nextZIndex++
-                });
-            } else {
-                console.warn('[BlueprintCard] StyleManager未初始化，使用内联样式降级');
-                card.style.cssText = `
-                    position: absolute;
-                    left: ${this.options.x}px;
-                    top: ${this.options.y}px;
-                    width: ${this.options.width}px;
-                    height: ${this.options.height}px;
-                    z-index: ${nextZIndex++};
-                    pointer-events: auto;
-                    background: var(--vscode-editor-background, #1e1e1e);
-                    border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12));
-                    border-radius: 8px;
-                    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                    transition: transform 0.15s ease-out;
-                `;
-            }
+            // 使用CSS变量设置位置(CSP安全)
+            card.style.setProperty('--x', `${this.options.x}px`);
+            card.style.setProperty('--y', `${this.options.y}px`);
+            card.setAttribute('data-x', this.options.x);
+            card.setAttribute('data-y', this.options.y);
             
             // 卡片头部
-            const header = document.createElement('div');
-            header.className = 'blueprint-card-header';
-            header.style.cssText = `
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 8px 12px;
-                background: var(--vscode-tab-activeBackground, rgba(255,255,255,0.05));
-                border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08));
-                cursor: move;
-                user-select: none;
-                flex-shrink: 0;
-            `;
+            const header = el('div', 'bp-header');
             
-            const title = document.createElement('div');
-            title.className = 'card-title';
-            title.style.cssText = `
-                font-weight: 600;
-                font-size: 13px;
-                color: var(--vscode-foreground);
-                flex: 1;
-                overflow: hidden;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-            `;
-            title.textContent = this.getFileName(this.path);
+            const title = el('div', 'bp-title', {
+                text: this.getFileName(this.path)
+            });
             
-            const controls = document.createElement('div');
-            controls.className = 'card-controls';
-            controls.style.cssText = `
-                display: flex;
-                gap: 4px;
-            `;
+            const controls = el('div', 'bp-header-actions');
             
             // 固定按钮
-            const pinBtn = document.createElement('button');
-            pinBtn.className = 'pin-btn';
-            pinBtn.innerHTML = this.options.pinned ? '📌' : '📍';
-            pinBtn.title = this.options.pinned ? '取消固定' : '固定卡片';
-            pinBtn.style.cssText = `
-                background: none;
-                border: none;
-                color: var(--vscode-foreground);
-                cursor: pointer;
-                padding: 2px 4px;
-                border-radius: 3px;
-                font-size: 12px;
-            `;
+            const pinBtn = el('button', 'bp-icon-btn pin-btn', {
+                html: this.options.pinned ? '📌' : '📍',
+                title: this.options.pinned ? '取消固定' : '固定卡片'
+            });
+            if (this.options.pinned) {
+                pinBtn.classList.add('is-active');
+            }
             pinBtn.onclick = (e) => {
                 e.stopPropagation();
                 this.togglePin();
             };
             
             // 关闭按钮
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'close-btn';
-            closeBtn.innerHTML = '✕';
-            closeBtn.title = '关闭卡片';
-            closeBtn.style.cssText = `
-                background: none;
-                border: none;
-                color: var(--vscode-foreground);
-                cursor: pointer;
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-size: 12px;
-            `;
+            const closeBtn = el('button', 'bp-icon-btn close-btn', {
+                html: '✕',
+                title: '关闭卡片'
+            });
             closeBtn.onclick = (e) => {
                 e.stopPropagation();
                 this.close();
@@ -169,14 +118,7 @@
             header.appendChild(controls);
             
             // Tab导航栏
-            const tabNav = document.createElement('div');
-            tabNav.className = 'tab-nav';
-            tabNav.style.cssText = `
-                display: flex;
-                background: var(--vscode-editor-background);
-                border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08));
-                flex-shrink: 0;
-            `;
+            const tabNav = el('div', 'bp-tabs');
             
             const tabs = [
                 { id: 'overview', label: '概览', icon: '📋' },
@@ -186,33 +128,21 @@
             ];
             
             tabs.forEach(tab => {
-                const tabBtn = document.createElement('button');
-                tabBtn.className = `tab-btn tab-${tab.id}`;
-                tabBtn.innerHTML = `${tab.icon} ${tab.label}`;
-                tabBtn.style.cssText = `
-                    background: none;
-                    border: none;
-                    color: var(--vscode-foreground);
-                    padding: 8px 12px;
-                    cursor: pointer;
-                    font-size: 11px;
-                    border-bottom: 2px solid transparent;
-                    transition: all 0.15s ease;
-                    ${tab.id === this.options.activeTab ? 'border-bottom-color: var(--vscode-focusBorder);' : ''}
-                `;
+                const tabBtn = el('button', 'bp-tab-btn', {
+                    html: `${tab.icon} ${tab.label}`
+                });
+                tabBtn.setAttribute('data-tab', tab.id);
+                
+                if (tab.id === this.options.activeTab) {
+                    tabBtn.classList.add('is-active');
+                }
                 
                 tabBtn.onclick = () => this.switchTab(tab.id);
                 tabNav.appendChild(tabBtn);
             });
             
             // 内容区域
-            const content = document.createElement('div');
-            content.className = 'card-content';
-            content.style.cssText = `
-                flex: 1;
-                overflow: auto;
-                padding: 12px;
-            `;
+            const content = el('div', 'bp-panel-host');
             
             // 组装卡片
             card.appendChild(header);
@@ -247,17 +177,9 @@
                     cardY: this.options.y
                 };
                 
-                if (window.styleManager) {
-                    window.styleManager.setElementStyle(this.dom.id, `
-                        cursor: grabbing !important;
-                        z-index: ${nextZIndex++} !important;
-                        transform: scale(1.02) !important;
-                    `);
-                } else {
-                    this.dom.style.cursor = 'grabbing';
-                    this.dom.style.zIndex = nextZIndex++;
-                    this.dom.style.transform = 'scale(1.02)';
-                }
+                // CSP-safe: 使用 class 替代 inline style
+                this.dom.classList.add('is-dragging');
+                this.dom.style.zIndex = nextZIndex++;
                 
                 e.preventDefault();
                 e.stopPropagation();
@@ -279,29 +201,16 @@
                     this.options.y = Math.round(this.options.y / gridSize) * gridSize;
                 }
                 
-                if (window.styleManager) {
-                    window.styleManager.setElementStyle(this.dom.id, `
-                        left: ${this.options.x}px !important;
-                        top: ${this.options.y}px !important;
-                    `);
-                } else {
-                    this.dom.style.left = this.options.x + 'px';
-                    this.dom.style.top = this.options.y + 'px';
-                }
+                // CSP-safe: 使用 CSS 变量更新位置
+                this.dom.style.setProperty('--x', `${this.options.x}px`);
+                this.dom.style.setProperty('--y', `${this.options.y}px`);
             });
             
             document.addEventListener('mouseup', () => {
                 if (this.dragging) {
                     this.dragging = false;
-                    if (window.styleManager) {
-                        window.styleManager.setElementStyle(this.dom.id, `
-                            cursor: move !important;
-                            transform: scale(1) !important;
-                        `);
-                    } else {
-                        this.dom.style.cursor = 'move';
-                        this.dom.style.transform = 'scale(1)';
-                    }
+                    // CSP-safe: 移除拖拽状态类
+                    this.dom.classList.remove('is-dragging');
                     
                     // 保存位置
                     this.saveState();
@@ -314,12 +223,12 @@
         switchTab(tabId) {
             this.options.activeTab = tabId;
             
-            // 更新Tab样式
-            this.tabNav.querySelectorAll('.tab-btn').forEach(btn => {
+            // 更新Tab样式 (CSP-safe)
+            this.tabNav.querySelectorAll('.bp-tab-btn').forEach(btn => {
                 if (btn.classList.contains(`tab-${tabId}`)) {
-                    btn.style.borderBottomColor = 'var(--vscode-focusBorder)';
+                    btn.classList.add('is-active');
                 } else {
-                    btn.style.borderBottomColor = 'transparent';
+                    btn.classList.remove('is-active');
                 }
             });
             
@@ -382,29 +291,27 @@
             const deps = this.data?.static?.deps || this.data?.deps || { in: [], out: [] };
             
             this.content.innerHTML = `
-                <div class="deps-section">
-                    <h4 style="margin: 0 0 8px 0; color: var(--vscode-foreground); font-size: 13px;">📥 输入依赖 (${deps.in?.length || 0})</h4>
-                    <div style="max-height: 120px; overflow-y: auto; margin-bottom: 16px;">
+                <div class="bp-deps-section">
+                    <h4 class="bp-deps-title">📥 输入依赖 (${deps.in?.length || 0})</h4>
+                    <div class="bp-deps-list">
                         ${(deps.in || []).map(dep => `
-                            <div style="font-size: 11px; padding: 4px 8px; margin: 2px 0; background: var(--vscode-input-background); border-radius: 4px; cursor: pointer;" 
-                                 title="点击跳转到 ${dep}">📄 ${dep}</div>
-                        `).join('') || '<div style="color: var(--vscode-descriptionForeground); font-size: 12px;">无输入依赖</div>'}
+                            <div class="bp-dep-item" data-dep-path="${dep}" title="点击跳转到 ${dep}">📄 ${dep}</div>
+                        `).join('') || '<div class="bp-deps-empty">无输入依赖</div>'}
                     </div>
                     
-                    <h4 style="margin: 0 0 8px 0; color: var(--vscode-foreground); font-size: 13px;">📤 输出依赖 (${deps.out?.length || 0})</h4>
-                    <div style="max-height: 120px; overflow-y: auto;">
+                    <h4 class="bp-deps-title">📤 输出依赖 (${deps.out?.length || 0})</h4>
+                    <div class="bp-deps-list">
                         ${(deps.out || []).map(dep => `
-                            <div style="font-size: 11px; padding: 4px 8px; margin: 2px 0; background: var(--vscode-input-background); border-radius: 4px; cursor: pointer;" 
-                                 title="点击跳转到 ${dep}">📄 ${dep}</div>
-                        `).join('') || '<div style="color: var(--vscode-descriptionForeground); font-size: 12px;">无输出依赖</div>'}
+                            <div class="bp-dep-item" data-dep-path="${dep}" title="点击跳转到 ${dep}">📄 ${dep}</div>
+                        `).join('') || '<div class="bp-deps-empty">无输出依赖</div>'}
                     </div>
                 </div>
             `;
             
             // 添加依赖点击事件
-            this.content.querySelectorAll('[title^="点击跳转到"]').forEach(el => {
+            this.content.querySelectorAll('.bp-dep-item').forEach(el => {
                 el.onclick = () => {
-                    const depPath = el.title.replace('点击跳转到 ', '');
+                    const depPath = el.dataset.depPath;
                     this.onDependencyClick?.(depPath);
                 };
             });
@@ -414,12 +321,12 @@
             const ai = this.data?.ai || {};
             
             this.content.innerHTML = `
-                <div class="ai-section">
+                <div class="bp-ai-section">
                     ${ai.inferences?.length ? `
-                        <h4 class="section-title">🧠 AI 推断</h4>
-                        <div class="ai-inferences">
+                        <h4 class="bp-section-title">🧠 AI 推断</h4>
+                        <div class="bp-ai-list">
                             ${ai.inferences.map(inf => `
-                                <div class="ai-item ai-item--inference">
+                                <div class="bp-ai-item bp-ai-item--inference">
                                     ${inf}
                                 </div>
                             `).join('')}
@@ -427,10 +334,10 @@
                     ` : ''}
                     
                     ${ai.suggestions?.length ? `
-                        <h4 class="section-title">💡 改进建议</h4>
-                        <div class="ai-suggestions">
+                        <h4 class="bp-section-title">💡 改进建议</h4>
+                        <div class="bp-ai-list">
                             ${ai.suggestions.map(sug => `
-                                <div class="ai-item ai-item--suggestion">
+                                <div class="bp-ai-item bp-ai-item--suggestion">
                                     ${sug}
                                 </div>
                             `).join('')}
@@ -438,15 +345,15 @@
                     ` : ''}
                     
                     ${!ai.inferences?.length && !ai.suggestions?.length ? `
-                        <div style="text-align: center; padding: 20px; color: var(--vscode-descriptionForeground);">
-                            <div style="font-size: 24px; margin-bottom: 8px;">🤖</div>
-                            <div>暂无AI分析结果</div>
-                            <div style="font-size: 11px; margin-top: 4px;">AI正在分析中...</div>
+                        <div class="bp-ai-empty">
+                            <div class="bp-ai-empty-icon">🤖</div>
+                            <div class="bp-ai-empty-text">暂无AI分析结果</div>
+                            <div class="bp-ai-empty-hint">AI正在分析中...</div>
                         </div>
                     ` : ''}
                     
                     ${ai.lastModel ? `
-                        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--vscode-panel-border); font-size: 10px; color: var(--vscode-descriptionForeground);">
+                        <div class="bp-ai-meta">
                             模型: ${ai.lastModel} | 更新时间: ${ai.lastAt ? new Date(ai.lastAt).toLocaleString() : '未知'}
                         </div>
                     ` : ''}
@@ -461,7 +368,7 @@
                 return;
             }
             
-            // 兼容旧版用户备注（来自S3缓存系统）
+            // 兼容旧版用户备注(来自S3缓存系统)
             const userNotes = this.data?.userNotes || {};
             const comments = userNotes.comments || [];
             const tags = userNotes.tags || [];
@@ -471,105 +378,69 @@
             const safeId = this.path.replace(/[^a-zA-Z0-9]/g, '_');
             
             this.content.innerHTML = `
-                <div class="user-notes-container legacy-notes" style="padding: 8px;">
+                <div class="bp-notes-legacy">
                     <!-- 升级提示 -->
-                    <div class="upgrade-prompt" style="
-                        background: var(--vscode-textCodeBlock-background);
-                        border: 1px solid var(--vscode-focusBorder);
-                        border-radius: 6px;
-                        padding: 8px;
-                        margin-bottom: 12px;
-                        text-align: center;
-                    ">
-                        <div style="font-size: 11px; margin-bottom: 6px;">🎉 新版备注系统已上线！</div>
-                        <button id="upgrade-notes-${safeId}" style="
-                            background: var(--vscode-button-background);
-                            color: var(--vscode-button-foreground);
-                            border: none;
-                            padding: 4px 8px;
-                            border-radius: 3px;
-                            cursor: pointer;
-                            font-size: 10px;
-                        ">🚀 升级到增强版备注</button>
+                    <div class="bp-upgrade-prompt">
+                        <div class="bp-upgrade-prompt-text">🎉 新版备注系统已上线!</div>
+                        <button id="upgrade-notes-${safeId}" class="bp-upgrade-btn">🚀 升级到增强版备注</button>
                     </div>
                     
                     <!-- 优先级选择 -->
-                    <div class="notes-section" style="margin-bottom: 12px;">
-                        <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">⚡ 优先级</h4>
-                        <div class="priority-selector" style="display: flex; gap: 8px;">
-                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="high" ${priority === 'high' ? 'checked' : ''}> 🔴 高</label>
-                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="medium" ${priority === 'medium' ? 'checked' : ''}> 🟡 中</label>
-                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="low" ${priority === 'low' ? 'checked' : ''}> 🟢 低</label>
-                            <label style="font-size: 11px; cursor: pointer;"><input type="radio" name="priority-${safeId}" value="" ${!priority ? 'checked' : ''}> ⚪ 无</label>
+                    <div class="bp-priority-section">
+                        <h4 class="bp-section-title">⚡ 优先级</h4>
+                        <div class="bp-priority-selector">
+                            <label class="bp-priority-label"><input type="radio" name="priority-${safeId}" value="high" ${priority === 'high' ? 'checked' : ''}> 🔴 高</label>
+                            <label class="bp-priority-label"><input type="radio" name="priority-${safeId}" value="medium" ${priority === 'medium' ? 'checked' : ''}> 🟡 中</label>
+                            <label class="bp-priority-label"><input type="radio" name="priority-${safeId}" value="low" ${priority === 'low' ? 'checked' : ''}> 🟢 低</label>
+                            <label class="bp-priority-label"><input type="radio" name="priority-${safeId}" value="" ${!priority ? 'checked' : ''}> ⚪ 无</label>
                         </div>
                     </div>
                     
                     <!-- 标签管理 -->
-                    <div class="notes-section" style="margin-bottom: 12px;">
-                        <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">🏷️ 标签</h4>
-                        <div class="tags-container">
-                            <div class="tags-display" id="tags-display-${safeId}" style="margin-bottom: 6px; min-height: 20px;">
+                    <div class="bp-tags-section">
+                        <h4 class="bp-section-title">🏷️ 标签</h4>
+                        <div class="bp-tags-container">
+                            <div class="bp-tags-display" id="tags-display-${safeId}">
                                 ${tags.map(tag => `
-                                    <span class="tag-item" data-tag="${tag}" style="
-                                        display: inline-block; background: var(--vscode-button-background); 
-                                        color: var(--vscode-button-foreground); padding: 2px 6px; margin: 2px; 
-                                        border-radius: 12px; font-size: 10px; cursor: pointer;">
+                                    <span class="bp-tag-item" data-tag="${tag}">
                                         ${tag} 
-                                        <span class="tag-remove" onclick="window.blueprintCard.removeTag('${this.path}', '${tag}')" 
-                                              style="margin-left: 4px; color: var(--vscode-errorForeground); cursor: pointer;">×</span>
+                                        <span class="bp-tag-remove" onclick="window.blueprintCard.removeTag('${this.path}', '${tag}')">×</span>
                                     </span>
                                 `).join('')}
                             </div>
-                            <div class="tags-input-row" style="display: flex; gap: 4px;">
-                                <input type="text" id="tag-input-${safeId}" placeholder="添加标签..." 
-                                       style="flex: 1; padding: 4px; border: 1px solid var(--vscode-input-border); 
-                                              background: var(--vscode-input-background); color: var(--vscode-input-foreground);
-                                              border-radius: 3px; font-size: 11px;">
-                                <button id="add-tag-${safeId}" style="padding: 4px 8px; 
-                                        background: var(--vscode-button-background); color: var(--vscode-button-foreground); 
-                                        border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">+ 添加</button>
+                            <div class="bp-tags-input-row">
+                                <input type="text" id="tag-input-${safeId}" class="bp-tag-input" placeholder="添加标签...">
+                                <button id="add-tag-${safeId}" class="bp-tag-add-btn">+ 添加</button>
                             </div>
                         </div>
                     </div>
                     
                     <!-- 评论列表 -->
-                    <div class="notes-section" style="margin-bottom: 12px;">
-                        <h4 class="section-title" style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold;">💭 评论备注</h4>
-                        <div class="comments-list" id="comments-list-${safeId}" style="max-height: 150px; overflow-y: auto; margin-bottom: 8px;">
+                    <div class="bp-comments-section">
+                        <h4 class="bp-section-title">💭 评论备注</h4>
+                        <div class="bp-comments-list" id="comments-list-${safeId}">
                             ${comments.map((comment, index) => `
-                                <div class="comment-item" data-index="${index}" style="
-                                    background: var(--vscode-editor-background); border: 1px solid var(--vscode-input-border);
-                                    padding: 6px; margin-bottom: 4px; border-radius: 4px; position: relative;">
-                                    <div class="comment-content" style="font-size: 11px; line-height: 1.4; padding-right: 40px;">${this.escapeHtml(comment)}</div>
-                                    <button class="comment-remove" onclick="window.blueprintCard.removeComment('${this.path}', ${index})" 
-                                            style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; 
-                                                   color: var(--vscode-errorForeground); cursor: pointer; font-size: 10px;">删除</button>
+                                <div class="bp-comment-item" data-index="${index}">
+                                    <div class="bp-comment-content">${this.escapeHtml(comment)}</div>
+                                    <button class="bp-comment-remove" onclick="window.blueprintCard.removeComment('${this.path}', ${index})">删除</button>
                                 </div>
                             `).join('')}
                         </div>
                         
-                        <div class="comment-input-section">
-                            <textarea id="comment-input-${safeId}" placeholder="添加新评论..." 
-                                     style="width: 100%; height: 60px; padding: 6px; border: 1px solid var(--vscode-input-border); 
-                                            background: var(--vscode-input-background); color: var(--vscode-input-foreground); 
-                                            border-radius: 4px; font-family: var(--vscode-font-family); font-size: 11px; resize: vertical;
-                                            box-sizing: border-box;"></textarea>
-                            <div style="margin-top: 6px; text-align: right;">
-                                <button id="add-comment-${safeId}" style="padding: 6px 12px; background: var(--vscode-button-background); 
-                                        color: var(--vscode-button-foreground); border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">💬 添加评论</button>
+                        <div class="bp-comment-input-section">
+                            <textarea id="comment-input-${safeId}" class="bp-comment-textarea" placeholder="添加新评论..."></textarea>
+                            <div class="bp-comment-actions">
+                                <button id="add-comment-${safeId}" class="bp-comment-add-btn">💬 添加评论</button>
                             </div>
                         </div>
                     </div>
                     
                     <!-- 状态信息 -->
-                    <div class="notes-footer" style="display: flex; justify-content: space-between; align-items: center; 
-                         border-top: 1px solid var(--vscode-input-border); padding-top: 8px;">
-                        <div style="font-size: 10px; color: var(--vscode-descriptionForeground);">
+                    <div class="bp-notes-footer">
+                        <div class="bp-notes-status">
                             ${lastEdited ? `最后编辑: ${new Date(lastEdited).toLocaleString()}` : '尚未保存'} (旧版)
                         </div>
-                        <button id="save-all-notes-${safeId}" style="background: var(--vscode-button-background); 
-                                color: var(--vscode-button-foreground); border: none; padding: 6px 12px; 
-                                border-radius: 3px; font-size: 10px; cursor: pointer;">💾 保存所有更改</button>
+                        <button id="save-all-notes-${safeId}" class="bp-notes-save-btn">💾 保存所有更改</button>
                     </div>
                 </div>
             `;
@@ -586,7 +457,7 @@
          */
         renderEnhancedNotes() {
             // 清空容器并创建增强版UI
-            this.content.innerHTML = '<div id="enhanced-notes-container" style="height: 100%; overflow: hidden;"></div>';
+            this.content.innerHTML = '<div id="enhanced-notes-container" class="bp-enhanced-notes-container"></div>';
             
             // 请求获取增强版用户备注数据
             this.requestEnhancedUserNotes();
@@ -773,42 +644,32 @@
             if (!container) return;
             
             container.innerHTML = `
-                <div style="padding: 12px; text-align: center;">
-                    <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
-                    <div style="font-size: 12px; margin-bottom: 12px;">增强版备注组件加载失败</div>
-                    <div style="font-size: 10px; color: var(--vscode-descriptionForeground); margin-bottom: 12px;">
+                <div class="bp-fallback-container">
+                    <div class="bp-fallback-icon">⚠️</div>
+                    <div class="bp-fallback-title">增强版备注组件加载失败</div>
+                    <div class="bp-fallback-hint">
                         正在使用简化模式显示备注数据
                     </div>
                     
-                    <div style="text-align: left; background: var(--vscode-editor-background); 
-                                border: 1px solid var(--vscode-input-border); border-radius: 6px; padding: 8px;">
-                        <div style="margin-bottom: 8px;">
+                    <div class="bp-fallback-data">
+                        <div class="bp-fallback-item">
                             <strong>优先级:</strong> ${this.getPriorityDisplay(notesData.priority)}
                         </div>
-                        <div style="margin-bottom: 8px;">
+                        <div class="bp-fallback-item">
                             <strong>状态:</strong> ${this.getStatusDisplay(notesData.status)}
                         </div>
-                        <div style="margin-bottom: 8px;">
+                        <div class="bp-fallback-item">
                             <strong>评论:</strong> ${notesData.comments?.length || 0} 条
                         </div>
-                        <div style="margin-bottom: 8px;">
+                        <div class="bp-fallback-item">
                             <strong>待办:</strong> ${notesData.todos?.length || 0} 项
                         </div>
-                        <div>
+                        <div class="bp-fallback-item">
                             <strong>标签:</strong> ${notesData.tags?.length || 0} 个
                         </div>
                     </div>
                     
-                    <button onclick="location.reload()" style="
-                        margin-top: 12px;
-                        background: var(--vscode-button-background);
-                        color: var(--vscode-button-foreground);
-                        border: none;
-                        padding: 6px 12px;
-                        border-radius: 3px;
-                        cursor: pointer;
-                        font-size: 10px;
-                    ">🔄 重新加载</button>
+                    <button onclick="location.reload()" class="bp-fallback-reload-btn">🔄 重新加载</button>
                 </div>
             `;
         }
@@ -849,23 +710,15 @@
             const container = this.content.querySelector('#enhanced-notes-container');
             if (container) {
                 container.innerHTML = `
-                    <div style="padding: 20px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 12px;">❌</div>
-                        <div style="font-size: 14px; margin-bottom: 8px; color: var(--vscode-errorForeground);">
+                    <div class="bp-error-container">
+                        <div class="bp-error-icon">❌</div>
+                        <div class="bp-error-title">
                             增强版备注加载失败
                         </div>
-                        <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 16px;">
+                        <div class="bp-error-message">
                             ${error || '未知错误'}
                         </div>
-                        <button onclick="location.reload()" style="
-                            background: var(--vscode-button-background);
-                            color: var(--vscode-button-foreground);
-                            border: none;
-                            padding: 8px 16px;
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-size: 11px;
-                        ">🔄 重新加载</button>
+                        <button onclick="location.reload()" class="bp-error-reload-btn">🔄 重新加载</button>
                     </div>
                 `;
             }
@@ -1005,13 +858,11 @@
             this.pinBtn.innerHTML = this.options.pinned ? '📌' : '📍';
             this.pinBtn.title = this.options.pinned ? '取消固定' : '固定卡片';
             
-            // 视觉反馈
+            // CSP-safe: 使用 class 替代 inline style
             if (this.options.pinned) {
-                this.dom.style.borderColor = 'var(--vscode-focusBorder)';
-                this.dom.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px var(--vscode-focusBorder)';
+                this.dom.classList.add('is-pinned');
             } else {
-                this.dom.style.borderColor = 'var(--vscode-panel-border, rgba(255,255,255,0.12))';
-                this.dom.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)';
+                this.dom.classList.remove('is-pinned');
             }
             
             this.saveState();
@@ -1020,10 +871,8 @@
 
         close() {
             if (this.dom && this.dom.parentElement) {
-                // 动画关闭
-                this.dom.style.transform = 'scale(0.8)';
-                this.dom.style.opacity = '0';
-                this.dom.style.transition = 'all 0.2s ease-out';
+                // CSP-safe: 使用 class 实现动画关闭
+                this.dom.classList.add('is-closed');
                 
                 setTimeout(() => {
                     this.dom.remove();
@@ -1123,14 +972,10 @@
                 return false;
             }
             
-            // 设置挂载层样式
-            mountLayer.style.cssText = `
-                position: fixed;
-                inset: 0;
-                pointer-events: none;
-                z-index: 1500;
-                overflow: hidden;
-            `;
+            // 使用bp-card-layer class (已在bp.css中定义)
+            if (!mountLayer.classList.contains('bp-card-layer')) {
+                mountLayer.classList.add('bp-card-layer');
+            }
             
             console.log('[blueprintCard] ✅ 挂载成功:', selector);
             return true;
@@ -1151,11 +996,11 @@
             // 创建新卡片
             const card = new CardInstance(path, options);
             if (card.loadState()) {
-                // 恢复保存的状态
-                card.dom.style.left = card.options.x + 'px';
-                card.dom.style.top = card.options.y + 'px';
-                card.dom.style.width = card.options.width + 'px';
-                card.dom.style.height = card.options.height + 'px';
+                // 恢复保存的状态 (CSP-safe: 使用 CSS 变量)
+                card.dom.style.setProperty('--x', `${card.options.x}px`);
+                card.dom.style.setProperty('--y', `${card.options.y}px`);
+                card.dom.style.setProperty('--bp-card-w', `${card.options.width}px`);
+                card.dom.style.setProperty('--bp-card-h', `${card.options.height}px`);
                 card.switchTab(card.options.activeTab);
             }
             

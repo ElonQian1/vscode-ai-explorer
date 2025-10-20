@@ -103,6 +103,11 @@ body {
 	height: var(--bp-card-header-h);
 }
 
+.bp-card.is-pinned {
+	border-color: var(--bp-accent) !important;
+	box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px var(--bp-accent) !important;
+}
+
 .bp-card.is-pinned::before {
 	content: '';
 	position: absolute;
@@ -113,6 +118,18 @@ body {
 	background: var(--bp-accent);
 	z-index: 100;
 }
+
+.bp-card.is-dragging {
+	cursor: grabbing !important;
+	transform: translate(var(--x), var(--y)) scale(1.02) !important;
+}
+
+.bp-card.is-closed {
+	transform: translate(var(--x), var(--y)) scale(0.8);
+	opacity: 0;
+	transition: all 0.2s ease-out;
+}
+
 
 /* ========== 卡片头部 ========== */
 
@@ -387,10 +404,104 @@ body {
 	color: #3b82f6;
 }
 
+/* ========== Dependencies Panel ========== */
+
+.bp-deps-section {
+	padding: var(--bp-gap);
+}
+
+.bp-deps-title {
+	margin: 0 0 8px 0;
+	color: var(--bp-fg);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.bp-deps-list {
+	max-height: 120px;
+	overflow-y: auto;
+	margin-bottom: 16px;
+}
+
+.bp-dep-item {
+	font-size: 11px;
+	padding: 4px 8px;
+	margin: 2px 0;
+	background: var(--vscode-input-background);
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background var(--bp-transition);
+}
+
+.bp-dep-item:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.bp-deps-empty {
+	color: var(--vscode-descriptionForeground);
+	font-size: 12px;
+	font-style: italic;
+}
+
 /* ========== AI Panel ========== */
 
 .panel-ai {
 	line-height: 1.6;
+}
+
+.bp-ai-section {
+	padding: var(--bp-gap);
+}
+
+.bp-ai-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bp-gap);
+	margin-bottom: var(--bp-gap-lg);
+}
+
+.bp-ai-item {
+	padding: var(--bp-gap);
+	background: var(--bp-bg);
+	border-radius: var(--bp-radius-sm);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.bp-ai-item--inference {
+	border-left: 3px solid var(--vscode-charts-blue);
+}
+
+.bp-ai-item--suggestion {
+	border-left: 3px solid var(--vscode-charts-yellow);
+}
+
+.bp-ai-empty {
+	text-align: center;
+	padding: 20px;
+	color: var(--vscode-descriptionForeground);
+}
+
+.bp-ai-empty-icon {
+	font-size: 24px;
+	margin-bottom: 8px;
+}
+
+.bp-ai-empty-text {
+	margin-bottom: 4px;
+}
+
+.bp-ai-empty-hint {
+	font-size: 11px;
+	margin-top: 4px;
+}
+
+.bp-ai-meta {
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--bp-border);
+	font-size: 10px;
+	color: var(--vscode-descriptionForeground);
 }
 
 .bp-ai-body {
@@ -426,6 +537,296 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: var(--bp-gap);
+}
+
+/* Notes - Legacy (旧版备注系统) */
+.bp-notes-legacy {
+	padding: 8px;
+}
+
+.bp-upgrade-prompt {
+	background: var(--vscode-textCodeBlock-background);
+	border: 1px solid var(--bp-accent);
+	border-radius: 6px;
+	padding: 8px;
+	margin-bottom: 12px;
+	text-align: center;
+}
+
+.bp-upgrade-prompt-text {
+	font-size: 11px;
+	margin-bottom: 6px;
+}
+
+.bp-upgrade-btn {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	padding: 4px 8px;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 10px;
+}
+
+.bp-upgrade-btn:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+/* Priority Selector */
+.bp-priority-section {
+	margin-bottom: 12px;
+}
+
+.bp-priority-selector {
+	display: flex;
+	gap: 8px;
+}
+
+.bp-priority-label {
+	font-size: 11px;
+	cursor: pointer;
+}
+
+/* Tags */
+.bp-tags-section {
+	margin-bottom: 12px;
+}
+
+.bp-tags-display {
+	margin-bottom: 6px;
+	min-height: 20px;
+}
+
+.bp-tag-item {
+	display: inline-block;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	padding: 2px 6px;
+	margin: 2px;
+	border-radius: 12px;
+	font-size: 10px;
+	cursor: pointer;
+}
+
+.bp-tag-remove {
+	margin-left: 4px;
+	color: var(--vscode-errorForeground);
+	cursor: pointer;
+}
+
+.bp-tags-input-row {
+	display: flex;
+	gap: 4px;
+}
+
+.bp-tag-input {
+	flex: 1;
+	padding: 4px;
+	border: 1px solid var(--bp-border);
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border-radius: 3px;
+	font-size: 11px;
+}
+
+.bp-tag-add-btn {
+	padding: 4px 8px;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 10px;
+}
+
+/* Comments */
+.bp-comments-section {
+	margin-bottom: 12px;
+}
+
+.bp-comments-list {
+	max-height: 150px;
+	overflow-y: auto;
+	margin-bottom: 8px;
+}
+
+.bp-comment-item {
+	background: var(--vscode-editor-background);
+	border: 1px solid var(--bp-border);
+	padding: 6px;
+	margin-bottom: 4px;
+	border-radius: 4px;
+	position: relative;
+}
+
+.bp-comment-content {
+	font-size: 11px;
+	line-height: 1.4;
+	padding-right: 40px;
+}
+
+.bp-comment-remove {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	background: transparent;
+	border: none;
+	color: var(--vscode-errorForeground);
+	cursor: pointer;
+	font-size: 10px;
+}
+
+.bp-comment-textarea {
+	width: 100%;
+	height: 60px;
+	padding: 6px;
+	border: 1px solid var(--bp-border);
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	border-radius: 4px;
+	font-family: var(--vscode-font-family);
+	font-size: 11px;
+	resize: vertical;
+	box-sizing: border-box;
+}
+
+.bp-comment-actions {
+	margin-top: 6px;
+	text-align: right;
+}
+
+.bp-comment-add-btn {
+	padding: 6px 12px;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 10px;
+}
+
+/* Notes Footer */
+.bp-notes-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-top: 1px solid var(--bp-border);
+	padding-top: 8px;
+}
+
+.bp-notes-status {
+	font-size: 10px;
+	color: var(--vscode-descriptionForeground);
+}
+
+.bp-notes-save-btn {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	padding: 6px 12px;
+	border-radius: 3px;
+	font-size: 10px;
+	cursor: pointer;
+}
+
+.bp-notes-save-btn:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+/* Enhanced Notes Container */
+.bp-enhanced-notes-container {
+	height: 100%;
+	overflow: hidden;
+}
+
+/* Error States */
+.bp-error-container {
+	padding: 20px;
+	text-align: center;
+}
+
+.bp-error-icon {
+	font-size: 24px;
+	margin-bottom: 12px;
+}
+
+.bp-error-title {
+	font-size: 14px;
+	margin-bottom: 8px;
+	color: var(--vscode-errorForeground);
+}
+
+.bp-error-message {
+	font-size: 11px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 16px;
+}
+
+.bp-error-reload-btn {
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	padding: 8px 16px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 11px;
+}
+
+.bp-error-reload-btn:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+/* Fallback Display */
+.bp-fallback-container {
+	padding: 12px;
+	text-align: center;
+}
+
+.bp-fallback-icon {
+	font-size: 24px;
+	margin-bottom: 8px;
+}
+
+.bp-fallback-title {
+	font-size: 12px;
+	margin-bottom: 12px;
+}
+
+.bp-fallback-hint {
+	font-size: 10px;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: 12px;
+}
+
+.bp-fallback-data {
+	text-align: left;
+	background: var(--vscode-editor-background);
+	border: 1px solid var(--bp-border);
+	border-radius: 6px;
+	padding: 8px;
+}
+
+.bp-fallback-item {
+	margin-bottom: 8px;
+}
+
+.bp-fallback-item:last-child {
+	margin-bottom: 0;
+}
+
+.bp-fallback-reload-btn {
+	margin-top: 12px;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	padding: 6px 12px;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 10px;
+}
+
+.bp-fallback-reload-btn:hover {
+	background: var(--vscode-button-hoverBackground);
 }
 
 .bp-notes-editor {
