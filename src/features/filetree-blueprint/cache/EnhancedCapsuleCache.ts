@@ -654,6 +654,12 @@ export class EnhancedCapsuleCache {
                         const content = await vscode.workspace.fs.readFile(fileUri);
                         const capsule: CapsuleData = JSON.parse(Buffer.from(content).toString('utf8'));
                         
+                        // ✅ 防御性检查：跳过格式不正确的缓存
+                        if (!capsule || !capsule.meta || !capsule.meta.filePath) {
+                            this.logger.warn(`[EnhancedCache] 跳过格式不正确的缓存文件: ${fileName}`);
+                            continue;
+                        }
+                        
                         const cacheKey = this.getCacheKey(capsule.meta.filePath);
                         this.memoryCache.set(cacheKey, capsule);
                         loadedCount++;

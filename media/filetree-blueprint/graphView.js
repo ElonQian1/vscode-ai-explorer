@@ -284,14 +284,18 @@
         // 接收来自扩展的消息
         window.addEventListener('message', handleMessage);
 
-        // 画布平移/缩放
-        wrap.addEventListener('wheel', onWheel, { passive: false });
+        // 画布平移/缩放（检查wrap是否存在）
+        if (wrap) {
+            wrap.addEventListener('wheel', onWheel, { passive: false });
+        }
 
         // 键盘事件
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !isInputFocused()) {
                 spacePressed = true;
-                wrap.classList.add('panning-mode');
+                if (wrap) {
+                    wrap.classList.add('panning-mode');
+                }
                 e.preventDefault();
             }
             if (e.key === 'Backspace' || (e.key === 'ArrowUp' && e.altKey)) {
@@ -312,33 +316,37 @@
         window.addEventListener('keyup', (e) => {
             if (e.code === 'Space') {
                 spacePressed = false;
-                wrap.classList.remove('panning-mode');
-                wrap.classList.remove('panning-active');
+                if (wrap) {
+                    wrap.classList.remove('panning-mode');
+                    wrap.classList.remove('panning-active');
+                }
             }
         });
 
-        // 画布平移（空格+拖拽）
-        wrap.addEventListener('pointerdown', (ev) => {
-            if (!spacePressed) return;
-            panning = true;
-            wrap.classList.add('panning-active');
-            panStart = { x: ev.clientX, y: ev.clientY };
-            originAtPanStart = { ...offset };
-            wrap.setPointerCapture(ev.pointerId);
-        });
-        wrap.addEventListener('pointermove', (ev) => {
-            if (!panning) return;
-            const dx = ev.clientX - panStart.x;
-            const dy = ev.clientY - panStart.y;
-            offset = { x: originAtPanStart.x + dx, y: originAtPanStart.y + dy };
-            applyTransform();
-        });
-        wrap.addEventListener('pointerup', () => {
-            if (panning) {
-                panning = false;
-                wrap.classList.remove('panning-active');
-            }
-        });
+        // 画布平移（空格+拖拽）- 检查wrap是否存在
+        if (wrap) {
+            wrap.addEventListener('pointerdown', (ev) => {
+                if (!spacePressed) return;
+                panning = true;
+                wrap.classList.add('panning-active');
+                panStart = { x: ev.clientX, y: ev.clientY };
+                originAtPanStart = { ...offset };
+                wrap.setPointerCapture(ev.pointerId);
+            });
+            wrap.addEventListener('pointermove', (ev) => {
+                if (!panning) return;
+                const dx = ev.clientX - panStart.x;
+                const dy = ev.clientY - panStart.y;
+                offset = { x: originAtPanStart.x + dx, y: originAtPanStart.y + dy };
+                applyTransform();
+            });
+            wrap.addEventListener('pointerup', () => {
+                if (panning) {
+                    panning = false;
+                    wrap.classList.remove('panning-active');
+                }
+            });
+        }
     }
 
     // ✅ Phase 7: 通知扩展 Webview 已就绪（可以发送消息了）

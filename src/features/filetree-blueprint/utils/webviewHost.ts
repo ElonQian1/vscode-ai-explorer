@@ -39,7 +39,7 @@ export function getWebviewHtml(
 	// 资源URI
 	const cssUri = asWebviewUri('media', 'filetree-blueprint', 'bp.css');
 	const graphViewJsUri = asWebviewUri('media', 'filetree-blueprint', 'graphView.js');
-	const elkBundledUri = asWebviewUri('media', 'filetree-blueprint', 'lib', 'elk.bundled.js');
+	const elkBundledUri = asWebviewUri('media', 'vendor', 'elk.bundled.js'); // ✅ 修复路径
 	
 	// 模块URI
 	const blueprintCardUri = asWebviewUri('media', 'filetree-blueprint', 'modules', 'blueprintCard.js');
