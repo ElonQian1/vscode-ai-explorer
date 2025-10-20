@@ -17,7 +17,7 @@
  */
 
 // ========== 模块导入（ES6 模块化） ==========
-import { createRuntimeStyle } from './core/runtimeStyle.js';
+import { createRuntimeStyle, hash } from './core/runtimeStyle.js';
 import { createMessageHub, setupMessageListener } from './core/messageHub.js';
 import { createLayoutEngine, NODE_SIZE } from './core/layoutEngine.js';
 import { createRenderer } from './core/renderer.js';
@@ -185,6 +185,9 @@ import { createZoomPan } from './interactions/ZoomPan.js';
     // 监听错误消息
     messageHub.onError(handleError);
 
+    // ✨ M4: 监听位置恢复（消息类型与 BlueprintPanel 保持一致）
+    messageHub.on('ui/positions', handlePositionsLoaded);
+
     // 节点点击事件（事件委托）
     nodeContainer.addEventListener('click', handleNodeClick);
 
@@ -240,6 +243,30 @@ import { createZoomPan } from './interactions/ZoomPan.js';
   function handleError(error) {
     console.error('[graphView] ❌ 后端错误:', error);
     // 可以添加 Toast 提示
+  }
+
+  /**
+   * ✨ M4: 处理位置恢复
+   * @param {Object} positionsMap - {path: {x, y, posClass}}
+   */
+  function handlePositionsLoaded(positionsMap) {
+    console.log('[graphView] 📍 收到保存的位置', positionsMap);
+    
+    if (!positionsMap || typeof positionsMap !== 'object') {
+      console.warn('[graphView] 无效的位置数据');
+      return;
+    }
+
+    // 应用所有保存的位置到 runtimeStyle
+    Object.entries(positionsMap).forEach(([path, data]) => {
+      if (data && typeof data.x === 'number' && typeof data.y === 'number') {
+        const posClassName = data.posClass || `card-pos-${hash(path)}`;
+        runtimeStyle.setPos(posClassName, data.x, data.y);
+        console.log(`[graphView] 恢复位置: ${path} → (${data.x}, ${data.y})`);
+      }
+    });
+
+    console.log(`[graphView] ✅ 已恢复 ${Object.keys(positionsMap).length} 个位置`);
   }
 
   // ========== 布局管理 ==========
