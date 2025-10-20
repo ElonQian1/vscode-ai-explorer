@@ -1,5 +1,5 @@
 /**
- * LayoutEngine - 布局引擎服务（第五刀：迁移 + ES6 模块化）
+ * LayoutEngine - 布局引擎服务（第五刀：迁移 + ES6 模块化 + M5 增强）
  * 
  * 职责：
  * 1. 基于 elkjs 实现蓝图式自动布局
@@ -7,14 +7,22 @@
  * 3. 管理节点尺寸策略（COMPACT/EXPANDED/FILE/FOLDER）
  * 4. 计算边的路由路径（正交连线）
  * 
+ * ✨ M5 增强：
+ * 1. 请求合并（16ms coalesce）- 防止频繁布局
+ * 2. 超时保护（5秒）- 防止卡死
+ * 3. 降级策略增强 - 超时/失败时自动使用网格布局
+ * 4. 并发锁优化 - 防止重入
+ * 
  * 设计原则：
  * - 延迟初始化 ELK（首次使用时加载）
- * - 降级策略（ELK 加载失败时使用网格布局）
+ * - 降级策略（ELK 加载失败/超时时使用网格布局）
  * - 防重入锁（layoutInProgress）
+ * - 请求合并（16ms 窗口内合并多次请求）
  * - 丰富日志（便于调试）
  * 
  * 原始代码：media/filetree-blueprint/modules/layoutEngine.js
  * 迁移目标：core/layoutEngine.js（ES6 模块化）
+ * M5 增强：2025-10-20
  */
 
 // ===== 布局配置 =====
@@ -44,6 +52,14 @@ class LayoutEngine {
     this.elkInstance = null;
     this.layoutInProgress = false;
     this.elkInitialized = false;
+    
+    // ✨ M5: 请求合并相关
+    this.pendingReflowTimer = null; // 防抖定时器
+    this.pendingReflowReason = null; // 待处理的原因
+    this.coalesceDelay = 16; // 16ms 合并窗口（约1帧）
+    
+    // ✨ M5: 超时保护
+    this.layoutTimeout = 5000; // 5秒超时
     
     // 回调钩子
     this.onLayoutComplete = null;
@@ -162,15 +178,43 @@ class LayoutEngine {
   }
 
   /**
-   * 执行布局重排
+   * ✨ M5: 执行布局重排（带请求合并）
    * @param {string} reason - 触发原因
    * @param {Array} changedNodes - 变更的节点列表
    * @returns {Promise<Object|null>} 布局结果
    */
   async reflow(reason = 'manual', changedNodes = []) {
+    // ✨ M5: 请求合并 - 在短时间内的多次请求合并为一次
+    if (this.pendingReflowTimer) {
+      console.log(`[LayoutEngine] 🔄 合并布局请求: ${this.pendingReflowReason} + ${reason}`);
+      clearTimeout(this.pendingReflowTimer);
+      this.pendingReflowReason = `${this.pendingReflowReason}+${reason}`;
+    } else {
+      this.pendingReflowReason = reason;
+    }
+
+    // 使用防抖：16ms 内的多次请求只执行最后一次
+    return new Promise((resolve) => {
+      this.pendingReflowTimer = setTimeout(async () => {
+        this.pendingReflowTimer = null;
+        const result = await this._executeReflow(this.pendingReflowReason, changedNodes);
+        this.pendingReflowReason = null;
+        resolve(result);
+      }, this.coalesceDelay);
+    });
+  }
+
+  /**
+   * ✨ M5: 实际执行布局（带超时保护）
+   * @private
+   * @param {string} reason - 触发原因
+   * @param {Array} changedNodes - 变更的节点列表
+   * @returns {Promise<Object|null>} 布局结果
+   */
+  async _executeReflow(reason = 'manual', changedNodes = []) {
     if (this.layoutInProgress) {
       console.log('[LayoutEngine] ⏳ 布局进行中，跳过本次请求');
-      return false;
+      return null;
     }
 
     // 延迟初始化：首次使用时才加载 ELK
@@ -181,7 +225,7 @@ class LayoutEngine {
 
     if (!this.elkInstance) {
       console.warn('[LayoutEngine] ⚠️ ELK 实例未就绪，可能是加载失败');
-      return false;
+      return null;
     }
 
     this.layoutInProgress = true;
@@ -193,8 +237,14 @@ class LayoutEngine {
       // 准备 ELK 图数据
       const elkGraph = this.prepareELKGraph();
       
-      // 执行布局计算
-      const layoutResult = await this.elkInstance.layout(elkGraph);
+      // ✨ M5: 带超时保护的布局计算
+      const layoutResult = await this._layoutWithTimeout(elkGraph);
+      
+      if (!layoutResult) {
+        console.warn('[LayoutEngine] ⚠️ 布局超时或失败，使用降级布局');
+        // 使用降级布局
+        return await this._fallbackLayout();
+      }
       
       // 应用布局结果
       const appliedLayout = this.applyLayout(layoutResult);
@@ -206,10 +256,98 @@ class LayoutEngine {
       
     } catch (error) {
       console.error('[LayoutEngine] ❌ 布局失败:', error);
-      return null;
+      // 发生错误时也尝试降级布局
+      return await this._fallbackLayout();
     } finally {
       this.layoutInProgress = false;
     }
+  }
+
+  /**
+   * ✨ M5: 带超时保护的布局计算
+   * @private
+   * @param {Object} elkGraph - ELK 图数据
+   * @returns {Promise<Object|null>}
+   */
+  async _layoutWithTimeout(elkGraph) {
+    return Promise.race([
+      this.elkInstance.layout(elkGraph),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Layout timeout')), this.layoutTimeout)
+      )
+    ]).catch(error => {
+      if (error.message === 'Layout timeout') {
+        console.warn(`[LayoutEngine] ⏱️ 布局超时 (${this.layoutTimeout}ms)`);
+      } else {
+        console.error('[LayoutEngine] 布局计算错误:', error);
+      }
+      return null;
+    });
+  }
+
+  /**
+   * ✨ M5: 降级布局（使用网格布局）
+   * @private
+   * @returns {Promise<Object>}
+   */
+  async _fallbackLayout() {
+    console.log('[LayoutEngine] 🔄 使用降级网格布局');
+    
+    const nodes = this.graphData.nodes;
+    const COLS = Math.ceil(Math.sqrt(nodes.length || 1));
+    const GAPX = 80, GAPY = 60;
+    
+    const positionUpdates = {};
+    
+    nodes.forEach((node, i) => {
+      const size = this.getNodeSize(node);
+      const col = i % COLS;
+      const row = Math.floor(i / COLS);
+      
+      positionUpdates[node.id] = {
+        x: col * (size.width + GAPX),
+        y: row * (size.height + GAPY),
+        width: size.width,
+        height: size.height
+      };
+    });
+    
+    console.log(`[LayoutEngine] ✅ 降级布局完成: ${nodes.length} 个节点`);
+    
+    return {
+      nodes: positionUpdates,
+      edges: {},
+      bounds: this._calculateFallbackBounds(positionUpdates)
+    };
+  }
+
+  /**
+   * 计算降级布局的边界
+   * @private
+   * @param {Object} positions - 节点位置映射
+   * @returns {{x, y, width, height}}
+   */
+  _calculateFallbackBounds(positions) {
+    if (Object.keys(positions).length === 0) {
+      return { x: 0, y: 0, width: 800, height: 600 };
+    }
+
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+
+    Object.values(positions).forEach(pos => {
+      minX = Math.min(minX, pos.x);
+      minY = Math.min(minY, pos.y);
+      maxX = Math.max(maxX, pos.x + pos.width);
+      maxY = Math.max(maxY, pos.y + pos.height);
+    });
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX + 100,
+      height: maxY - minY + 100
+    };
   }
 
   /**
@@ -339,13 +477,20 @@ class LayoutEngine {
   }
 
   /**
-   * 强制重新布局（忽略进行状态）
+   * 强制重新布局（忽略进行状态和合并延迟）
    * @param {string} reason - 触发原因
    * @returns {Promise<Object|null>}
    */
   async forceReflow(reason = 'force') {
+    // 清除待处理的合并请求
+    if (this.pendingReflowTimer) {
+      clearTimeout(this.pendingReflowTimer);
+      this.pendingReflowTimer = null;
+      this.pendingReflowReason = null;
+    }
+    
     this.layoutInProgress = false;
-    return await this.reflow(reason);
+    return await this._executeReflow(reason, []);
   }
 
   /**
@@ -357,7 +502,9 @@ class LayoutEngine {
       layoutInProgress: this.layoutInProgress,
       expandedNodes: Array.from(this.expandedNodes),
       nodeCount: this.graphData.nodes.length,
-      edgeCount: this.graphData.edges.length
+      edgeCount: this.graphData.edges.length,
+      hasPendingReflow: !!this.pendingReflowTimer, // ✨ M5: 是否有待处理的请求
+      pendingReason: this.pendingReflowReason // ✨ M5: 待处理的原因
     };
   }
 }
