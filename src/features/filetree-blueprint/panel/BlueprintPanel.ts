@@ -29,6 +29,8 @@ import { W2E_DRILL, W2E_DRILL_UP, SYSTEM_PING, SYSTEM_PONG, E2W_INIT_GRAPH, E2W_
 import { getWorkspaceRoot } from '../../../core/path/workspaceRoot'; // ✅ 引入统一工作区根服务
 import { relToAbs } from '../../../core/path/pathMapper'; // ✅ 引入路径映射工具
 import { getWebviewHtml, getNonce } from '../utils/webviewHost'; // ✅ 新增：引入CSP安全工具
+import { PositionsStore } from '../storage/PositionsStore'; // ✅ Phase 1: 位置持久化
+import { NotesStore } from '../storage/NotesStore'; // ✅ Phase 1: 备注持久化
 
 /**
  * 面板状态：保存根目录、当前聚焦路径、导航栈等
@@ -58,6 +60,10 @@ export class BlueprintPanel {
     private enhancedAnalysisUseCase: EnhancedAnalysisUseCase; // ✅ 新增：增强分析用例
     private context: vscode.ExtensionContext;  // ✅ 新增：Extension Context
     
+    // ✅ Phase 1: 持久化存储服务
+    private positionsStore: PositionsStore;
+    private notesStore: NotesStore;
+    
     // ✅ Phase 7: 统一状态管理
     private state: PanelState;
 
@@ -74,6 +80,11 @@ export class BlueprintPanel {
         this.context = context;            // ✅ 保存context
         this.fileAnalysisService = new FileAnalysisService(logger);
         this.enhancedAnalysisUseCase = new EnhancedAnalysisUseCase(logger, context); // ✅ 初始化增强分析用例
+
+        // ✅ Phase 1: 初始化持久化存储服务
+        this.positionsStore = new PositionsStore(rootUri);
+        this.notesStore = new NotesStore(rootUri, 'default');
+        this.logger.info(`[BlueprintPanel] 💾 初始化存储服务: ${this.positionsStore.getStorePath()}`);
 
         // ✅ 初始化状态
         this.state = {
@@ -328,8 +339,18 @@ export class BlueprintPanel {
                 break;
 
             case 'card-moved':
-                // Priority 3: 持久化卡片位置
+                // ✅ Phase 1: 持久化卡片位置
                 await this.handleCardMoved(message.payload);
+                break;
+
+            case 'save-notes':
+                // ✅ Phase 1: 保存备注
+                await this.handleSaveNotes(message.payload);
+                break;
+
+            case 'load-notes':
+                // ✅ Phase 1: 加载备注
+                await this.handleLoadNotes(message.payload);
                 break;
 
             case 'save-notes':
@@ -1318,7 +1339,107 @@ export class BlueprintPanel {
     /**
      * Priority 3: 处理卡片移动消息 (持久化位置)
      */
+    /**
+     * ✅ Phase 1: 使用 PositionsStore 处理卡片移动持久化
+     */
     private async handleCardMoved(payload: any): Promise<void> {
+        const { path, position } = payload;
+        
+        if (!path || !position) {
+            this.logger.warn('[持久化] 卡片移动消息缺少必要参数');
+            return;
+        }
+
+        try {
+            // 使用 PositionsStore 保存位置
+            await this.positionsStore.set(
+                path,
+                Math.round(position.x),
+                Math.round(position.y)
+            );
+            
+            this.logger.info(`[持久化] ✅ 卡片位置已保存: ${path} (${position.x}, ${position.y})`);
+        } catch (error) {
+            this.logger.error('[持久化] ❌ 保存位置失败:', error);
+        }
+    }
+
+    /**
+     * ✅ Phase 1: 处理备注保存（save-notes）
+     */
+    private async handleSaveNotes(payload: any): Promise<void> {
+        const { path, notes } = payload;
+        
+        if (!path) {
+            this.logger.warn('[持久化] 保存备注消息缺少路径参数');
+            return;
+        }
+
+        try {
+            await this.notesStore.write(path, notes || '');
+            this.logger.info(`[持久化] ✅ 备注已保存: ${path}`);
+            
+            // 通知 Webview 保存成功
+            await this.safePostMessage({
+                type: 'notes-saved',
+                payload: { path }
+            });
+        } catch (error) {
+            this.logger.error('[持久化] ❌ 保存备注失败:', error);
+        }
+    }
+
+    /**
+     * ✅ Phase 1: 处理备注加载（load-notes）
+     */
+    private async handleLoadNotes(payload: any): Promise<void> {
+        const { path } = payload;
+        
+        if (!path) {
+            this.logger.warn('[持久化] 加载备注消息缺少路径参数');
+            return;
+        }
+
+        try {
+            const notes = await this.notesStore.read(path);
+            this.logger.info(`[持久化] ✅ 备注已加载: ${path}`);
+            
+            // 发送备注内容到 Webview
+            await this.safePostMessage({
+                type: 'notes-loaded',
+                payload: { path, notes }
+            });
+        } catch (error) {
+            this.logger.error('[持久化] ❌ 加载备注失败:', error);
+            
+            // 发送空备注
+            await this.safePostMessage({
+                type: 'notes-loaded',
+                payload: { path, notes: '' }
+            });
+        }
+    }
+
+    /**
+     * ✅ Phase 1: Webview 准备就绪后，发送已保存的位置数据
+     */
+    private async sendSavedPositions(): Promise<void> {
+        try {
+            const positions = await this.positionsStore.getAll();
+            
+            await this.safePostMessage({
+                type: 'ui/positions',
+                payload: positions
+            });
+            
+            this.logger.info(`[持久化] ✅ 已发送位置数据: ${Object.keys(positions).length} 条`);
+        } catch (error) {
+            this.logger.error('[持久化] ❌ 发送位置数据失败:', error);
+        }
+    }
+
+    // 旧代码（待删除）
+    private async OLD_handleCardMoved_DEPRECATED(payload: any): Promise<void> {
         const { path, position } = payload;
         
         if (!path || !position) {
