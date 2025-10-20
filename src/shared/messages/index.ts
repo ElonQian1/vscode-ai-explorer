@@ -288,6 +288,36 @@ export interface GetEnhancedUserNotesMessage {
 }
 
 /**
+ * Priority 3: 卡片移动消息（持久化位置）
+ */
+export interface CardMovedMessage {
+    type: 'card-moved';
+    payload: {
+        path: string;
+        position: {
+            x: number;
+            y: number;
+        };
+    };
+}
+
+/**
+ * Priority 3: 保存备注消息（持久化备注）
+ */
+export interface SaveNotesMessage {
+    type: 'save-notes';
+    payload: {
+        path: string;
+        notes: {
+            md: string;
+            updatedAt: string;
+            author: string;
+            version: number;
+        };
+    };
+}
+
+/**
  * Webview → Extension 消息联合类型
  */
 export type WebviewToExtension =
@@ -309,7 +339,9 @@ export type WebviewToExtension =
     | SaveUserNotesMessage
     | GetUserNotesMessage
     | SaveEnhancedUserNotesMessage
-    | GetEnhancedUserNotesMessage;
+    | GetEnhancedUserNotesMessage
+    | CardMovedMessage
+    | SaveNotesMessage;
 
 // ============================================================================
 // Extension → Webview (后端发给前端的消息)

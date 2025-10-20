@@ -37,6 +37,7 @@ export type Graph = {
     nodes: Node[];
     edges: Edge[];
     metadata?: any;
+    savedPositions?: Record<string, { x: number; y: number }>; // Priority 3: 持久化位置
 };
 
 const DEFAULT_EXCLUDES = [
