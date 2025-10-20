@@ -48,8 +48,9 @@ export class FeatureRenderer {
 			const relevantScores = scores.filter((s: FileScore) => s.score >= threshold);
 			this.logger.info(`[FeatureRenderer] Found ${relevantScores.length} relevant files (threshold: ${threshold})`);
 			
-			// 7. 计算跳数(BFS从种子出发)
-			this.calculateHops(relevantScores, context.importGraph, new Set(payload.seeds));
+			// 7. 计算跳数(BFS从种子出发, 限制最大跳数)
+			const maxHops = payload.maxHops ?? 3;
+			this.calculateHops(relevantScores, context.importGraph, new Set(payload.seeds), maxHops);
 			
 			// 8. 构建子图
 			const subGraph = this.buildSubGraph(payload, relevantScores, context);
@@ -99,19 +100,13 @@ export class FeatureRenderer {
 	}
 	
 	/**
-	 * 分析文件(TODO: 真实实现需要AST解析)
+	 * 分析文件(改进版: 更好的依赖解析)
 	 */
 	private async analyzeFiles(
 		filePaths: string[]
 	): Promise<AnalyzedFile[]> {
-		// TODO: 这里是简化版,真实实现需要:
-		// 1. 用 TypeScript Compiler API 或 ts-morph 解析AST
-		// 2. 提取 imports/exports/symbols/calls
-		// 3. 识别路由配置(react-router等)
-		// 4. 识别网络请求(axios/fetch)
-		
-		// 现在先返回占位数据
 		const analyzed: AnalyzedFile[] = [];
+		const path = await import('path');
 		
 		for (const filePath of filePaths) {
 			try {
@@ -119,24 +114,88 @@ export class FeatureRenderer {
 				const content = await vscode.workspace.fs.readFile(uri);
 				const text = Buffer.from(content).toString('utf-8');
 				
-				// 简单的import正则提取(生产环境应该用AST)
-				const importMatches = text.matchAll(/import\s+.*?from\s+['"](.+?)['"]/g);
-				const imports = Array.from(importMatches, m => m[1]);
+				// ✅ 改进的import提取(支持多种语法)
+				const imports: string[] = [];
 				
-				// 简单的export正则提取
-				const exportMatches = text.matchAll(/export\s+(?:const|function|class|interface|type)\s+(\w+)/g);
-				const exports = Array.from(exportMatches, m => m[1]);
+				// ES6 import from
+				const importFromMatches = text.matchAll(/import\s+.*?from\s+['"](.+?)['"]/g);
+				for (const match of importFromMatches) {
+					imports.push(match[1]);
+				}
+				
+				// require()
+				const requireMatches = text.matchAll(/require\s*\(\s*['"](.+?)['"]\s*\)/g);
+				for (const match of requireMatches) {
+					imports.push(match[1]);
+				}
+				
+				// dynamic import()
+				const dynamicImportMatches = text.matchAll(/import\s*\(\s*['"](.+?)['"]\s*\)/g);
+				for (const match of dynamicImportMatches) {
+					imports.push(match[1]);
+				}
+				
+				// ✅ 解析相对路径为绝对路径
+				const resolvedImports = imports.map(imp => {
+					if (imp.startsWith('.')) {
+						// 相对路径,解析为绝对路径
+						const dir = path.dirname(filePath);
+						let resolved = path.resolve(dir, imp);
+						
+						// 添加文件扩展名(如果没有)
+						if (!path.extname(resolved)) {
+							const extensions = ['.ts', '.tsx', '.js', '.jsx'];
+							for (const ext of extensions) {
+								if (filePaths.includes(resolved + ext)) {
+									resolved += ext;
+									break;
+								}
+							}
+						}
+						return resolved;
+					} else if (imp.startsWith('@/')) {
+						// 别名路径(简化处理,假设@指向src)
+						const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+						return path.join(workspaceRoot, 'src', imp.substring(2));
+					} else {
+						// node_modules或其他外部依赖,暂时忽略
+						return imp;
+					}
+				}).filter(imp => filePaths.includes(imp)); // 只保留在分析范围内的文件
+				
+				// ✅ 改进的export提取
+				const exports: string[] = [];
+				const exportMatches = text.matchAll(/export\s+(?:const|function|class|interface|type|enum)\s+(\w+)/g);
+				for (const match of exportMatches) {
+					exports.push(match[1]);
+				}
+				
+				// export default
+				if (text.includes('export default')) {
+					exports.push('default');
+				}
 				
 				analyzed.push({
 					path: filePath,
 					content: text,
-					imports,
+					imports: resolvedImports,
 					importedBy: [], // 后续构建反向图时填充
 					exports,
-					symbols: exports // 简化版,实际应包含所有符号
+					symbols: exports
 				});
 			} catch (error) {
 				this.logger.warn(`[FeatureRenderer] Failed to analyze ${filePath}: ${error}`);
+			}
+		}
+		
+		// ✅ 构建反向图(importedBy)
+		const fileMap = new Map(analyzed.map(f => [f.path, f]));
+		for (const file of analyzed) {
+			for (const imp of file.imports) {
+				const imported = fileMap.get(imp);
+				if (imported) {
+					imported.importedBy.push(file.path);
+				}
 			}
 		}
 		
@@ -144,7 +203,7 @@ export class FeatureRenderer {
 	}
 	
 	/**
-	 * 构建图上下文(依赖图/调用图/路由图)
+	 * 构建图上下文(改进版: 双向依赖图)
 	 */
 	private buildGraphContext(
 		files: AnalyzedFile[],
@@ -158,17 +217,24 @@ export class FeatureRenderer {
 	} {
 		const importGraph = new Map<string, Set<string>>();
 		
-		// 构建import图
+		// ✅ 构建双向import图(包含imports和importedBy)
 		for (const file of files) {
-			const imports = new Set<string>();
-			for (const imp of file.imports) {
-				// TODO: 解析相对路径为绝对路径
-				imports.add(imp);
-			}
+			// 正向: file imports X
+			const imports = new Set<string>(file.imports);
 			importGraph.set(file.path, imports);
+			
+			// 反向: X is imported by file
+			for (const imported of file.importedBy) {
+				if (!importGraph.has(imported)) {
+					importGraph.set(imported, new Set());
+				}
+				importGraph.get(imported)!.add(file.path);
+			}
 		}
 		
-		// TODO: 构建callGraph和routeGraph
+		// TODO: 未来可以添加callGraph和routeGraph
+		// callGraph: 函数调用关系图(需要AST深度分析)
+		// routeGraph: 路由配置关系图(识别react-router/vue-router配置)
 		
 		return {
 			seeds: new Set(payload.seeds),
@@ -178,12 +244,13 @@ export class FeatureRenderer {
 	}
 	
 	/**
-	 * 计算跳数(BFS)
+	 * 计算跳数(改进版: 支持maxHops限制)
 	 */
 	private calculateHops(
 		scores: FileScore[],
 		importGraph: Map<string, Set<string>>,
-		seeds: Set<string>
+		seeds: Set<string>,
+		maxHops?: number
 	): void {
 		const visited = new Set<string>();
 		const queue: { path: string; hops: number }[] = [];
@@ -192,14 +259,19 @@ export class FeatureRenderer {
 		for (const seed of seeds) {
 			queue.push({ path: seed, hops: 0 });
 			visited.add(seed);
+			const score = scores.find(s => s.path === seed);
+			if (score) {
+				score.hops = 0;
+			}
 		}
 		
-		// BFS
+		// ✅ BFS with maxHops constraint
 		while (queue.length > 0) {
 			const { path, hops } = queue.shift()!;
-			const score = scores.find(s => s.path === path);
-			if (score) {
-				score.hops = hops;
+			
+			// ✅ 如果达到最大跳数,停止拓展
+			if (maxHops !== undefined && hops >= maxHops) {
+				continue;
 			}
 			
 			const neighbors = importGraph.get(path);
@@ -208,6 +280,12 @@ export class FeatureRenderer {
 					if (!visited.has(neighbor)) {
 						visited.add(neighbor);
 						queue.push({ path: neighbor, hops: hops + 1 });
+						
+						// 更新score中的hops
+						const score = scores.find(s => s.path === neighbor);
+						if (score) {
+							score.hops = hops + 1;
+						}
 					}
 				}
 			}
@@ -215,7 +293,7 @@ export class FeatureRenderer {
 	}
 	
 	/**
-	 * 构建功能子图
+	 * 构建功能子图(改进版: 识别桥接节点)
 	 */
 	private buildSubGraph(
 		payload: FeaturePayload,
@@ -228,7 +306,7 @@ export class FeatureRenderer {
 		const edges: Record<string, string[]> = {};
 		const edgeTypes: Record<string, 'import'|'call'|'route'|'api'> = {};
 		
-		// 构建边(只保留相关文件间的边)
+		// ✅ 构建边(只保留相关文件间的边)
 		for (const score of scores) {
 			const neighbors = context.importGraph.get(score.path);
 			if (neighbors) {
@@ -242,6 +320,9 @@ export class FeatureRenderer {
 			}
 		}
 		
+		// ✅ 识别桥接节点(连接度高的节点)
+		this.identifyBridgeNodes(scores, edges);
+		
 		return {
 			featureId: payload.featureId,
 			featureName: payload.featureName || payload.featureId,
@@ -253,6 +334,53 @@ export class FeatureRenderer {
 			timestamp: new Date().toISOString(),
 			toolVersion: '1.0.0' // TODO: 从package.json读取
 		};
+	}
+	
+	/**
+	 * 识别桥接节点(高连接度的节点)
+	 */
+	private identifyBridgeNodes(
+		scores: FileScore[],
+		edges: Record<string, string[]>
+	): void {
+		// 计算每个节点的度数(入度+出度)
+		const inDegree = new Map<string, number>();
+		const outDegree = new Map<string, number>();
+		
+		// 初始化度数
+		for (const score of scores) {
+			inDegree.set(score.path, 0);
+			outDegree.set(score.path, edges[score.path]?.length || 0);
+		}
+		
+		// 计算入度
+		for (const [from, targets] of Object.entries(edges)) {
+			for (const to of targets) {
+				inDegree.set(to, (inDegree.get(to) || 0) + 1);
+			}
+		}
+		
+		// ✅ 标记桥接节点: 总度数 >= 4 且 入度和出度都 >= 1
+		const avgDegree = scores.reduce((sum, s) => {
+			const degree = (inDegree.get(s.path) || 0) + (outDegree.get(s.path) || 0);
+			return sum + degree;
+		}, 0) / scores.length;
+		
+		for (const score of scores) {
+			const inDeg = inDegree.get(score.path) || 0;
+			const outDeg = outDegree.get(score.path) || 0;
+			const totalDeg = inDeg + outDeg;
+			
+			// 桥接节点条件:
+			// 1. 总度数 >= 平均度数的1.5倍
+			// 2. 或者总度数 >= 4 且双向连接(入度和出度都 >= 1)
+			if (totalDeg >= avgDegree * 1.5 || (totalDeg >= 4 && inDeg >= 1 && outDeg >= 1)) {
+				score.isBridge = true;
+			}
+		}
+		
+		const bridgeCount = scores.filter(s => s.isBridge).length;
+		this.logger.info(`[FeatureRenderer] Identified ${bridgeCount} bridge nodes (avgDegree: ${avgDegree.toFixed(2)})`);
 	}
 	
 	/**
