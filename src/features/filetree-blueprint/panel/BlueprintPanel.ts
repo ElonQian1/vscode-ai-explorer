@@ -28,6 +28,7 @@ import { generateWebviewHtml } from './WebviewTemplate'; // ✅ 引入模板生�
 import { W2E_DRILL, W2E_DRILL_UP, SYSTEM_PING, SYSTEM_PONG, E2W_INIT_GRAPH, E2W_DRILL_RESULT } from '../../../shared/protocol'; // ✅ 引入协议常量
 import { getWorkspaceRoot } from '../../../core/path/workspaceRoot'; // ✅ 引入统一工作区根服务
 import { relToAbs } from '../../../core/path/pathMapper'; // ✅ 引入路径映射工具
+import { getWebviewHtml, getNonce } from '../utils/webviewHost'; // ✅ 新增：引入CSP安全工具
 
 /**
  * 面板状态：保存根目录、当前聚焦路径、导航栈等
@@ -83,8 +84,8 @@ export class BlueprintPanel {
             messageQueue: []
         };
 
-        // 🚨 急救补丁：直接生成HTML，绕过可能有问题的WebviewTemplate
-        this.panel.webview.html = this.getEmergencyHtml(extensionUri);
+        // ✅ 使用CSP安全的HTML生成器
+        this.panel.webview.html = getWebviewHtml(this.panel.webview, extensionUri);
 
         // 监听面板销毁
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -971,18 +972,6 @@ export class BlueprintPanel {
     <script nonce="${nonce}" src="${bootScriptUri}"></script>
 </body>
 </html>`;
-    }
-
-    /**
-     * 生成随机 nonce
-     */
-    private getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
     }
 
     /**
