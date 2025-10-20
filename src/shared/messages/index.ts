@@ -318,6 +318,16 @@ export interface SaveNotesMessage {
 }
 
 /**
+ * ✅ Phase 1: 加载备注消息（请求加载备注）
+ */
+export interface LoadNotesMessage {
+    type: 'load-notes';
+    payload: {
+        path: string;
+    };
+}
+
+/**
  * Webview → Extension 消息联合类型
  */
 export type WebviewToExtension =
@@ -341,7 +351,8 @@ export type WebviewToExtension =
     | SaveEnhancedUserNotesMessage
     | GetEnhancedUserNotesMessage
     | CardMovedMessage
-    | SaveNotesMessage;
+    | SaveNotesMessage
+    | LoadNotesMessage;
 
 // ============================================================================
 // Extension → Webview (后端发给前端的消息)
@@ -500,6 +511,41 @@ export interface EnhancedUserNotesSavedMessage {
 }
 
 /**
+ * ✅ Phase 1: 备注已加载消息（返回备注内容）
+ */
+export interface NotesLoadedMessage {
+    type: 'notes-loaded';
+    payload: {
+        path: string;
+        notes: string;
+    };
+}
+
+/**
+ * ✅ Phase 1: 备注已保存确认消息
+ */
+export interface NotesSavedMessage {
+    type: 'notes-saved';
+    payload: {
+        path: string;
+        success?: boolean;
+    };
+}
+
+/**
+ * ✅ Phase 1: UI 位置数据消息（初始化时发送）
+ */
+export interface UiPositionsMessage {
+    type: 'ui/positions';
+    payload: Record<string, {
+        x: number;
+        y: number;
+        posClass?: string;
+        t: number;
+    }>;
+}
+
+/**
  * Extension → Webview 消息联合类型
  */
 export type ExtensionToWebview =
@@ -511,7 +557,10 @@ export type ExtensionToWebview =
     | UserNotesDataMessage
     | UserNotesSavedMessage
     | EnhancedUserNotesDataMessage
-    | EnhancedUserNotesSavedMessage;
+    | EnhancedUserNotesSavedMessage
+    | NotesLoadedMessage
+    | NotesSavedMessage
+    | UiPositionsMessage;
 
 // ============================================================================
 // 类型守卫 (Type Guards)
