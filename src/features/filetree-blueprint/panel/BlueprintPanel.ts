@@ -46,6 +46,8 @@ interface PanelState {
     webviewReady: boolean;
     /** 消息队列（在 ready 之前排队）*/
     messageQueue: ExtensionToWebview[];
+    /** ✨ M7: Feature 过滤器（文件路径列表，null 表示显示全部）*/
+    featureFilter: string[] | null;
 }
 
 export class BlueprintPanel {
@@ -92,7 +94,8 @@ export class BlueprintPanel {
             focusPath: '/',
             navStack: ['/'],
             webviewReady: false,
-            messageQueue: []
+            messageQueue: [],
+            featureFilter: null  // ✨ M7: 默认不过滤，显示全部
         };
 
         // ✅ 使用CSP安全的HTML生成器
@@ -160,17 +163,48 @@ export class BlueprintPanel {
     /**
      * 显示图表数据
      */
+    /**
+     * 显示图数据
+     * ✨ M7: 支持 Feature 过滤
+     */
     public showGraph(graph: Graph): void {
         this.currentGraph = graph;
-        this.panel.title = graph.title;
+        
+        // ✨ M7: 如果设置了 Feature 过滤器，进行过滤
+        let filteredGraph = graph;
+        if (this.state.featureFilter && this.state.featureFilter.length > 0) {
+            filteredGraph = this.filterGraphByFeature(graph, this.state.featureFilter);
+            this.logger.info(`[M7] Feature 过滤: ${graph.nodes.length} → ${filteredGraph.nodes.length} 个节点`);
+        }
+        
+        this.panel.title = filteredGraph.title;
         
         // ✅ Phase 7: 使用安全发送（带队列）
         this.safePostMessage({
             type: 'init-graph',
-            payload: graph
+            payload: filteredGraph
         });
 
-        this.logger.info(`显示蓝图: ${graph.title} (${graph.nodes.length} 个节点)`);
+        this.logger.info(`显示蓝图: ${filteredGraph.title} (${filteredGraph.nodes.length} 个节点)`);
+    }
+
+    /**
+     * ✨ M7: 设置 Feature 过滤器
+     * @param files 要显示的文件路径列表（null 表示显示全部）
+     */
+    public setFeatureFilter(files: string[] | null): void {
+        this.state.featureFilter = files;
+        
+        if (files && files.length > 0) {
+            this.logger.info(`[M7] 设置 Feature 过滤器: ${files.length} 个文件`);
+        } else {
+            this.logger.info(`[M7] 清除 Feature 过滤器，显示全部`);
+        }
+        
+        // 如果当前已有图数据，重新渲染
+        if (this.currentGraph) {
+            this.showGraph(this.currentGraph);
+        }
     }
 
     /**
@@ -1524,6 +1558,65 @@ export class BlueprintPanel {
         } catch (error) {
             this.logger.error('[持久化] 保存卡片位置失败:', error);
         }
+    }
+
+    /**
+     * ✨ M7: 根据 Feature 过滤图数据
+     * @param graph 原始图数据
+     * @param featureFiles 要保留的文件路径列表
+     * @returns 过滤后的图数据
+     */
+    private filterGraphByFeature(graph: Graph, featureFiles: string[]): Graph {
+        // 将文件路径转为 Set 以提高查找性能（支持绝对路径和相对路径）
+        const fileSet = new Set<string>();
+        featureFiles.forEach(f => {
+            fileSet.add(f.toLowerCase());
+            // 也添加文件名（不带路径）
+            const fileName = f.split('/').pop() || f.split('\\').pop();
+            if (fileName) {
+                fileSet.add(fileName.toLowerCase());
+            }
+        });
+        
+        // 过滤节点：只保留在 featureFiles 中的文件
+        const filteredNodes = graph.nodes.filter(node => {
+            // 检查节点的 id 或 label 是否在 featureFiles 中
+            const nodeId = node.id.toLowerCase();
+            const nodeLabel = node.label.toLowerCase();
+            return fileSet.has(nodeId) || fileSet.has(nodeLabel);
+        });
+        
+        // 提取保留的节点 ID
+        const retainedNodeIds = new Set(filteredNodes.map(n => n.id));
+        
+        // 过滤边：只保留两端节点都存在的边
+        const filteredEdges = graph.edges.filter(edge => {
+            const fromNode = typeof edge.from === 'string' ? edge.from : edge.from.node;
+            const toNode = typeof edge.to === 'string' ? edge.to : edge.to.node;
+            return retainedNodeIds.has(fromNode) && retainedNodeIds.has(toNode);
+        });
+        
+        // 构建新的图对象
+        const filteredGraph: Graph = {
+            ...graph,
+            title: `Feature: ${featureFiles.length} files`,  // ✨ M7: 标题显示文件数
+            nodes: filteredNodes,
+            edges: filteredEdges,
+            metadata: {
+                ...graph.metadata,
+                featureFilter: featureFiles,  // 记录过滤信息
+                originalNodeCount: graph.nodes.length,
+                filteredNodeCount: filteredNodes.length
+            }
+        };
+        
+        this.logger.info(`[M7] Feature 过滤完成:`, {
+            original: graph.nodes.length,
+            filtered: filteredNodes.length,
+            edges: `${graph.edges.length} → ${filteredEdges.length}`
+        });
+        
+        return filteredGraph;
     }
 
     /**
