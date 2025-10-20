@@ -14,6 +14,7 @@ import * as crypto from 'crypto';
 import { Logger } from '../../../core/logging/Logger';
 import { MultiProviderAIClient } from '../../../core/ai/MultiProviderAIClient';
 import { EnhancedCapsuleCache, CapsuleData, AIAnalysisResult } from '../cache/EnhancedCapsuleCache';
+import { UserNotes as EnhancedUserNotes, createEmptyUserNotes } from '../types/UserNotes';
 
 export interface AnalysisRequest {
     filePath: string;
@@ -164,6 +165,39 @@ export class EnhancedAnalysisUseCase {
     }): Promise<void> {
         await this.cache.saveUserNotes(filePath, notes);
         this.logger.info(`[EnhancedAnalysis] 📝 用户备注已保存: ${filePath}`);
+    }
+
+    /**
+     * 保存增强版用户备注（新版API）
+     */
+    public async saveEnhancedUserNotes(filePath: string, notes: EnhancedUserNotes): Promise<void> {
+        await this.cache.saveEnhancedUserNotes(filePath, notes);
+        this.logger.info(`[EnhancedAnalysis] ✨ 增强版用户备注已保存: ${filePath}`);
+    }
+
+    /**
+     * 获取增强版用户备注
+     */
+    public async getEnhancedUserNotes(filePath: string): Promise<EnhancedUserNotes | null> {
+        const notes = await this.cache.getEnhancedUserNotes(filePath);
+        if (notes) {
+            this.logger.info(`[EnhancedAnalysis] ✨ 增强版用户备注已加载: ${filePath}`);
+        } else {
+            this.logger.debug(`[EnhancedAnalysis] 增强版用户备注不存在: ${filePath}`);
+        }
+        return notes;
+    }
+
+    /**
+     * 获取或创建增强版用户备注
+     */
+    public async getOrCreateEnhancedUserNotes(filePath: string): Promise<EnhancedUserNotes> {
+        let notes = await this.getEnhancedUserNotes(filePath);
+        if (!notes) {
+            notes = createEmptyUserNotes(filePath);
+            await this.saveEnhancedUserNotes(filePath, notes);
+        }
+        return notes;
     }
 
     /**

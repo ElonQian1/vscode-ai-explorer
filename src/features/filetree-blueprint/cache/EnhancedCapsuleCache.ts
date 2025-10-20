@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { Logger } from '../../../core/logging/Logger';
+import { UserNotes as EnhancedUserNotes, createEmptyUserNotes } from '../types/UserNotes';
 
 // ===== 类型定义 =====
 
@@ -58,6 +59,7 @@ export interface AIAnalysisResult {
     aiVersion: string;
 }
 
+// 使用增强版用户备注类型，保留简化版用于向后兼容
 export interface UserNotes {
     /** 用户备注 */
     comments: string[];
@@ -266,6 +268,174 @@ export class EnhancedCapsuleCache {
         this.updateMemorySizeStats();
         await this.updateDiskSizeStats();
         this.logger.info(`[EnhancedCache] 📝 保存用户备注: ${path.basename(filePath)}`);
+    }
+
+    /**
+     * 保存增强版用户备注（新版API）
+     */
+    public async saveEnhancedUserNotes(
+        filePath: string,
+        notes: EnhancedUserNotes
+    ): Promise<void> {
+        const cacheKey = this.getCacheKey(filePath);
+        const notesPath = path.join(this.cacheDir, `${cacheKey}.notes.json`);
+        
+        try {
+            // 保存到专门的notes文件
+            await vscode.workspace.fs.writeFile(
+                vscode.Uri.file(notesPath),
+                Buffer.from(JSON.stringify(notes, null, 2))
+            );
+            
+            // 同时更新内存缓存中的简化版本（保持向后兼容）
+            let existing = this.memoryCache.get(cacheKey);
+            if (!existing) {
+                const contentHash = await this.getFileContentHash(filePath);
+                existing = await this.getCapsule(filePath, contentHash) || 
+                          this.createEmptyCapsule(filePath, contentHash);
+            }
+            
+            // 将增强版数据映射到简化版
+            existing.notes = {
+                comments: notes.comments.map(c => c.content),
+                tags: notes.tags.map(t => t.name),
+                priority: this.mapPriorityToLegacy(notes.priority),
+                lastEditedAt: notes.metadata.lastEditedAt,
+                bookmarked: notes.customFields?.bookmarked || false
+            };
+            existing.meta.updatedAt = Date.now();
+            
+            this.memoryCache.set(cacheKey, existing);
+            await this.saveToDisk(existing);
+            
+            this.stats.writes++;
+            this.stats.lastWriteTime = Date.now();
+            this.updateMemorySizeStats();
+            await this.updateDiskSizeStats();
+            
+            this.logger.info(`[EnhancedCache] ✨ 保存增强版用户备注: ${path.basename(filePath)}`);
+            
+        } catch (error) {
+            this.logger.error(`[EnhancedCache] 保存增强版用户备注失败: ${filePath}`, error);
+            throw error;
+        }
+    }
+    
+    /**
+     * 获取增强版用户备注
+     */
+    public async getEnhancedUserNotes(filePath: string): Promise<EnhancedUserNotes | null> {
+        const cacheKey = this.getCacheKey(filePath);
+        const notesPath = path.join(this.cacheDir, `${cacheKey}.notes.json`);
+        
+        try {
+            const notesUri = vscode.Uri.file(notesPath);
+            const notesData = await vscode.workspace.fs.readFile(notesUri);
+            const notes = JSON.parse(Buffer.from(notesData).toString()) as EnhancedUserNotes;
+            
+            this.logger.info(`[EnhancedCache] ✨ 加载增强版用户备注: ${path.basename(filePath)}`);
+            return notes;
+            
+        } catch (error) {
+            // 如果增强版不存在，尝试从旧版本迁移
+            const legacy = await this.getLegacyUserNotes(filePath);
+            if (legacy) {
+                const enhanced = this.migrateFromLegacy(filePath, legacy);
+                await this.saveEnhancedUserNotes(filePath, enhanced);
+                return enhanced;
+            }
+            
+            this.logger.debug(`[EnhancedCache] 增强版用户备注不存在: ${filePath}`);
+            return null;
+        }
+    }
+
+    /**
+     * 从旧版本迁移用户备注
+     */
+    private migrateFromLegacy(filePath: string, legacy: UserNotes): EnhancedUserNotes {
+        const enhanced = createEmptyUserNotes(filePath);
+        
+        // 迁移评论
+        enhanced.comments = legacy.comments.map((content, index) => ({
+            id: `legacy-${index}-${Date.now()}`,
+            content,
+            createdAt: legacy.lastEditedAt || Date.now(),
+            pinned: false
+        }));
+        
+        // 迁移标签
+        enhanced.tags = legacy.tags.map((name, index) => ({
+            name,
+            color: 'blue' as any, // 默认颜色
+            createdAt: legacy.lastEditedAt || Date.now()
+        }));
+        
+        // 迁移优先级
+        enhanced.priority = this.mapLegacyPriority(legacy.priority);
+        
+        // 更新元数据
+        enhanced.metadata.lastEditedAt = legacy.lastEditedAt;
+        enhanced.metadata.editCount = 1;
+        
+        // 保存收藏状态
+        enhanced.customFields = { bookmarked: legacy.bookmarked };
+        
+        return enhanced;
+    }
+
+    /**
+     * 获取旧版用户备注（用于迁移）
+     */
+    private async getLegacyUserNotes(filePath: string): Promise<UserNotes | null> {
+        const cacheKey = this.getCacheKey(filePath);
+        const existing = this.memoryCache.get(cacheKey);
+        
+        if (existing?.notes) {
+            return existing.notes;
+        }
+        
+        // 尝试从磁盘加载
+        try {
+            const contentHash = await this.getFileContentHash(filePath);
+            const capsule = await this.getCapsule(filePath, contentHash);
+            return capsule?.notes || null;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * 映射优先级到旧版格式
+     */
+    private mapPriorityToLegacy(priority: any): 'low' | 'medium' | 'high' | undefined {
+        switch (priority) {
+            case 'critical':
+            case 'high':
+                return 'high';
+            case 'medium':
+                return 'medium';
+            case 'low':
+                return 'low';
+            default:
+                return undefined;
+        }
+    }
+
+    /**
+     * 映射旧版优先级到新版
+     */
+    private mapLegacyPriority(priority?: 'low' | 'medium' | 'high'): any {
+        switch (priority) {
+            case 'high':
+                return 'high';
+            case 'medium':
+                return 'medium';
+            case 'low':
+                return 'low';
+            default:
+                return 'none';
+        }
     }
 
     /**

@@ -1,4 +1,4 @@
-// src/features/filetree-blueprint/panel/BlueprintPanel.ts
+ src/features/filetree-blueprint/panel/BlueprintPanel.ts
 // [module: filetree-blueprint] [tags: Webview, Panel]
 /**
  * 蓝图面板管理器
@@ -18,7 +18,9 @@ import {
     createUpdateAnalysisCardMessage,
     createAnalysisErrorMessage,
     createUserNotesDataMessage,
-    createUserNotesSavedMessage
+    createUserNotesSavedMessage,
+    EnhancedUserNotesDataMessage,
+    EnhancedUserNotesSavedMessage
 } from '../../../shared/messages';
 import { toAbsolute, getWorkspaceRelative } from '../../../shared/utils/pathUtils';
 import { resolveTargetToFileAndRoot, toPosix, relativePosix, toAbsoluteUri } from './resolveTarget';
@@ -307,6 +309,14 @@ export class BlueprintPanel {
 
             case 'get-user-notes':
                 await this.handleGetUserNotes(message.payload);
+                break;
+
+            case 'save-enhanced-user-notes':
+                await this.handleSaveEnhancedUserNotes(message.payload);
+                break;
+
+            case 'get-enhanced-user-notes':
+                await this.handleGetEnhancedUserNotes(message.payload);
                 break;
 
             default:
@@ -1110,6 +1120,143 @@ export class BlueprintPanel {
             const dataMessage = createUserNotesDataMessage(filePath, emptyNotes);
             await this.safePostMessage(dataMessage);
         }
+    }
+
+    /**
+     * 处理保存增强版用户备注请求
+     */
+    private async handleSaveEnhancedUserNotes(payload: any): Promise<void> {
+        const { filePath, notes } = payload;
+        
+        this.logger.info(`[增强备注] 保存增强版备注: ${filePath}`);
+        
+        if (!filePath || !notes) {
+            this.logger.warn('保存增强版用户备注消息缺少必要信息');
+            return;
+        }
+
+        try {
+            // 使用增强分析用例保存增强版用户备注
+            await this.enhancedAnalysisUseCase.saveEnhancedUserNotes(filePath, notes);
+            
+            // 发送成功确认消息
+            const successMessage: EnhancedUserNotesSavedMessage = {
+                type: 'enhanced-user-notes-saved',
+                payload: {
+                    filePath,
+                    success: true
+                }
+            };
+            await this.safePostMessage(successMessage);
+            
+            this.logger.info(`[增强备注] 增强版备注保存成功: ${filePath}`);
+            
+        } catch (error) {
+            this.logger.error(`[增强备注] 保存失败: ${filePath}`, error);
+            
+            // 发送失败消息
+            const errorMessage: EnhancedUserNotesSavedMessage = {
+                type: 'enhanced-user-notes-saved',
+                payload: {
+                    filePath,
+                    success: false,
+                    error: error instanceof Error ? error.message : '保存失败'
+                }
+            };
+            await this.safePostMessage(errorMessage);
+        }
+    }
+
+    /**
+     * 处理获取增强版用户备注请求
+     */
+    private async handleGetEnhancedUserNotes(payload: any): Promise<void> {
+        const { filePath } = payload;
+        
+        this.logger.info(`[增强备注] 获取增强版备注: ${filePath}`);
+        
+        if (!filePath) {
+            this.logger.warn('获取增强版用户备注消息缺少路径信息');
+            return;
+        }
+
+        try {
+            // 使用增强分析用例获取或创建增强版用户备注
+            const notes = await this.enhancedAnalysisUseCase.getOrCreateEnhancedUserNotes(filePath);
+
+            // 将 UserNotes 转换为消息格式
+            const messageNotes = this.convertUserNotesToMessage(notes);
+
+            // 发送增强版用户备注数据
+            const dataMessage: EnhancedUserNotesDataMessage = {
+                type: 'enhanced-user-notes-data',
+                payload: {
+                    filePath,
+                    notes: messageNotes,
+                    success: true
+                }
+            };
+            await this.safePostMessage(dataMessage);
+            
+            this.logger.info(`[增强备注] 增强版备注获取成功: ${filePath}`, {
+                commentsCount: notes.comments?.length || 0,
+                todosCount: notes.todos?.length || 0,
+                tagsCount: notes.tags?.length || 0,
+                priority: notes.priority,
+                status: notes.status
+            });
+            
+        } catch (error) {
+            this.logger.error(`[增强备注] 获取失败: ${filePath}`, error);
+            
+            // 发送空的增强版备注数据作为降级
+            const { createEmptyUserNotes } = await import('../types/UserNotes');
+            const emptyNotes = createEmptyUserNotes(filePath);
+            const messageNotes = this.convertUserNotesToMessage(emptyNotes);
+            
+            const dataMessage: EnhancedUserNotesDataMessage = {
+                type: 'enhanced-user-notes-data',
+                payload: {
+                    filePath,
+                    notes: messageNotes,
+                    success: false,
+                    error: error instanceof Error ? error.message : '获取失败'
+                }
+            };
+            await this.safePostMessage(dataMessage);
+        }
+    }
+
+    /**
+     * 将 UserNotes 转换为消息格式
+     */
+    private convertUserNotesToMessage(notes: any): any {
+        return {
+            filePath: notes.filePath,
+            priority: notes.priority,
+            status: notes.status,
+            tags: notes.tags || [],
+            comments: (notes.comments || []).map((comment: any) => ({
+                id: comment.id,
+                content: comment.content,
+                createdAt: comment.createdAt,
+                pinned: comment.pinned ?? false,
+                tags: comment.tags ?? []
+            })),
+            todos: (notes.todos || []).map((todo: any) => ({
+                id: todo.id,
+                content: todo.content,
+                completed: todo.completed,
+                createdAt: todo.createdAt,
+                completedAt: todo.completedAt,
+                priority: todo.priority === 'none' ? undefined : todo.priority,
+                tags: todo.tags ?? []
+            })),
+            links: notes.links || [],
+            rating: notes.rating,
+            customFields: notes.customFields || {},
+            metadata: notes.metadata
+        };
     }
 
     /**
