@@ -111,7 +111,21 @@
             canvas.appendChild(nodeContainer);
             wrap.appendChild(canvas);
             graphRoot.appendChild(wrap);
+            
+            console.log('[graphView] ✅ DOM容器创建完成');
+        } else {
+            console.error('[graphView] ❌ 无法找到graph-root容器，图表渲染将失败');
         }
+    }
+    
+    // 最终验证所有关键DOM元素
+    if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
+        console.error('[graphView] ❌ 关键DOM元素缺失:', {
+            wrap: !!wrap, 
+            canvas: !!canvas, 
+            nodeContainer: !!nodeContainer, 
+            edgeSvg: !!edgeSvg
+        });
     }
     const nodeCountEl = document.getElementById("node-count");
     const edgeCountEl = document.getElementById("edge-count");
@@ -729,12 +743,20 @@
 
     // Edge 层尺寸只设一次避免反复回流
     function initEdgesLayerOnce() {
+        if (!edgeSvg) {
+            console.error('[graphView] ❌ edgeSvg未初始化，无法设置边层尺寸');
+            return;
+        }
         edgeSvg.setAttribute("width", 5000);
         edgeSvg.setAttribute("height", 5000);
     }
 
     // 渲染节点（只在图表初始化时调用一次）
     function renderNodesOnce() {
+        if (!nodeContainer) {
+            console.error('[graphView] ❌ nodeContainer未初始化，无法渲染节点');
+            return;
+        }
         nodeContainer.innerHTML = "";
         for (const n of graph.nodes) {
             const el = document.createElement("div");
@@ -890,6 +912,10 @@
 
     // 绘制边（可重复调用）
     function drawEdges() {
+        if (!edgeSvg) {
+            console.error('[graphView] ❌ edgeSvg未初始化，无法绘制边');
+            return;
+        }
         edgeSvg.innerHTML = "";
         
         for (const e of graph.edges) {

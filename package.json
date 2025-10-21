@@ -141,31 +141,6 @@
         "command": "filetreeBlueprint.toggleHints",
         "title": "蓝图：开关状态栏提示",
         "icon": "$(eye)"
-      },
-      {
-        "command": "aiExplorer.showCacheStats",
-        "title": "显示缓存统计面板",
-        "icon": "$(graph)"
-      },
-      {
-        "command": "aiExplorer.refreshCacheStats",
-        "title": "刷新缓存统计",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "aiExplorer.toggleCacheMonitoring",
-        "title": "切换缓存监控",
-        "icon": "$(pulse)"
-      },
-      {
-        "command": "aiExplorer.clearCache",
-        "title": "清空所有缓存",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "aiExplorer.clearExpiredCache",
-        "title": "清理过期缓存",
-        "icon": "$(filter)"
       }
     ],
     "menus": {
@@ -332,11 +307,6 @@
           "type": "boolean",
           "default": true,
           "description": "首次打开蓝图时自动显示帮助浮层"
-        },
-        "filetreeBlueprint.useNewArchitecture": {
-          "type": "boolean",
-          "default": true,
-          "description": "✨ Phase 2: 使用新的模块化架构（graphView-slim.js + 8个核心模块）。设为false可回退到旧版本（graphView.js）"
         },
         "aiExplorer.provider.primary": {
           "type": "string",
@@ -593,29 +563,12 @@
             "grid"
           ],
           "description": "UML图表布局算法"
-        },
-        "aiExplorer.cache.monitoring.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "启用缓存性能监控和状态栏显示"
-        },
-        "aiExplorer.cache.monitoring.updateInterval": {
-          "type": "number",
-          "default": 5000,
-          "minimum": 1000,
-          "maximum": 30000,
-          "description": "缓存监控更新间隔（毫秒，默认5秒）"
-        },
-        "aiExplorer.cache.monitoring.showInStatusBar": {
-          "type": "boolean",
-          "default": true,
-          "description": "在VS Code状态栏显示缓存统计信息"
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile && npm run build:webview",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "compile:watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
@@ -625,8 +578,6 @@
     "build:explorer": "tsc -b src/features/explorer-alias",
     "build:uml": "tsc -b src/features/uml-canvas",
     "build:core": "tsc -b src/core",
-    "build:webview": "node scripts/build-webview.js",
-    "test:smoke": "node scripts/smoke-test.js",
     "dev": "npm run compile:watch",
     "grep:alias": "npx rg -t ts 'explorer-alias|别名|资源管理器' src/features/explorer-alias",
     "grep:uml": "npx rg -t ts 'uml-canvas|UML|图表' src/features/uml-canvas"
@@ -638,7 +589,6 @@
     "@typescript-eslint/eslint-plugin": "^6.4.0",
     "@typescript-eslint/parser": "^6.4.0",
     "@vscode/test-electron": "^2.3.4",
-    "esbuild": "^0.25.11",
     "eslint": "^8.47.0",
     "eslint-plugin-boundaries": "^4.0.0",
     "eslint-plugin-import": "^2.28.1",
@@ -650,7 +600,6 @@
   "dependencies": {
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
-    "elkjs": "^0.11.0",
     "openai": "^4.20.1",
     "vis-network": "^9.1.6"
   }

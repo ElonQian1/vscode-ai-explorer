@@ -857,15 +857,10 @@ export class BlueprintPanel {
 
         // ✨ Phase 2: 读取配置，决定使用新架构还是旧架构
         const useNewArchitecture = vscode.workspace.getConfiguration('filetreeBlueprint').get<boolean>('useNewArchitecture', true);
-        this.logger.info(`[Phase 2] 使用架构: ${useNewArchitecture ? '新架构 (graphView-slim.js)' : '旧架构 (graphView.js)'}`);
+        this.logger.info(`[Phase 2] 使用架构: ${useNewArchitecture ? '新架构 (bundle.js)' : '旧架构 (graphView.js)'}`);
 
         // 🚨 修复：确保所有资源都用asWebviewUri转换
         const mediaBase = vscode.Uri.joinPath(extensionUri, 'media', 'filetree-blueprint');
-        
-        // ✨ Phase 2: 根据配置选择主脚本
-        const mainScriptUri = useNewArchitecture
-            ? webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView-slim.js'))
-            : webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView.js'));
         
         const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'index.css'));
         
@@ -891,6 +886,7 @@ export class BlueprintPanel {
 `;
         } else {
             // 旧架构：单文件 + UMD模块
+            const mainScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'graphView.js'));
             const smokeProbeUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'SmokeProbe.js'));
             const debugBannerUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'DebugBanner.js'));
             const analysisCardUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaBase, 'modules', 'analysisCard.js'));
