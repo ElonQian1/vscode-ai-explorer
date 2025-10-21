@@ -25,7 +25,8 @@ export function getNonce(): string {
  */
 export function getWebviewHtml(
 	webview: vscode.Webview,
-	extensionUri: vscode.Uri
+	extensionUri: vscode.Uri,
+	useNewArchitecture: boolean = true
 ): string {
 	const nonce = getNonce();
 	
@@ -78,6 +79,15 @@ export function getWebviewHtml(
 		<svg id="graph-svg" class="bp-graph-svg"></svg>
 	</div>
 	
+	<!-- 兼容性：旧架构所需的容器 -->
+	<div id="graph-root" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1;">
+		<div class="empty-state" style="display: none;">
+			<h3>🎨 画布已加载</h3>
+			<p>正在初始化图表数据...</p>
+			<p><small>如果长时间无数据，请检查Debug Banner状态</small></p>
+		</div>
+	</div>
+	
 	<!-- 功能筛选工具条(由featureToolbar.js动态生成) -->
 	<div id="feature-toolbar-container"></div>
 	
@@ -87,13 +97,19 @@ export function getWebviewHtml(
 		<p class="bp-loading-text">正在分析...</p>
 	</div>
 	
-	<!-- 依赖加载顺序: ELK → 模块 → 主应用 -->
+	${useNewArchitecture ? `
+	<!-- 新架构: Bundle.js -->
+	<script nonce="${nonce}" src="${elkBundledUri}"></script>
+	<script nonce="${nonce}" type="module" src="${asWebviewUri('media', 'filetree-blueprint', 'dist', 'bundle.js')}"></script>
+	` : `
+	<!-- 旧架构: 模块化加载 -->
 	<script nonce="${nonce}" src="${elkBundledUri}"></script>
 	<script nonce="${nonce}" src="${runtimeStylesheetUri}"></script>
 	<script nonce="${nonce}" src="${blueprintCardUri}"></script>
 	<script nonce="${nonce}" src="${enhancedUserNotesUri}"></script>
 	<script nonce="${nonce}" src="${featureToolbarUri}"></script>
 	<script nonce="${nonce}" src="${graphViewJsUri}"></script>
+	`}
 </body>
 </html>`;
 }
