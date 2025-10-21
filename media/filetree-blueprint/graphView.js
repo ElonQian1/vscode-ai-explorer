@@ -503,7 +503,7 @@
                 setTimeout(() => {
                     const loadingEl = document.getElementById('loading');
                     if (loadingEl) {
-                        loadingEl.style.display = 'none';
+                        loadingEl.classList.add('hidden');
                         console.log('[graphView] ✅ 布局完成，隐藏loading状态');
                     }
                 }, 100);
@@ -535,7 +535,7 @@
         setTimeout(() => {
             const loadingEl = document.getElementById('loading');
             if (loadingEl) {
-                loadingEl.style.display = 'none';
+                loadingEl.classList.add('hidden');
                 console.log('[graphView] ✅ 隐藏loading状态');
             }
         }, 500); // 给布局和渲染一些时间
@@ -554,7 +554,7 @@
         setTimeout(() => {
             const loadingEl = document.getElementById('loading');
             if (loadingEl) {
-                loadingEl.style.display = 'none';
+                loadingEl.classList.add('hidden');
                 console.log('[graphView] ✅ 静态布局完成，隐藏loading状态');
             }
         }, 200);

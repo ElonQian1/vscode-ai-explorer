@@ -92,7 +92,7 @@ export function getWebviewHtml(
 	<div id="feature-toolbar-container"></div>
 	
 	<!-- 加载状态提示 -->
-	<div id="loading" class="bp-loading" style="display: none;">
+	<div id="loading" class="bp-loading hidden">
 		<div class="bp-spinner"></div>
 		<p class="bp-loading-text">正在分析...</p>
 	</div>
