@@ -80,8 +80,8 @@ export function getWebviewHtml(
 	</div>
 	
 	<!-- 兼容性：旧架构所需的容器 -->
-	<div id="graph-root" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1;">
-		<div class="empty-state" style="display: none;">
+	<div id="graph-root">
+		<div class="empty-state">
 			<h3>🎨 画布已加载</h3>
 			<p>正在初始化图表数据...</p>
 			<p><small>如果长时间无数据，请检查Debug Banner状态</small></p>
