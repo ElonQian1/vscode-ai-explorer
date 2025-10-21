@@ -78,11 +78,17 @@ class RuntimeStylesheet {
 
     /**
      * 设置任意CSS属性
-     * @param {string} selector - CSS选择器或类名
+     * @param {string} selector - CSS选择器（支持ID、class、元素选择器等）
      * @param {Object|string} properties - CSS属性对象 {prop: value} 或CSS字符串
      */
     setProperties(selector, properties) {
-        const cleanSelector = selector.startsWith('.') ? selector : `.${selector}`;
+        // 智能处理选择器：保持ID选择器(#)、class选择器(.)、属性选择器([])等不变
+        // 只对纯标识符添加class前缀
+        let cleanSelector = selector;
+        if (!selector.match(/^[#.\[:]/) && !selector.includes(' ')) {
+            // 如果是纯标识符（不包含特殊字符），添加class前缀
+            cleanSelector = `.${selector}`;
+        }
         
         let declarations;
         if (typeof properties === 'string') {
