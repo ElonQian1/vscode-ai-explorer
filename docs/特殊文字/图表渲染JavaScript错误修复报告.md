@@ -313,10 +313,12 @@ function showGraphError(message) {
 ### 提交历史
 1. **Commit 8133f72**: 初始修复 - 添加DOM元素空值检查
 2. **Commit 0a7c153**: 深度修复 - DOM初始化时机重构
+3. **Commit f942040**: 架构兼容性修复 - DOM模板统一
 
 ### 修复范围
 - **第一阶段**: 防护性编程（空值检查）
 - **第二阶段**: 架构修复（异步DOM初始化）
+- **第三阶段**: 架构兼容性（DOM模板统一）
 - **验证**: 编译通过，错误日志优化
 
 ---
@@ -325,3 +327,65 @@ function showGraphError(message) {
 **测试状态**: ✅ 编译通过  
 **部署建议**: ✅ 已部署到生产环境  
 **用户影响**: 蓝图面板现在应该能正常工作
+
+## 🔧 第三阶段修复详解
+
+### 问题发现
+经过前两阶段修复后，用户报告问题仍然存在：
+```
+[graphView] ❌ 无法找到graph-root容器，图表渲染将失败
+```
+
+### 根因分析
+**架构不匹配问题**：
+1. **实际使用的HTML模板**：`webviewHost.ts`（包含`graph-container`）
+2. **旧架构脚本期望**：`graph-root`容器
+3. **配置vs实际**：配置显示使用新架构，但实际加载旧架构脚本
+
+### 第三阶段解决方案
+
+**1. DOM兼容性修复**
+```typescript
+// webviewHost.ts - 添加向后兼容容器
+<div id="graph-container" class="bp-graph-container">
+  <svg id="graph-svg" class="bp-graph-svg"></svg>
+</div>
+
+<!-- 兼容性：旧架构所需的容器 -->
+<div id="graph-root" style="position: absolute; ...">
+  <div class="empty-state" style="display: none;">...</div>
+</div>
+```
+
+**2. 架构选择机制**
+```typescript  
+// webviewHost.ts - 动态脚本加载
+export function getWebviewHtml(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+  useNewArchitecture: boolean = true  // 新参数
+): string {
+  // 根据配置选择脚本加载方式
+  ${useNewArchitecture ? `
+    <!-- 新架构: Bundle.js -->
+    <script type="module" src="${bundleUri}"></script>
+  ` : `
+    <!-- 旧架构: 模块化加载 -->
+    <script src="${graphViewUri}"></script>
+  `}
+}
+```
+
+**3. 配置传递**
+```typescript
+// BlueprintPanel.ts - 传递架构配置
+const useNewArchitecture = vscode.workspace.getConfiguration(...)
+  .get<boolean>('useNewArchitecture', false);
+this.panel.webview.html = getWebviewHtml(webview, uri, useNewArchitecture);
+```
+
+### 修复效果
+- ✅ **旧架构**：找到`graph-root`，正常初始化
+- ✅ **新架构**：使用正确的bundle.js（待更新）
+- ✅ **配置驱动**：根据用户设置选择架构
+- ✅ **向后兼容**：两套DOM容器并存，互不干扰
