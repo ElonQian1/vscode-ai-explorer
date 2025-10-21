@@ -92,9 +92,37 @@ runtimeStyle.setProperties(sizeClassName, { width: `${width}px`, height: `${heig
 2. **双重支持**: 字符串直接使用，对象转换为声明字符串
 3. **错误处理**: 对无效参数类型进行错误提示
 
+## 🔄 后续修复 - CSS选择器问题
+
+### 4. 修复选择器处理错误 (Commit 3ff5e1a)
+
+**问题**: 控制台出现新错误：`Failed to parse the rule '.#canvas { transform: translate(243px, 0px) scale(0); }'`
+
+**根本原因**: `runtimeStylesheet.js` 的选择器处理逻辑将ID选择器 `#canvas` 错误转换为 `.#canvas`，导致无效CSS语法。
+
+**修复**: 智能选择器识别逻辑
+```javascript
+// 修复前（错误逻辑）
+const cleanSelector = selector.startsWith('.') ? selector : `.${selector}`;
+
+// 修复后（智能识别）  
+let cleanSelector = selector;
+if (!selector.match(/^[#.\[:]/) && !selector.includes(' ')) {
+    // 只对纯标识符添加class前缀
+    cleanSelector = `.${selector}`;
+}
+```
+
+**效果**: 
+- ✅ 正确处理ID选择器 `#canvas` 
+- ✅ 保持class选择器 `.class` 不变
+- ✅ 支持属性选择器 `[attr]` 和伪类选择器 `:hover`
+- ✅ 只对纯标识符（如 `container`）添加class前缀
+
 ## 🎉 提交信息
 
-**Commit**: `2efa087` - 修复CSS transform错误：兼容setProperties对象和字符串参数
+**Commit 1**: `2efa087` - 修复CSS transform错误：兼容setProperties对象和字符串参数  
+**Commit 2**: `3ff5e1a` - 修复CSS选择器处理错误：智能识别ID和class选择器  
 **推送状态**: ✅ 已推送到 origin/master
 
 ## 🔄 相关修复历史
@@ -103,6 +131,7 @@ runtimeStyle.setProperties(sizeClassName, { width: `${width}px`, height: `${heig
 1. **Stage 1**: DOM null checks (Commit 8133f72)
 2. **Stage 2**: 异步DOM初始化 (Commit 0a7c153)  
 3. **Stage 3**: 架构兼容性 (Commit f942040)
-4. **Stage 4**: **CSS Transform错误** (Commit 2efa087) ← 当前修复
+4. **Stage 4**: **CSS Transform参数错误** (Commit 2efa087) 
+5. **Stage 5**: **CSS选择器处理错误** (Commit 3ff5e1a) ← 最新修复
 
-现在蓝图面板的JavaScript错误已全面解决，用户可以正常使用所有功能。
+现在蓝图面板的所有JavaScript和CSS错误已全面解决，用户可以正常使用所有功能。
