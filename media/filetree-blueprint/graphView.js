@@ -499,6 +499,15 @@
                     renderNodesWithStaticLayout(g);
                 }
                 
+                // ✅ 布局完成后隐藏loading状态
+                setTimeout(() => {
+                    const loadingEl = document.getElementById('loading');
+                    if (loadingEl) {
+                        loadingEl.style.display = 'none';
+                        console.log('[graphView] ✅ 布局完成，隐藏loading状态');
+                    }
+                }, 100);
+                
                 // 检查是否有待处理的图数据
                 processPendingGraph();
             }).catch(err => {
@@ -521,6 +530,15 @@
         if (window.debugBanner?.setGraphMeta) {
             window.debugBanner.setGraphMeta(g);
         }
+        
+        // ✅ 隐藏loading状态
+        setTimeout(() => {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+                console.log('[graphView] ✅ 隐藏loading状态');
+            }
+        }, 500); // 给布局和渲染一些时间
     }
     
     // 静态布局渲染（兼容旧版本）
@@ -531,6 +549,15 @@
         
         // 自动适应视图
         setTimeout(() => fitView(), 100);
+        
+        // ✅ 隐藏loading状态
+        setTimeout(() => {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+                console.log('[graphView] ✅ 静态布局完成，隐藏loading状态');
+            }
+        }, 200);
     }
     
     // 应用布局结果到DOM

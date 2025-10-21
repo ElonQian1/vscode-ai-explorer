@@ -26,7 +26,7 @@ export function getNonce(): string {
 export function getWebviewHtml(
 	webview: vscode.Webview,
 	extensionUri: vscode.Uri,
-	useNewArchitecture: boolean = true
+	useNewArchitecture: boolean = false
 ): string {
 	const nonce = getNonce();
 	
