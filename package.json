@@ -141,6 +141,21 @@
         "command": "filetreeBlueprint.toggleHints",
         "title": "蓝图：开关状态栏提示",
         "icon": "$(eye)"
+      },
+      {
+        "command": "ai-explorer.aiguard.showStats",
+        "title": "🛡️ AI守卫：显示统计面板",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "ai-explorer.aiguard.resetStats",
+        "title": "🛡️ AI守卫：重置统计数据",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "ai-explorer.aiguard.refreshStats",
+        "title": "🛡️ AI守卫：刷新统计显示",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
