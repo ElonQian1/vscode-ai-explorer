@@ -584,15 +584,16 @@ export class BlueprintPanel {
       return;
     }
 
-    // ✅ 使用统一的工作区根服务
-    const root = await getWorkspaceRoot(this.context);
-    if (!root) {
-      this.logger.warn("[handleDrill] 无法确定工作区根目录");
+    // ✅ 使用图表metadata中的workspaceRoot作为基准
+    const workspaceRootPath = this.currentGraph?.metadata?.workspaceRoot;
+    if (!workspaceRootPath) {
+      this.logger.warn("[handleDrill] 无法从图表metadata获取workspaceRoot");
       vscode.window.showWarningMessage(
-        "AI Explorer：未能识别工作区根目录，请选择一个根目录。"
+        "AI Explorer：图表metadata缺失workspaceRoot，请重新加载蓝图面板。"
       );
       return;
     }
+    const root = vscode.Uri.file(workspaceRootPath);
 
     this.logger.info(`下钻到: ${folderPath}`);
 
