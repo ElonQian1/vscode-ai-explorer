@@ -1087,7 +1087,7 @@
         const transformValue = `translate(${Math.round(offset.x)}px, ${Math.round(
             offset.y
         )}px) scale(${scale})`;
-        runtimeStyles.setProperties('#canvas', `transform: ${transformValue};`);
+        runtimeStyles.setProperties('#canvas', { transform: transformValue });
     }
 
     // 重置视图

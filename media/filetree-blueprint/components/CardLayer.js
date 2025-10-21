@@ -70,7 +70,7 @@ export function createCardLayer({ container, runtimeStyle, onCardMoved }) {
     const sizeClassName = `card-size-${hash(path)}`;
     
     // 使用 RuntimeStyle 设置尺寸（CSP-safe）
-    runtimeStyle.setProperties(sizeClassName, `width: ${width}px; height: ${height}px;`);
+    runtimeStyle.setProperties(sizeClassName, { width: `${width}px`, height: `${height}px` });
     cardElement.classList.add(sizeClassName);
 
     // 添加内容
