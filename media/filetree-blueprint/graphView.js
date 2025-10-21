@@ -82,10 +82,12 @@
     let nodeContainer = document.getElementById("nodes");
     let edgeSvg = document.querySelector("svg.edges");
     
-    // 🚨 如果是简化HTML结构，创建必要的容器
-    if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
-        const graphRoot = document.getElementById("graph-root");
-        if (graphRoot) {
+    // 🚨 DOM初始化：确保在DOM加载完成后执行
+    function initializeDOM() {
+        // 如果是简化HTML结构，创建必要的容器
+        if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
+            const graphRoot = document.getElementById("graph-root");
+            if (graphRoot) {
             console.log('[graphView] 检测到简化HTML，创建画布容器');
             
             // 清空原有内容
@@ -112,26 +114,38 @@
             wrap.appendChild(canvas);
             graphRoot.appendChild(wrap);
             
-            console.log('[graphView] ✅ DOM容器创建完成');
-        } else {
-            console.error('[graphView] ❌ 无法找到graph-root容器，图表渲染将失败');
+                console.log('[graphView] ✅ DOM容器创建完成');
+            } else {
+                console.error('[graphView] ❌ 无法找到graph-root容器，图表渲染将失败');
+            }
         }
+        
+        // 最终验证所有关键DOM元素
+        if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
+            console.error('[graphView] ❌ 关键DOM元素缺失:', {
+                wrap: !!wrap, 
+                canvas: !!canvas, 
+                nodeContainer: !!nodeContainer, 
+                edgeSvg: !!edgeSvg
+            });
+        }
+        
+        return wrap && canvas && nodeContainer && edgeSvg;
     }
     
-    // 最终验证所有关键DOM元素
-    if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
-        console.error('[graphView] ❌ 关键DOM元素缺失:', {
-            wrap: !!wrap, 
-            canvas: !!canvas, 
-            nodeContainer: !!nodeContainer, 
-            edgeSvg: !!edgeSvg
+    // 🚨 等待DOM加载完成后再初始化
+    function waitForDOMReady() {
+        return new Promise((resolve) => {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', resolve);
+            } else {
+                resolve();
+            }
         });
     }
-    const nodeCountEl = document.getElementById("node-count");
-    const edgeCountEl = document.getElementById("edge-count");
-    const helpOverlay = document.getElementById("helpOverlay");
-    const helpCloseBtn = document.getElementById("helpClose");
-    const noShowAgainCheckbox = document.getElementById("noShowAgain");
+    
+    // DOM元素变量（将在初始化后设置）
+    let nodeCountEl, edgeCountEl, helpOverlay, helpCloseBtn, noShowAgainCheckbox;
 
     // 帮助浮层相关
     const HELP_STORAGE_KEY = "filetree_blueprint_help_seen_v1";
@@ -294,7 +308,25 @@
     }
 
     // 初始化（保留兼容性）
-    function init() {
+    async function init() {
+        // 等待DOM加载完成
+        await waitForDOMReady();
+        
+        // 初始化DOM容器
+        const domReady = initializeDOM();
+        if (!domReady) {
+            console.error('[graphView] ❌ DOM初始化失败，图表功能不可用');
+            return;
+        }
+        
+        // 初始化其他DOM元素
+        nodeCountEl = document.getElementById("node-count");
+        edgeCountEl = document.getElementById("edge-count");
+        helpOverlay = document.getElementById("helpOverlay");
+        helpCloseBtn = document.getElementById("helpClose");
+        noShowAgainCheckbox = document.getElementById("noShowAgain");
+        
+        console.log('[graphView] ✅ DOM初始化完成，开始启动图表系统');
         boot();
     }
 
@@ -1905,7 +1937,9 @@
         };
     }
 
-    // 启动
-    init();
+    // 启动（异步）
+    init().catch(err => {
+        console.error('[graphView] ❌ 初始化失败:', err);
+    });
 })();
 
