@@ -1,0 +1,18 @@
+{
+  // VS Code MCP 服务器配置
+  // 为 GitHub Copilot 提供 AI Explorer 项目分析工具
+  "servers": {
+    "ai-explorer": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./servers/ai-explorer-mcp/index.js"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "HUNYUAN_SECRET_ID": "${env:HUNYUAN_SECRET_ID}",
+        "HUNYUAN_SECRET_KEY": "${env:HUNYUAN_SECRET_KEY}"
+      },
+      "description": "AI Explorer - 项目文件智能分析工具，提供文件用途识别、依赖分析、相关文件查找等功能"
+    }
+  }
+}

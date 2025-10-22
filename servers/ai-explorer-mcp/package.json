@@ -1,0 +1,32 @@
+{
+  "name": "ai-explorer-mcp-server",
+  "version": "0.1.0",
+  "description": "AI Explorer MCP Server - 为 GitHub Copilot 提供项目分析工具",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node index.js",
+    "dev": "tsc && node index.js",
+    "clean": "rm -rf dist *.js *.js.map"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-explorer",
+    "github-copilot",
+    "code-analysis"
+  ],
+  "author": "AI Explorer Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
