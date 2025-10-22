@@ -78,32 +78,14 @@ class RuntimeStylesheet {
 
     /**
      * 设置任意CSS属性
-     * @param {string} selector - CSS选择器（支持ID、class、元素选择器等）
-     * @param {Object|string} properties - CSS属性对象 {prop: value} 或CSS字符串
+     * @param {string} selector - CSS选择器或类名
+     * @param {Object} properties - CSS属性对象 {prop: value}
      */
     setProperties(selector, properties) {
-        // 智能处理选择器：保持ID选择器(#)、class选择器(.)、属性选择器([])等不变
-        // 只对纯标识符添加class前缀
-        let cleanSelector = selector;
-        if (!selector.match(/^[#.\[:]/) && !selector.includes(' ')) {
-            // 如果是纯标识符（不包含特殊字符），添加class前缀
-            cleanSelector = `.${selector}`;
-        }
-        
-        let declarations;
-        if (typeof properties === 'string') {
-            // 如果是字符串，直接使用（兼容旧代码）
-            declarations = properties.endsWith(';') ? properties : properties + ';';
-        } else if (typeof properties === 'object' && properties !== null) {
-            // 如果是对象，转换为声明字符串
-            declarations = Object.entries(properties)
-                .map(([prop, value]) => `${prop}: ${value};`)
-                .join(' ');
-        } else {
-            console.error('[RuntimeStylesheet] setProperties: properties must be object or string', properties);
-            return;
-        }
-        
+        const cleanSelector = selector.startsWith('.') ? selector : `.${selector}`;
+        const declarations = Object.entries(properties)
+            .map(([prop, value]) => `${prop}: ${value};`)
+            .join(' ');
         const rule = `${cleanSelector} { ${declarations} }`;
         this.upsertRule(cleanSelector, rule);
     }

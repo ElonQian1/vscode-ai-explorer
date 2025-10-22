@@ -12,7 +12,6 @@ import { Logger } from './core/logging/Logger';
 import { ExplorerAliasModule } from './features/explorer-alias/ExplorerAliasModule';
 import { UMLCanvasModule } from './features/uml-canvas/UMLCanvasModule';
 import { FileTreeBlueprintModule } from './features/filetree-blueprint/FileTreeBlueprintModule';
-import { AIGuardStatsModule } from './features/aiguard-stats/AIGuardStatsModule';
 
 let container: DIContainer;
 
@@ -40,12 +39,10 @@ export async function activate(context: vscode.ExtensionContext) {
         const explorerModule = new ExplorerAliasModule(container);
         const umlModule = new UMLCanvasModule(container);
         const blueprintModule = new FileTreeBlueprintModule(container);
-        const aiGuardStatsModule = new AIGuardStatsModule(container);
         
         await explorerModule.activate(context);
         await umlModule.activate(context);
         await blueprintModule.activate(context);
-        await aiGuardStatsModule.activate(context);
         
         logger.info('AI Explorer 插件激活完成');
         vscode.window.showInformationMessage('AI Explorer 插件已启动');

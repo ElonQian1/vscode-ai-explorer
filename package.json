@@ -141,21 +141,6 @@
         "command": "filetreeBlueprint.toggleHints",
         "title": "蓝图：开关状态栏提示",
         "icon": "$(eye)"
-      },
-      {
-        "command": "ai-explorer.aiguard.showStats",
-        "title": "🛡️ AI守卫：显示统计面板",
-        "icon": "$(graph-line)"
-      },
-      {
-        "command": "ai-explorer.aiguard.resetStats",
-        "title": "🛡️ AI守卫：重置统计数据",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "ai-explorer.aiguard.refreshStats",
-        "title": "🛡️ AI守卫：刷新统计显示",
-        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -322,6 +307,11 @@
           "type": "boolean",
           "default": true,
           "description": "首次打开蓝图时自动显示帮助浮层"
+        },
+        "filetreeBlueprint.useNewArchitecture": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "🚨 **架构选择（重要）**\n\n✅ **true (推荐)**：使用新架构 (bundle.js)\n- ✅ 单文件打包，加载速度快\n- ✅ 无 CSP 安全问题\n- ✅ 修复所有 TypeError 错误\n- ✅ ES6 模块化，代码质量高\n\n❌ **false (已废弃)**：使用旧架构 (graphView.js)\n- ❌ 存在 `TypeError: Cannot set properties of null`\n- ❌ 违反 CSP 内容安全策略\n- ❌ 渲染失败和功能卡死\n- ❌ 多文件加载，性能差\n\n⚠️ **警告**：除非紧急降级，否则不要设置为 false！"
         },
         "aiExplorer.provider.primary": {
           "type": "string",
