@@ -615,7 +615,7 @@
   "dependencies": {
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
-    "openai": "^4.20.1",
+    "openai": "^6.6.0",
     "vis-network": "^9.1.6"
   }
 }
