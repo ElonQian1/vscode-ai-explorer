@@ -1,17 +1,3 @@
-// 🚨🚨🚨 旧架构文件 - 已废弃，不要使用或修改！🚨🚨🚨
-// 
-// ❌ 此文件存在严重问题：
-// 1. TypeError: Cannot set properties of null (graphView.js:738)
-// 2. CSP 违规：拒绝应用内联样式
-// 3. 渲染失败和功能卡死
-// 4. 安全策略冲突
-//
-// ✅ 请使用新架构：media/filetree-blueprint/dist/bundle.js
-// 
-// 🛡️ 警告：其他AI代理不要启用此文件！
-// 📝 保留原因：仅用于紧急降级和代码考古
-// 🏗️ 替代方案：M2-M8 bundle.js 新架构（已修复所有问题）
-//
 // media/filetree-blueprint/graphView.js
 // 文件树蓝图前端交互逻辑（防抖动优化版 + 模块化卡片管理）
 // 修复要点：拖拽/悬停不全量重渲染，只重画边；用 rAF 节流；坐标取整；CSS 抖动处理配合 index.css。
@@ -96,10 +82,12 @@
     let nodeContainer = document.getElementById("nodes");
     let edgeSvg = document.querySelector("svg.edges");
     
-    // 🚨 如果是简化HTML结构，创建必要的容器
-    if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
-        const graphRoot = document.getElementById("graph-root");
-        if (graphRoot) {
+    // 🚨 DOM初始化：确保在DOM加载完成后执行
+    function initializeDOM() {
+        // 如果是简化HTML结构，创建必要的容器
+        if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
+            const graphRoot = document.getElementById("graph-root");
+            if (graphRoot) {
             console.log('[graphView] 检测到简化HTML，创建画布容器');
             
             // 清空原有内容
@@ -125,13 +113,39 @@
             canvas.appendChild(nodeContainer);
             wrap.appendChild(canvas);
             graphRoot.appendChild(wrap);
+            
+                console.log('[graphView] ✅ DOM容器创建完成');
+            } else {
+                console.error('[graphView] ❌ 无法找到graph-root容器，图表渲染将失败');
+            }
         }
+        
+        // 最终验证所有关键DOM元素
+        if (!wrap || !canvas || !nodeContainer || !edgeSvg) {
+            console.error('[graphView] ❌ 关键DOM元素缺失:', {
+                wrap: !!wrap, 
+                canvas: !!canvas, 
+                nodeContainer: !!nodeContainer, 
+                edgeSvg: !!edgeSvg
+            });
+        }
+        
+        return wrap && canvas && nodeContainer && edgeSvg;
     }
-    const nodeCountEl = document.getElementById("node-count");
-    const edgeCountEl = document.getElementById("edge-count");
-    const helpOverlay = document.getElementById("helpOverlay");
-    const helpCloseBtn = document.getElementById("helpClose");
-    const noShowAgainCheckbox = document.getElementById("noShowAgain");
+    
+    // 🚨 等待DOM加载完成后再初始化
+    function waitForDOMReady() {
+        return new Promise((resolve) => {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', resolve);
+            } else {
+                resolve();
+            }
+        });
+    }
+    
+    // DOM元素变量（将在初始化后设置）
+    let nodeCountEl, edgeCountEl, helpOverlay, helpCloseBtn, noShowAgainCheckbox;
 
     // 帮助浮层相关
     const HELP_STORAGE_KEY = "filetree_blueprint_help_seen_v1";
@@ -294,7 +308,25 @@
     }
 
     // 初始化（保留兼容性）
-    function init() {
+    async function init() {
+        // 等待DOM加载完成
+        await waitForDOMReady();
+        
+        // 初始化DOM容器
+        const domReady = initializeDOM();
+        if (!domReady) {
+            console.error('[graphView] ❌ DOM初始化失败，图表功能不可用');
+            return;
+        }
+        
+        // 初始化其他DOM元素
+        nodeCountEl = document.getElementById("node-count");
+        edgeCountEl = document.getElementById("edge-count");
+        helpOverlay = document.getElementById("helpOverlay");
+        helpCloseBtn = document.getElementById("helpClose");
+        noShowAgainCheckbox = document.getElementById("noShowAgain");
+        
+        console.log('[graphView] ✅ DOM初始化完成，开始启动图表系统');
         boot();
     }
 
@@ -467,6 +499,15 @@
                     renderNodesWithStaticLayout(g);
                 }
                 
+                // ✅ 布局完成后隐藏loading状态
+                setTimeout(() => {
+                    const loadingEl = document.getElementById('loading');
+                    if (loadingEl) {
+                        loadingEl.classList.add('hidden');
+                        console.log('[graphView] ✅ 布局完成，隐藏loading状态');
+                    }
+                }, 100);
+                
                 // 检查是否有待处理的图数据
                 processPendingGraph();
             }).catch(err => {
@@ -489,6 +530,15 @@
         if (window.debugBanner?.setGraphMeta) {
             window.debugBanner.setGraphMeta(g);
         }
+        
+        // ✅ 隐藏loading状态
+        setTimeout(() => {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.classList.add('hidden');
+                console.log('[graphView] ✅ 隐藏loading状态');
+            }
+        }, 500); // 给布局和渲染一些时间
     }
     
     // 静态布局渲染（兼容旧版本）
@@ -499,6 +549,15 @@
         
         // 自动适应视图
         setTimeout(() => fitView(), 100);
+        
+        // ✅ 隐藏loading状态
+        setTimeout(() => {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.classList.add('hidden');
+                console.log('[graphView] ✅ 静态布局完成，隐藏loading状态');
+            }
+        }, 200);
     }
     
     // 应用布局结果到DOM
@@ -743,12 +802,20 @@
 
     // Edge 层尺寸只设一次避免反复回流
     function initEdgesLayerOnce() {
+        if (!edgeSvg) {
+            console.error('[graphView] ❌ edgeSvg未初始化，无法设置边层尺寸');
+            return;
+        }
         edgeSvg.setAttribute("width", 5000);
         edgeSvg.setAttribute("height", 5000);
     }
 
     // 渲染节点（只在图表初始化时调用一次）
     function renderNodesOnce() {
+        if (!nodeContainer) {
+            console.error('[graphView] ❌ nodeContainer未初始化，无法渲染节点');
+            return;
+        }
         nodeContainer.innerHTML = "";
         for (const n of graph.nodes) {
             const el = document.createElement("div");
@@ -904,6 +971,10 @@
 
     // 绘制边（可重复调用）
     function drawEdges() {
+        if (!edgeSvg) {
+            console.error('[graphView] ❌ edgeSvg未初始化，无法绘制边');
+            return;
+        }
         edgeSvg.innerHTML = "";
         
         for (const e of graph.edges) {
@@ -1043,7 +1114,7 @@
         const transformValue = `translate(${Math.round(offset.x)}px, ${Math.round(
             offset.y
         )}px) scale(${scale})`;
-        runtimeStyles.setProperties('#canvas', `transform: ${transformValue};`);
+        runtimeStyles.setProperties('#canvas', { transform: transformValue });
     }
 
     // 重置视图
@@ -1893,7 +1964,9 @@
         };
     }
 
-    // 启动
-    init();
+    // 启动（异步）
+    init().catch(err => {
+        console.error('[graphView] ❌ 初始化失败:', err);
+    });
 })();
 

@@ -373,18 +373,124 @@ export class EnhancedAnalysisUseCase {
         inferences: string[];
         suggestions: string[];
     }> {
-        // 这里调用实际的AI分析
-        // 暂时返回模拟结果
-        return {
-            inferences: [
-                '该文件似乎是一个工具类，提供了基础的功能函数',
-                '代码结构清晰，遵循了良好的编码规范'
-            ],
-            suggestions: [
-                '建议添加更多的单元测试',
-                '考虑添加更详细的文档注释'
-            ]
-        };
+        if (!this.aiClient) {
+            this.logger.warn('[EnhancedAnalysis] AI客户端未初始化，返回空结果');
+            return { inferences: [], suggestions: [] };
+        }
+
+        try {
+            // 构建AI分析提示词
+            const prompt = this.buildAnalysisPrompt(content, staticResult);
+            
+            // 调用AI服务进行分析
+            const aiRequest = {
+                prompt: prompt,
+                temperature: 0.3,
+                maxTokens: 1000
+            };
+            
+            const response = await this.aiClient.sendRequest(aiRequest);
+
+            // 解析AI响应
+            return this.parseAIResponse(response.content);
+            
+        } catch (error) {
+            this.logger.error('[EnhancedAnalysis] AI分析失败', error);
+            // 返回基于静态分析的推断作为兜底
+            return this.generateFallbackAnalysis(staticResult);
+        }
+    }
+
+    private buildAnalysisPrompt(content: string, staticResult: any): string {
+        const exports = staticResult.exports?.join(', ') || '无';
+        const imports = staticResult.imports?.join(', ') || '无';
+        const functions = staticResult.functions?.join(', ') || '无';
+        const classes = staticResult.classes?.join(', ') || '无';
+
+        return `请分析以下代码文件，提供推断和建议。
+
+**代码内容**:
+\`\`\`
+${content.substring(0, 2000)}${content.length > 2000 ? '...(内容被截断)' : ''}
+\`\`\`
+
+**静态分析结果**:
+- 导出: ${exports}
+- 导入: ${imports}  
+- 函数: ${functions}
+- 类: ${classes}
+
+请按以下格式回复:
+**推断**:
+1. [第一个推断]
+2. [第二个推断]
+...
+
+**建议**:
+1. [第一个建议]
+2. [第二个建议]
+...`;
+    }
+
+    private parseAIResponse(response: string): { inferences: string[]; suggestions: string[] } {
+        const inferences: string[] = [];
+        const suggestions: string[] = [];
+        
+        const lines = response.split('\n');
+        let currentSection: 'inferences' | 'suggestions' | null = null;
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            
+            if (trimmed.includes('推断') || trimmed.includes('Inferences')) {
+                currentSection = 'inferences';
+                continue;
+            }
+            
+            if (trimmed.includes('建议') || trimmed.includes('Suggestions')) {
+                currentSection = 'suggestions';
+                continue;
+            }
+            
+            // 解析列表项 (1. xxx 或 - xxx)
+            const match = trimmed.match(/^[\d\-\*]\s*\.?\s*(.+)$/);
+            if (match && currentSection) {
+                const content = match[1].trim();
+                if (content) {
+                    if (currentSection === 'inferences') {
+                        inferences.push(content);
+                    } else {
+                        suggestions.push(content);
+                    }
+                }
+            }
+        }
+        
+        return { inferences, suggestions };
+    }
+
+    private generateFallbackAnalysis(staticResult: any): { inferences: string[]; suggestions: string[] } {
+        const inferences: string[] = [];
+        const suggestions: string[] = [];
+        
+        // 基于静态分析生成推断
+        if (staticResult.exports?.length > 0) {
+            inferences.push(`该文件导出了 ${staticResult.exports.length} 个模块，可能是一个工具库或组件`);
+        }
+        
+        if (staticResult.imports?.length > 0) {
+            inferences.push(`文件依赖了 ${staticResult.imports.length} 个外部模块，集成度较高`);
+        }
+        
+        if (staticResult.functions?.length > 0) {
+            inferences.push(`包含 ${staticResult.functions.length} 个函数，提供了丰富的功能接口`);
+        }
+        
+        // 生成通用建议
+        suggestions.push('建议添加更多的单元测试以提高代码质量');
+        suggestions.push('考虑添加更详细的文档注释');
+        
+        return { inferences, suggestions };
     }
 
     private detectLanguage(filePath: string): string {

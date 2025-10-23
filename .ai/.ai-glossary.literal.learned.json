@@ -1,0 +1,5714 @@
+{
+  "words": {
+    "file": {
+      "alias": "文件",
+      "confidence": 1
+    },
+    "capsules": {
+      "alias": "胶囊",
+      "confidence": 1
+    },
+    "filecapsules": {
+      "alias": "文件胶囊",
+      "confidence": 1
+    },
+    "hooks": {
+      "alias": "钩子",
+      "confidence": 1
+    },
+    "applypatch": {
+      "alias": "应用补丁",
+      "confidence": 1
+    },
+    "msg": {
+      "alias": "消息",
+      "confidence": 1
+    },
+    "commit": {
+      "alias": "提交",
+      "confidence": 1
+    },
+    "fsmonitor": {
+      "alias": "文件系统监视器",
+      "confidence": 1
+    },
+    "watchman": {
+      "alias": "守望者",
+      "confidence": 1
+    },
+    "post": {
+      "alias": "发布",
+      "confidence": 1
+    },
+    "update": {
+      "alias": "更新",
+      "confidence": 1
+    },
+    "pre": {
+      "alias": "前",
+      "confidence": 1
+    },
+    "merge": {
+      "alias": "合并",
+      "confidence": 1
+    },
+    "push": {
+      "alias": "推",
+      "confidence": 1
+    },
+    "rebase": {
+      "alias": "变基",
+      "confidence": 1
+    },
+    "receive": {
+      "alias": "接收",
+      "confidence": 1
+    },
+    "prepare": {
+      "alias": "准备",
+      "confidence": 1
+    },
+    "checkout": {
+      "alias": "检出",
+      "confidence": 1
+    },
+    "sendemail": {
+      "alias": "发送邮件",
+      "confidence": 1
+    },
+    "validate": {
+      "alias": "验证",
+      "confidence": 1
+    },
+    "info": {
+      "alias": "信息",
+      "confidence": 1
+    },
+    "exclude": {
+      "alias": "排除",
+      "confidence": 1
+    },
+    "logs": {
+      "alias": "日志",
+      "confidence": 1
+    },
+    "refs": {
+      "alias": "引用",
+      "confidence": 1
+    },
+    "heads": {
+      "alias": "头部",
+      "confidence": 1
+    },
+    "master": {
+      "alias": "主控",
+      "confidence": 1
+    },
+    "remotes": {
+      "alias": "远程",
+      "confidence": 1
+    },
+    "origin": {
+      "alias": "起源",
+      "confidence": 1
+    },
+    "dependabot": {
+      "alias": "依赖机器人",
+      "confidence": 1
+    },
+    "github": {
+      "alias": "吉特哈布",
+      "confidence": 1
+    },
+    "actions": {
+      "alias": "行动",
+      "confidence": 1
+    },
+    "download": {
+      "alias": "下载",
+      "confidence": 1
+    },
+    "artifact": {
+      "alias": "工件",
+      "confidence": 1
+    },
+    "labeler": {
+      "alias": "贴标人",
+      "confidence": 1
+    },
+    "setup": {
+      "alias": "设置",
+      "confidence": 1
+    },
+    "node": {
+      "alias": "节点",
+      "confidence": 1
+    },
+    "amannn": {
+      "alias": "阿曼恩恩",
+      "confidence": 1
+    },
+    "semantic": {
+      "alias": "语义",
+      "confidence": 1
+    },
+    "pull": {
+      "alias": "拉",
+      "confidence": 1
+    },
+    "request": {
+      "alias": "请求",
+      "confidence": 1
+    },
+    "npm": {
+      "alias": "节点包管理器",
+      "confidence": 1
+    },
+    "yarn": {
+      "alias": "纱线",
+      "confidence": 1
+    },
+    "types": {
+      "alias": "类型",
+      "confidence": 1
+    },
+    "plugin": {
+      "alias": "插件",
+      "confidence": 1
+    },
+    "parser": {
+      "alias": "解析器",
+      "confidence": 1
+    },
+    "boundaries": {
+      "alias": "边界",
+      "confidence": 1
+    },
+    "openai": {
+      "alias": "开放人工智能",
+      "confidence": 1
+    },
+    "rimraf": {
+      "alias": "删除目录",
+      "confidence": 1
+    },
+    "vis": {
+      "alias": "视觉",
+      "confidence": 1
+    },
+    "network": {
+      "alias": "网络",
+      "confidence": 1
+    },
+    "zod": {
+      "alias": "佐德",
+      "confidence": 1
+    },
+    "objects": {
+      "alias": "物体",
+      "confidence": 1
+    },
+    "bdf": {
+      "alias": "二进制数据文件",
+      "confidence": 1
+    },
+    "ed": {
+      "alias": "教育",
+      "confidence": 1
+    },
+    "ea": {
+      "alias": "东部",
+      "confidence": 1
+    },
+    "bd": {
+      "alias": "bd",
+      "confidence": 1
+    },
+    "bf": {
+      "alias": "bf",
+      "confidence": 1
+    },
+    "dac": {
+      "alias": "数模转换器",
+      "confidence": 1
+    },
+    "faf": {
+      "alias": "法夫",
+      "confidence": 1
+    },
+    "bfce": {
+      "alias": "比费斯",
+      "confidence": 1
+    },
+    "ab": {
+      "alias": "绝对",
+      "confidence": 1
+    },
+    "ca": {
+      "alias": "加州",
+      "confidence": 1
+    },
+    "fe": {
+      "alias": "费",
+      "confidence": 1
+    },
+    "dad": {
+      "alias": "爸爸",
+      "confidence": 1
+    },
+    "cbc": {
+      "alias": "加拿大广播公司",
+      "confidence": 1
+    },
+    "ccfa": {
+      "alias": "厘米立方英尺",
+      "confidence": 1
+    },
+    "fd": {
+      "alias": "文件描述符",
+      "confidence": 1
+    },
+    "bb": {
+      "alias": "球",
+      "confidence": 1
+    },
+    "acd": {
+      "alias": "酸酐",
+      "confidence": 1
+    },
+    "ac": {
+      "alias": "交流",
+      "confidence": 1
+    },
+    "cbf": {
+      "alias": "中央银行基金",
+      "confidence": 1
+    },
+    "be": {
+      "alias": "是",
+      "confidence": 1
+    },
+    "dea": {
+      "alias": "药物执法局",
+      "confidence": 1
+    },
+    "eeb": {
+      "alias": "电子工程局",
+      "confidence": 1
+    },
+    "bbac": {
+      "alias": "工商管理硕士",
+      "confidence": 1
+    },
+    "ec": {
+      "alias": "经济共同体",
+      "confidence": 1
+    },
+    "cb": {
+      "alias": "回调",
+      "confidence": 1
+    },
+    "eda": {
+      "alias": "电子设计自动化",
+      "confidence": 1
+    },
+    "add": {
+      "alias": "增加",
+      "confidence": 1
+    },
+    "aae": {
+      "alias": "平均绝对误差",
+      "confidence": 1
+    },
+    "cea": {
+      "alias": "消费电子协会",
+      "confidence": 1
+    },
+    "cff": {
+      "alias": "cff",
+      "confidence": 1
+    },
+    "bace": {
+      "alias": "巴斯",
+      "confidence": 1
+    },
+    "dc": {
+      "alias": "直流",
+      "confidence": 1
+    },
+    "edb": {
+      "alias": "教育数据库",
+      "confidence": 1
+    },
+    "cc": {
+      "alias": "抄送",
+      "confidence": 1
+    },
+    "ad": {
+      "alias": "广告",
+      "confidence": 1
+    },
+    "ceb": {
+      "alias": "中国电子出版物中心",
+      "confidence": 1
+    },
+    "fa": {
+      "alias": "法",
+      "confidence": 1
+    },
+    "cbb": {
+      "alias": "CBB",
+      "confidence": 1
+    },
+    "bfa": {
+      "alias": "BFA",
+      "confidence": 1
+    },
+    "ff": {
+      "alias": "FF",
+      "confidence": 1
+    },
+    "ef": {
+      "alias": "十六进制数ef",
+      "confidence": 1
+    },
+    "faa": {
+      "alias": "法阿法",
+      "confidence": 1
+    },
+    "bdc": {
+      "alias": "二进制数据存储",
+      "confidence": 1
+    },
+    "cdba": {
+      "alias": "中央配电板",
+      "confidence": 1
+    },
+    "dda": {
+      "alias": "二乙基二氨基甲苯",
+      "confidence": 1
+    },
+    "edea": {
+      "alias": "乙二胺",
+      "confidence": 1
+    },
+    "aaac": {
+      "alias": "四甲基丙烯酸季戊四醇酯",
+      "confidence": 1
+    },
+    "abf": {
+      "alias": "阿贝夫",
+      "confidence": 1
+    },
+    "ba": {
+      "alias": "巴",
+      "confidence": 1
+    },
+    "bbb": {
+      "alias": "比比比",
+      "confidence": 1
+    },
+    "bab": {
+      "alias": "巴布",
+      "confidence": 1
+    },
+    "ce": {
+      "alias": "塞",
+      "confidence": 1
+    },
+    "cdb": {
+      "alias": "中央配电板",
+      "confidence": 1
+    },
+    "df": {
+      "alias": "数据帧",
+      "confidence": 1
+    },
+    "ee": {
+      "alias": "电气工程",
+      "confidence": 1
+    },
+    "aa": {
+      "alias": "阿阿",
+      "confidence": 1
+    },
+    "fc": {
+      "alias": "英尺立方",
+      "confidence": 1
+    },
+    "dcebc": {
+      "alias": "德塞布克",
+      "confidence": 1
+    },
+    "ae": {
+      "alias": "诶",
+      "confidence": 1
+    },
+    "da": {
+      "alias": "哒",
+      "confidence": 1
+    },
+    "fb": {
+      "alias": "反馈",
+      "confidence": 1
+    },
+    "aef": {
+      "alias": "自适应前馈",
+      "confidence": 1
+    },
+    "ddd": {
+      "alias": "ddd",
+      "confidence": 1
+    },
+    "aff": {
+      "alias": "阿福",
+      "confidence": 1
+    },
+    "dcba": {
+      "alias": "dcba",
+      "confidence": 1
+    },
+    "bcc": {
+      "alias": "bcc",
+      "confidence": 1
+    },
+    "adb": {
+      "alias": "安卓调试桥",
+      "confidence": 1
+    },
+    "abb": {
+      "alias": "阿伯",
+      "confidence": 1
+    },
+    "daf": {
+      "alias": "达夫",
+      "confidence": 1
+    },
+    "fbacbe": {
+      "alias": "费巴克比",
+      "confidence": 1
+    },
+    "cf": {
+      "alias": "常数",
+      "confidence": 1
+    },
+    "dd": {
+      "alias": "数据",
+      "confidence": 1
+    },
+    "cca": {
+      "alias": "中国建设银行",
+      "confidence": 1
+    },
+    "bdcdc": {
+      "alias": "病毒",
+      "confidence": 1
+    },
+    "bfae": {
+      "alias": "波法伊",
+      "confidence": 1
+    },
+    "ffd": {
+      "alias": "Ffd",
+      "confidence": 1
+    },
+    "cadb": {
+      "alias": "卡德布",
+      "confidence": 1
+    },
+    "eb": {
+      "alias": "易贝",
+      "confidence": 1
+    },
+    "cfeb": {
+      "alias": "cfeb",
+      "confidence": 1
+    },
+    "feb": {
+      "alias": "二月",
+      "confidence": 1
+    },
+    "af": {
+      "alias": "阿夫",
+      "confidence": 1
+    },
+    "adac": {
+      "alias": "自适应差分累积",
+      "confidence": 1
+    },
+    "dfae": {
+      "alias": "迪法伊",
+      "confidence": 1
+    },
+    "bc": {
+      "alias": "业务连续性",
+      "confidence": 1
+    },
+    "fba": {
+      "alias": "功能行为分析",
+      "confidence": 1
+    },
+    "daac": {
+      "alias": "直接访问控制",
+      "confidence": 1
+    },
+    "aaaabc": {
+      "alias": "阿阿阿宝贝",
+      "confidence": 1
+    },
+    "eee": {
+      "alias": "电子电气领域",
+      "confidence": 1
+    },
+    "ebdf": {
+      "alias": "东部边界防御设施",
+      "confidence": 1
+    },
+    "cdac": {
+      "alias": "加拿大国防部航空航天中心",
+      "confidence": 1
+    },
+    "fae": {
+      "alias": "仙子",
+      "confidence": 1
+    },
+    "bbbb": {
+      "alias": "四b",
+      "confidence": 1
+    },
+    "ffbc": {
+      "alias": "ffbc",
+      "confidence": 1
+    },
+    "fab": {
+      "alias": "fab",
+      "confidence": 1
+    },
+    "eade": {
+      "alias": "伊德",
+      "confidence": 1
+    },
+    "ecb": {
+      "alias": "电子控制盒",
+      "confidence": 1
+    },
+    "eca": {
+      "alias": "电子控制装置",
+      "confidence": 1
+    },
+    "afa": {
+      "alias": "阿法阿",
+      "confidence": 1
+    },
+    "aaf": {
+      "alias": "阿阿夫",
+      "confidence": 1
+    },
+    "bad": {
+      "alias": "坏",
+      "confidence": 1
+    },
+    "fee": {
+      "alias": "费用",
+      "confidence": 1
+    },
+    "fbc": {
+      "alias": "费城广播公司",
+      "confidence": 1
+    },
+    "bed": {
+      "alias": "床",
+      "confidence": 1
+    },
+    "aeea": {
+      "alias": "阿伊艾阿",
+      "confidence": 1
+    },
+    "dbd": {
+      "alias": "数据库死亡",
+      "confidence": 1
+    },
+    "ecf": {
+      "alias": "电子控制功能",
+      "confidence": 1
+    },
+    "ddbe": {
+      "alias": "DDBE",
+      "confidence": 1
+    },
+    "fff": {
+      "alias": "三个f",
+      "confidence": 1
+    },
+    "ddc": {
+      "alias": "三个d",
+      "confidence": 1
+    },
+    "eec": {
+      "alias": "电子电气委员会",
+      "confidence": 1
+    },
+    "baee": {
+      "alias": "巴伊",
+      "confidence": 1
+    },
+    "bfcf": {
+      "alias": "比福克夫",
+      "confidence": 1
+    },
+    "baac": {
+      "alias": "巴阿克",
+      "confidence": 1
+    },
+    "bbbbbb": {
+      "alias": "比比比比比比",
+      "confidence": 1
+    },
+    "ccf": {
+      "alias": "斯西夫",
+      "confidence": 1
+    },
+    "eebbd": {
+      "alias": "伊博德",
+      "confidence": 1
+    },
+    "bda": {
+      "alias": "巴达",
+      "confidence": 1
+    },
+    "cbcb": {
+      "alias": "中央数字中央数字",
+      "confidence": 1
+    },
+    "dddca": {
+      "alias": "德尔德尔塞尔",
+      "confidence": 1
+    },
+    "cafe": {
+      "alias": "咖啡馆",
+      "confidence": 1
+    },
+    "ada": {
+      "alias": "艾达",
+      "confidence": 1
+    },
+    "feec": {
+      "alias": "费克",
+      "confidence": 1
+    },
+    "dcd": {
+      "alias": "数据比较",
+      "confidence": 1
+    },
+    "bdd": {
+      "alias": "行为驱动开发",
+      "confidence": 1
+    },
+    "edcaf": {
+      "alias": "埃德卡夫",
+      "confidence": 1
+    },
+    "bba": {
+      "alias": "巴布",
+      "confidence": 1
+    },
+    "cce": {
+      "alias": "共同核心教育",
+      "confidence": 1
+    },
+    "cdce": {
+      "alias": "连续缺陷块",
+      "confidence": 1
+    },
+    "aeb": {
+      "alias": "阿伊布",
+      "confidence": 1
+    },
+    "dbbf": {
+      "alias": "德布布夫",
+      "confidence": 1
+    },
+    "adbf": {
+      "alias": "广告博福",
+      "confidence": 1
+    },
+    "debc": {
+      "alias": "德布克",
+      "confidence": 1
+    },
+    "fffd": {
+      "alias": "无效字符",
+      "confidence": 1
+    },
+    "cfd": {
+      "alias": "计算流体动力学",
+      "confidence": 1
+    },
+    "cad": {
+      "alias": "计算机辅助设计",
+      "confidence": 1
+    },
+    "dec": {
+      "alias": "十二月",
+      "confidence": 1
+    },
+    "ceca": {
+      "alias": "盲肠",
+      "confidence": 1
+    },
+    "ebc": {
+      "alias": "易贝可",
+      "confidence": 1
+    },
+    "fac": {
+      "alias": "FAC",
+      "confidence": 1
+    },
+    "acede": {
+      "alias": "阿塞德",
+      "confidence": 1
+    },
+    "afb": {
+      "alias": "阿夫布",
+      "confidence": 1
+    },
+    "dabb": {
+      "alias": "达布",
+      "confidence": 1
+    },
+    "dab": {
+      "alias": "轻拍",
+      "confidence": 1
+    },
+    "ebe": {
+      "alias": "易贝",
+      "confidence": 1
+    },
+    "fdf": {
+      "alias": "文件分发格式",
+      "confidence": 1
+    },
+    "efe": {
+      "alias": "埃费",
+      "confidence": 1
+    },
+    "afd": {
+      "alias": "阿福德",
+      "confidence": 1
+    },
+    "bef": {
+      "alias": "在前面",
+      "confidence": 1
+    },
+    "fdc": {
+      "alias": "联邦存款公司",
+      "confidence": 1
+    },
+    "bbf": {
+      "alias": "大黄蜂",
+      "confidence": 1
+    },
+    "edc": {
+      "alias": "电子柴油控制器",
+      "confidence": 1
+    },
+    "abaa": {
+      "alias": "阿巴阿",
+      "confidence": 1
+    },
+    "baea": {
+      "alias": "巴诶阿",
+      "confidence": 1
+    },
+    "ffc": {
+      "alias": "联邦基金委员会",
+      "confidence": 1
+    },
+    "deb": {
+      "alias": "辩论",
+      "confidence": 1
+    },
+    "efc": {
+      "alias": "电子燃料控制器",
+      "confidence": 1
+    },
+    "dca": {
+      "alias": "二氯乙酸",
+      "confidence": 1
+    },
+    "fefd": {
+      "alias": "费费德",
+      "confidence": 1
+    },
+    "bcca": {
+      "alias": "比茨卡",
+      "confidence": 1
+    },
+    "ffb": {
+      "alias": "F F B",
+      "confidence": 1
+    },
+    "daada": {
+      "alias": "达达达",
+      "confidence": 1
+    },
+    "dfa": {
+      "alias": "D F A",
+      "confidence": 1
+    },
+    "ccdaa": {
+      "alias": "C C D A A",
+      "confidence": 1
+    },
+    "ffbdada": {
+      "alias": "F F B 达达达",
+      "confidence": 1
+    },
+    "dadanfa": {
+      "alias": "达达达 F A",
+      "confidence": 1
+    },
+    "ccdaada": {
+      "alias": "C C D A A 达达达",
+      "confidence": 1
+    },
+    "dbcc": {
+      "alias": "数据库一致性检查",
+      "confidence": 1
+    },
+    "dfab": {
+      "alias": "Dfab",
+      "confidence": 1
+    },
+    "acfc": {
+      "alias": "阿克福",
+      "confidence": 1
+    },
+    "edbe": {
+      "alias": "埃德贝",
+      "confidence": 1
+    },
+    "faccad": {
+      "alias": "法卡德",
+      "confidence": 1
+    },
+    "ccfc": {
+      "alias": "中央商务金融中心",
+      "confidence": 1
+    },
+    "fbb": {
+      "alias": "功能块B",
+      "confidence": 1
+    },
+    "eff": {
+      "alias": "效果",
+      "confidence": 1
+    },
+    "cdbd": {
+      "alias": "cdbd",
+      "confidence": 1
+    },
+    "cfbb": {
+      "alias": "常数分数二进制编码",
+      "confidence": 1
+    },
+    "cace": {
+      "alias": "卡塞",
+      "confidence": 1
+    },
+    "cbdef": {
+      "alias": "cbdef",
+      "confidence": 1
+    },
+    "dbe": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "beee": {
+      "alias": "比伊",
+      "confidence": 1
+    },
+    "cbe": {
+      "alias": "中央商务区",
+      "confidence": 1
+    },
+    "eba": {
+      "alias": "伊巴",
+      "confidence": 1
+    },
+    "bae": {
+      "alias": "贝",
+      "confidence": 1
+    },
+    "ebae": {
+      "alias": "伊巴埃",
+      "confidence": 1
+    },
+    "ebcc": {
+      "alias": "电子制动控制计算机",
+      "confidence": 1
+    },
+    "cfda": {
+      "alias": "食品和药物管理局",
+      "confidence": 1
+    },
+    "ebd": {
+      "alias": "电子制动力分配系统",
+      "confidence": 1
+    },
+    "fea": {
+      "alias": "特征",
+      "confidence": 1
+    },
+    "fdb": {
+      "alias": "费德伯",
+      "confidence": 1
+    },
+    "dbba": {
+      "alias": "德巴巴",
+      "confidence": 1
+    },
+    "afc": {
+      "alias": "自动频率控制",
+      "confidence": 1
+    },
+    "affa": {
+      "alias": "非洲足球联合会",
+      "confidence": 1
+    },
+    "eabf": {
+      "alias": "伊阿布夫",
+      "confidence": 1
+    },
+    "cdd": {
+      "alias": "西迪",
+      "confidence": 1
+    },
+    "bfbca": {
+      "alias": "比福卡",
+      "confidence": 1
+    },
+    "fda": {
+      "alias": "食品与药物管理局",
+      "confidence": 1
+    },
+    "fdd": {
+      "alias": "频分双工",
+      "confidence": 1
+    },
+    "ebb": {
+      "alias": "衰退",
+      "confidence": 1
+    },
+    "aedb": {
+      "alias": "艾德布",
+      "confidence": 1
+    },
+    "ccc": {
+      "alias": "ccc",
+      "confidence": 1
+    },
+    "eccd": {
+      "alias": "经济合作与发展",
+      "confidence": 1
+    },
+    "aec": {
+      "alias": "自动曝光控制",
+      "confidence": 1
+    },
+    "aabb": {
+      "alias": "阿阿博博",
+      "confidence": 1
+    },
+    "afaead": {
+      "alias": "阿法伊阿德",
+      "confidence": 1
+    },
+    "eed": {
+      "alias": "需要",
+      "confidence": 1
+    },
+    "fabe": {
+      "alias": "费贝",
+      "confidence": 1
+    },
+    "abde": {
+      "alias": "阿贝德",
+      "confidence": 1
+    },
+    "aee": {
+      "alias": "艾伊",
+      "confidence": 1
+    },
+    "aea": {
+      "alias": "阿伊阿",
+      "confidence": 1
+    },
+    "fec": {
+      "alias": "粪便",
+      "confidence": 1
+    },
+    "eeaf": {
+      "alias": "伊伊阿夫",
+      "confidence": 1
+    },
+    "bde": {
+      "alias": "二进制数据交换",
+      "confidence": 1
+    },
+    "cdec": {
+      "alias": "cdec",
+      "confidence": 1
+    },
+    "dfadd": {
+      "alias": "数据文件添加",
+      "confidence": 1
+    },
+    "cba": {
+      "alias": "连续缺陷块",
+      "confidence": 1
+    },
+    "ffcf": {
+      "alias": "FFCF",
+      "confidence": 1
+    },
+    "bbcf": {
+      "alias": "B B C F",
+      "confidence": 1
+    },
+    "fbbb": {
+      "alias": "FBBB",
+      "confidence": 1
+    },
+    "bee": {
+      "alias": "蜜蜂",
+      "confidence": 1
+    },
+    "cbd": {
+      "alias": "中央商务区",
+      "confidence": 1
+    },
+    "dff": {
+      "alias": "差分文件格式",
+      "confidence": 1
+    },
+    "bdde": {
+      "alias": "bdde",
+      "confidence": 1
+    },
+    "cfe": {
+      "alias": "cfe",
+      "confidence": 1
+    },
+    "cccbf": {
+      "alias": "cccbf",
+      "confidence": 1
+    },
+    "fdaba": {
+      "alias": "法达巴",
+      "confidence": 1
+    },
+    "fbd": {
+      "alias": "FBD",
+      "confidence": 1
+    },
+    "eddb": {
+      "alias": "教育数据库",
+      "confidence": 1
+    },
+    "fcf": {
+      "alias": "功能连接因子",
+      "confidence": 1
+    },
+    "aed": {
+      "alias": "艾德",
+      "confidence": 1
+    },
+    "dfe": {
+      "alias": "德费",
+      "confidence": 1
+    },
+    "a": {
+      "alias": "一个",
+      "confidence": 1
+    },
+    "befae": {
+      "alias": "贝法伊",
+      "confidence": 1
+    },
+    "bfd": {
+      "alias": "双向转发检测",
+      "confidence": 1
+    },
+    "cabe": {
+      "alias": "头",
+      "confidence": 1
+    },
+    "ace": {
+      "alias": "一点",
+      "confidence": 1
+    },
+    "ffdec": {
+      "alias": "ff解码",
+      "confidence": 1
+    },
+    "cdedd": {
+      "alias": "cde增加",
+      "confidence": 1
+    },
+    "ddda": {
+      "alias": "迪达",
+      "confidence": 1
+    },
+    "fdbee": {
+      "alias": "fdbee",
+      "confidence": 1
+    },
+    "edd": {
+      "alias": "埃德",
+      "confidence": 1
+    },
+    "ffdf": {
+      "alias": "菲菲德芙",
+      "confidence": 1
+    },
+    "fde": {
+      "alias": "故障检测与排除",
+      "confidence": 1
+    },
+    "eebd": {
+      "alias": "伊伊布德",
+      "confidence": 1
+    },
+    "aca": {
+      "alias": "阿卡",
+      "confidence": 1
+    },
+    "cfae": {
+      "alias": "西法伊",
+      "confidence": 1
+    },
+    "eaafaa": {
+      "alias": "伊阿法伊阿",
+      "confidence": 1
+    },
+    "ddbb": {
+      "alias": "德德布布",
+      "confidence": 1
+    },
+    "bfe": {
+      "alias": "二进制字段扩展",
+      "confidence": 1
+    },
+    "fcc": {
+      "alias": "联邦通信委员会",
+      "confidence": 1
+    },
+    "dbae": {
+      "alias": "迪拜",
+      "confidence": 1
+    },
+    "cab": {
+      "alias": "出租车",
+      "confidence": 1
+    },
+    "bec": {
+      "alias": "成为",
+      "confidence": 1
+    },
+    "ffe": {
+      "alias": "费费",
+      "confidence": 1
+    },
+    "bbc": {
+      "alias": "英国广播公司",
+      "confidence": 1
+    },
+    "beca": {
+      "alias": "成为",
+      "confidence": 1
+    },
+    "efb": {
+      "alias": "电子前沿基金会",
+      "confidence": 1
+    },
+    "dbf": {
+      "alias": "数据库文件",
+      "confidence": 1
+    },
+    "aac": {
+      "alias": "高级音频编码",
+      "confidence": 1
+    },
+    "dba": {
+      "alias": "数据库管理员",
+      "confidence": 1
+    },
+    "fbba": {
+      "alias": "非波比",
+      "confidence": 1
+    },
+    "eef": {
+      "alias": "伊夫",
+      "confidence": 1
+    },
+    "efcea": {
+      "alias": "埃夫西阿",
+      "confidence": 1
+    },
+    "fbfb": {
+      "alias": "非非",
+      "confidence": 1
+    },
+    "ffdc": {
+      "alias": "FFDC",
+      "confidence": 1
+    },
+    "ade": {
+      "alias": "阿德",
+      "confidence": 1
+    },
+    "fdea": {
+      "alias": "费德阿",
+      "confidence": 1
+    },
+    "abfa": {
+      "alias": "阿布法",
+      "confidence": 1
+    },
+    "cebb": {
+      "alias": "塞布布",
+      "confidence": 1
+    },
+    "ead": {
+      "alias": "ead头",
+      "confidence": 1
+    },
+    "bca": {
+      "alias": "英国认证机构",
+      "confidence": 1
+    },
+    "dfd": {
+      "alias": "数据流图",
+      "confidence": 1
+    },
+    "eccf": {
+      "alias": "东非共同体论坛",
+      "confidence": 1
+    },
+    "eac": {
+      "alias": "东非共同体",
+      "confidence": 1
+    },
+    "aeef": {
+      "alias": "阿伊夫",
+      "confidence": 1
+    },
+    "abe": {
+      "alias": "亚伯",
+      "confidence": 1
+    },
+    "acf": {
+      "alias": "酸性磷酸酶",
+      "confidence": 1
+    },
+    "feaf": {
+      "alias": "费夫",
+      "confidence": 1
+    },
+    "ced": {
+      "alias": "中央配电",
+      "confidence": 1
+    },
+    "edcfa": {
+      "alias": "埃德卡法",
+      "confidence": 1
+    },
+    "baa": {
+      "alias": "咩",
+      "confidence": 1
+    },
+    "fbccf": {
+      "alias": "fbccf",
+      "confidence": 1
+    },
+    "bbfa": {
+      "alias": "比比发",
+      "confidence": 1
+    },
+    "eced": {
+      "alias": "埃塞德",
+      "confidence": 1
+    },
+    "c": {
+      "alias": "西",
+      "confidence": 1
+    },
+    "f": {
+      "alias": "频率",
+      "confidence": 1
+    },
+    "d": {
+      "alias": "的",
+      "confidence": 1
+    },
+    "acfdd": {
+      "alias": "阿克福德的",
+      "confidence": 1
+    },
+    "fbcb": {
+      "alias": "福克布",
+      "confidence": 1
+    },
+    "cee": {
+      "alias": "CEE",
+      "confidence": 1
+    },
+    "fcecb": {
+      "alias": "费克布",
+      "confidence": 1
+    },
+    "cef": {
+      "alias": "头孢",
+      "confidence": 1
+    },
+    "feaac": {
+      "alias": "费艾克",
+      "confidence": 1
+    },
+    "beaa": {
+      "alias": "比阿",
+      "confidence": 1
+    },
+    "bffd": {
+      "alias": "BFFD",
+      "confidence": 1
+    },
+    "cae": {
+      "alias": "计算辅助工程",
+      "confidence": 1
+    },
+    "ccbd": {
+      "alias": "中央商务区",
+      "confidence": 1
+    },
+    "afffc": {
+      "alias": "阿福福",
+      "confidence": 1
+    },
+    "eaec": {
+      "alias": "伊阿艾克",
+      "confidence": 1
+    },
+    "fcaec": {
+      "alias": "脂肪酸",
+      "confidence": 1
+    },
+    "aebb": {
+      "alias": "阿贝",
+      "confidence": 1
+    },
+    "cfb": {
+      "alias": "CFB",
+      "confidence": 1
+    },
+    "bdbb": {
+      "alias": "bdbb",
+      "confidence": 1
+    },
+    "dcc": {
+      "alias": "dcc",
+      "confidence": 1
+    },
+    "cabcec": {
+      "alias": "卡贝塞克",
+      "confidence": 1
+    },
+    "bff": {
+      "alias": "最好的朋友",
+      "confidence": 1
+    },
+    "eeaa": {
+      "alias": "伊伊啊阿",
+      "confidence": 1
+    },
+    "cfa": {
+      "alias": "西法",
+      "confidence": 1
+    },
+    "efad": {
+      "alias": "埃法德",
+      "confidence": 1
+    },
+    "dcf": {
+      "alias": "直流电容器",
+      "confidence": 1
+    },
+    "fbf": {
+      "alias": "F B F",
+      "confidence": 1
+    },
+    "dde": {
+      "alias": "DDE",
+      "confidence": 1
+    },
+    "abbd": {
+      "alias": "阿博德",
+      "confidence": 1
+    },
+    "cbbdf": {
+      "alias": "斯比德夫",
+      "confidence": 1
+    },
+    "bea": {
+      "alias": "比阿",
+      "confidence": 1
+    },
+    "ccac": {
+      "alias": "碳碳酰氯",
+      "confidence": 1
+    },
+    "daa": {
+      "alias": "二氨基苯甲酸",
+      "confidence": 1
+    },
+    "adc": {
+      "alias": "模数转换器",
+      "confidence": 1
+    },
+    "ccae": {
+      "alias": "卡卡伊",
+      "confidence": 1
+    },
+    "caadd": {
+      "alias": "卡阿德",
+      "confidence": 1
+    },
+    "bbbc": {
+      "alias": "四字母B",
+      "confidence": 1
+    },
+    "aad": {
+      "alias": "阿德",
+      "confidence": 1
+    },
+    "afe": {
+      "alias": "阿费",
+      "confidence": 1
+    },
+    "ece": {
+      "alias": "电子通信工程",
+      "confidence": 1
+    },
+    "bbed": {
+      "alias": "被咬的",
+      "confidence": 1
+    },
+    "adf": {
+      "alias": "广告文件",
+      "confidence": 1
+    },
+    "bcadd": {
+      "alias": "bc 加 d",
+      "confidence": 1
+    },
+    "bcdc": {
+      "alias": "波士顿儿童医院",
+      "confidence": 1
+    },
+    "eababb": {
+      "alias": "伊阿巴巴布",
+      "confidence": 1
+    },
+    "efdd": {
+      "alias": "埃弗德",
+      "confidence": 1
+    },
+    "dae": {
+      "alias": "大",
+      "confidence": 1
+    },
+    "cbccdd": {
+      "alias": "CBCCDD",
+      "confidence": 1
+    },
+    "fccb": {
+      "alias": "FCCB",
+      "confidence": 1
+    },
+    "ede": {
+      "alias": "埃德",
+      "confidence": 1
+    },
+    "b": {
+      "alias": "不",
+      "confidence": 1
+    },
+    "edeb": {
+      "alias": "埃德布",
+      "confidence": 1
+    },
+    "fca": {
+      "alias": "脂肪酸",
+      "confidence": 1
+    },
+    "beda": {
+      "alias": "贝达",
+      "confidence": 1
+    },
+    "ffa": {
+      "alias": "联邦脂肪酸",
+      "confidence": 1
+    },
+    "fdec": {
+      "alias": "费迪克",
+      "confidence": 1
+    },
+    "eedd": {
+      "alias": "伊德德",
+      "confidence": 1
+    },
+    "afcd": {
+      "alias": "阿夫克德",
+      "confidence": 1
+    },
+    "dee": {
+      "alias": "迪",
+      "confidence": 1
+    },
+    "fcb": {
+      "alias": "功能控制块",
+      "confidence": 1
+    },
+    "dafcc": {
+      "alias": "达夫茨",
+      "confidence": 1
+    },
+    "feafab": {
+      "alias": "费阿发巴",
+      "confidence": 1
+    },
+    "bdeae": {
+      "alias": "比德爱",
+      "confidence": 1
+    },
+    "bfec": {
+      "alias": "Bfec",
+      "confidence": 1
+    },
+    "ecae": {
+      "alias": "伊凯",
+      "confidence": 1
+    },
+    "fdce": {
+      "alias": "费德西",
+      "confidence": 1
+    },
+    "cdde": {
+      "alias": "光盘驱动器错误",
+      "confidence": 1
+    },
+    "bcf": {
+      "alias": "b c f",
+      "confidence": 1
+    },
+    "ceab": {
+      "alias": "塞阿布",
+      "confidence": 1
+    },
+    "fed": {
+      "alias": "供给",
+      "confidence": 1
+    },
+    "bfc": {
+      "alias": "二进制文件缓存",
+      "confidence": 1
+    },
+    "baf": {
+      "alias": "巴夫",
+      "confidence": 1
+    },
+    "bacb": {
+      "alias": "巴克布",
+      "confidence": 1
+    },
+    "cecb": {
+      "alias": "塞克布",
+      "confidence": 1
+    },
+    "befff": {
+      "alias": "贝福夫",
+      "confidence": 1
+    },
+    "bdad": {
+      "alias": "巴达德",
+      "confidence": 1
+    },
+    "bded": {
+      "alias": "B-D-E-D",
+      "confidence": 1
+    },
+    "bcdbfc": {
+      "alias": "卑咖的福克思",
+      "confidence": 1
+    },
+    "acaf": {
+      "alias": "阿卡夫",
+      "confidence": 1
+    },
+    "efa": {
+      "alias": "埃法",
+      "confidence": 1
+    },
+    "aba": {
+      "alias": "阿巴",
+      "confidence": 1
+    },
+    "abc": {
+      "alias": "abc",
+      "confidence": 1
+    },
+    "bfabd": {
+      "alias": "bfabd",
+      "confidence": 1
+    },
+    "ffcbd": {
+      "alias": "ffcbd",
+      "confidence": 1
+    },
+    "aeba": {
+      "alias": "阿伊巴",
+      "confidence": 1
+    },
+    "deeb": {
+      "alias": "迪布",
+      "confidence": 1
+    },
+    "deebb": {
+      "alias": "德布布",
+      "confidence": 1
+    },
+    "ddee": {
+      "alias": "德德",
+      "confidence": 1
+    },
+    "acc": {
+      "alias": "加速度",
+      "confidence": 1
+    },
+    "afde": {
+      "alias": "阿夫德",
+      "confidence": 1
+    },
+    "cdff": {
+      "alias": "光盘文件格式",
+      "confidence": 1
+    },
+    "aab": {
+      "alias": "阿布",
+      "confidence": 1
+    },
+    "dfc": {
+      "alias": "数字频率转换",
+      "confidence": 1
+    },
+    "caec": {
+      "alias": "盲肠",
+      "confidence": 1
+    },
+    "aaab": {
+      "alias": "aaa乙",
+      "confidence": 1
+    },
+    "cecf": {
+      "alias": "塞西夫",
+      "confidence": 1
+    },
+    "feed": {
+      "alias": "反馈",
+      "confidence": 1
+    },
+    "fffac": {
+      "alias": "FF FAC",
+      "confidence": 1
+    },
+    "aecc": {
+      "alias": "艾克",
+      "confidence": 1
+    },
+    "adde": {
+      "alias": "阿德",
+      "confidence": 1
+    },
+    "bbca": {
+      "alias": "B-B-C-A",
+      "confidence": 1
+    },
+    "adcb": {
+      "alias": "A-D-C-B",
+      "confidence": 1
+    },
+    "ebade": {
+      "alias": "伊巴德",
+      "confidence": 1
+    },
+    "dbee": {
+      "alias": "德比",
+      "confidence": 1
+    },
+    "dfecf": {
+      "alias": "的费克夫",
+      "confidence": 1
+    },
+    "dbc": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "db": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "cd": {
+      "alias": "光盘",
+      "confidence": 1
+    },
+    "ebbd": {
+      "alias": "衰退衰退",
+      "confidence": 1
+    },
+    "aaeded": {
+      "alias": "阿阿埃德德",
+      "confidence": 1
+    },
+    "acab": {
+      "alias": "结束",
+      "confidence": 1
+    },
+    "dbb": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "efbe": {
+      "alias": "埃夫比",
+      "confidence": 1
+    },
+    "bffa": {
+      "alias": "BFFA",
+      "confidence": 1
+    },
+    "cbde": {
+      "alias": "CBDE",
+      "confidence": 1
+    },
+    "dabf": {
+      "alias": "达布夫",
+      "confidence": 1
+    },
+    "afaefae": {
+      "alias": "阿法伊阿法伊",
+      "confidence": 1
+    },
+    "cafb": {
+      "alias": "卡福",
+      "confidence": 1
+    },
+    "feddf": {
+      "alias": "费德夫",
+      "confidence": 1
+    },
+    "fdedca": {
+      "alias": "费德卡",
+      "confidence": 1
+    },
+    "bcac": {
+      "alias": "巴卡",
+      "confidence": 1
+    },
+    "fade": {
+      "alias": "褪色",
+      "confidence": 1
+    },
+    "face": {
+      "alias": "脸",
+      "confidence": 1
+    },
+    "cebd": {
+      "alias": "cebD",
+      "confidence": 1
+    },
+    "fcabd": {
+      "alias": "FCABD",
+      "confidence": 1
+    },
+    "efce": {
+      "alias": "欧盟委员会",
+      "confidence": 1
+    },
+    "eaea": {
+      "alias": "伊阿伊阿",
+      "confidence": 1
+    },
+    "decae": {
+      "alias": "十",
+      "confidence": 1
+    },
+    "ddff": {
+      "alias": "D-D-F-F",
+      "confidence": 1
+    },
+    "adeca": {
+      "alias": "阿德卡",
+      "confidence": 1
+    },
+    "ebf": {
+      "alias": "EBF",
+      "confidence": 1
+    },
+    "dce": {
+      "alias": "数据通信设备",
+      "confidence": 1
+    },
+    "cdfec": {
+      "alias": "参见文档",
+      "confidence": 1
+    },
+    "ecda": {
+      "alias": "欧洲社区发展援助",
+      "confidence": 1
+    },
+    "abfea": {
+      "alias": "阿贝法",
+      "confidence": 1
+    },
+    "dcaa": {
+      "alias": "DCAA",
+      "confidence": 1
+    },
+    "acda": {
+      "alias": "阿克达",
+      "confidence": 1
+    },
+    "adeb": {
+      "alias": "阿德布",
+      "confidence": 1
+    },
+    "eaa": {
+      "alias": "欧洲航空安全局",
+      "confidence": 1
+    },
+    "acafe": {
+      "alias": "阿卡费",
+      "confidence": 1
+    },
+    "dcea": {
+      "alias": "德西亚",
+      "confidence": 1
+    },
+    "cafae": {
+      "alias": "卡法埃",
+      "confidence": 1
+    },
+    "bfca": {
+      "alias": "bfca",
+      "confidence": 1
+    },
+    "cefe": {
+      "alias": "塞费",
+      "confidence": 1
+    },
+    "fbfe": {
+      "alias": "非广播多访问光纤通道扩展",
+      "confidence": 1
+    },
+    "fcd": {
+      "alias": "功能设计文档",
+      "confidence": 1
+    },
+    "dfb": {
+      "alias": "德国足协",
+      "confidence": 1
+    },
+    "eacf": {
+      "alias": "欧洲文化交流基金会",
+      "confidence": 1
+    },
+    "feab": {
+      "alias": "费布",
+      "confidence": 1
+    },
+    "ebcf": {
+      "alias": "埃博克夫",
+      "confidence": 1
+    },
+    "bfeefe": {
+      "alias": "比费伊费",
+      "confidence": 1
+    },
+    "abec": {
+      "alias": "阿贝克",
+      "confidence": 1
+    },
+    "cbff": {
+      "alias": "字节块文件格式",
+      "confidence": 1
+    },
+    "bebea": {
+      "alias": "贝贝阿",
+      "confidence": 1
+    },
+    "eacba": {
+      "alias": "伊克巴",
+      "confidence": 1
+    },
+    "ffaddb": {
+      "alias": "ff添加数据库",
+      "confidence": 1
+    },
+    "ccd": {
+      "alias": "电荷耦合器件",
+      "confidence": 1
+    },
+    "fad": {
+      "alias": "时尚",
+      "confidence": 1
+    },
+    "cdea": {
+      "alias": "塞德阿",
+      "confidence": 1
+    },
+    "cadc": {
+      "alias": "卡达克",
+      "confidence": 1
+    },
+    "addc": {
+      "alias": "增加",
+      "confidence": 1
+    },
+    "bcfb": {
+      "alias": "bcfb",
+      "confidence": 1
+    },
+    "baaf": {
+      "alias": "巴夫",
+      "confidence": 1
+    },
+    "eeef": {
+      "alias": "伊伊夫",
+      "confidence": 1
+    },
+    "cdfe": {
+      "alias": "cdfe",
+      "confidence": 1
+    },
+    "affaf": {
+      "alias": "阿法法",
+      "confidence": 1
+    },
+    "ccdff": {
+      "alias": "Ccdff",
+      "confidence": 1
+    },
+    "efed": {
+      "alias": "埃菲德",
+      "confidence": 1
+    },
+    "edeaf": {
+      "alias": "埃德福",
+      "confidence": 1
+    },
+    "ceaaa": {
+      "alias": "塞阿阿阿",
+      "confidence": 1
+    },
+    "faaa": {
+      "alias": "法啊阿",
+      "confidence": 1
+    },
+    "dcca": {
+      "alias": "德卡卡",
+      "confidence": 1
+    },
+    "aaa": {
+      "alias": "阿阿阿",
+      "confidence": 1
+    },
+    "abebed": {
+      "alias": "阿贝贝德",
+      "confidence": 1
+    },
+    "eeaecb": {
+      "alias": "伊伊爱拆不",
+      "confidence": 1
+    },
+    "caf": {
+      "alias": "咖啡馆",
+      "confidence": 1
+    },
+    "aeae": {
+      "alias": "阿伊阿伊",
+      "confidence": 1
+    },
+    "aeeba": {
+      "alias": "阿伊巴",
+      "confidence": 1
+    },
+    "becea": {
+      "alias": "贝塞亚",
+      "confidence": 1
+    },
+    "eddf": {
+      "alias": "埃德福",
+      "confidence": 1
+    },
+    "dcaf": {
+      "alias": "达卡夫",
+      "confidence": 1
+    },
+    "cdf": {
+      "alias": "累积分布函数",
+      "confidence": 1
+    },
+    "facc": {
+      "alias": "面部表情肌肉",
+      "confidence": 1
+    },
+    "febc": {
+      "alias": "前端业务组件",
+      "confidence": 1
+    },
+    "dcac": {
+      "alias": "直流交流",
+      "confidence": 1
+    },
+    "edcb": {
+      "alias": "埃德克布",
+      "confidence": 1
+    },
+    "dafc": {
+      "alias": "达夫克",
+      "confidence": 1
+    },
+    "caef": {
+      "alias": "卡夫",
+      "confidence": 1
+    },
+    "cde": {
+      "alias": "发展中心",
+      "confidence": 1
+    },
+    "cac": {
+      "alias": "CAC",
+      "confidence": 1
+    },
+    "bbffac": {
+      "alias": "BBFFAC",
+      "confidence": 1
+    },
+    "afce": {
+      "alias": "阿夫塞",
+      "confidence": 1
+    },
+    "bcd": {
+      "alias": "二进制编码的十进制",
+      "confidence": 1
+    },
+    "caafa": {
+      "alias": "卡阿法",
+      "confidence": 1
+    },
+    "fce": {
+      "alias": "设施",
+      "confidence": 1
+    },
+    "edfac": {
+      "alias": "埃德法克",
+      "confidence": 1
+    },
+    "ddfd": {
+      "alias": "迪迪夫德",
+      "confidence": 1
+    },
+    "abd": {
+      "alias": "阿布德",
+      "confidence": 1
+    },
+    "ebea": {
+      "alias": "伊贝亚",
+      "confidence": 1
+    },
+    "eaf": {
+      "alias": "耳朵",
+      "confidence": 1
+    },
+    "fddf": {
+      "alias": "无效数据",
+      "confidence": 1
+    },
+    "fbdb": {
+      "alias": "反馈数据库",
+      "confidence": 1
+    },
+    "ebbb": {
+      "alias": "埃比比",
+      "confidence": 1
+    },
+    "ddf": {
+      "alias": "得得福",
+      "confidence": 1
+    },
+    "cdfd": {
+      "alias": "光盘文件目录",
+      "confidence": 1
+    },
+    "efd": {
+      "alias": "埃夫德",
+      "confidence": 1
+    },
+    "cebf": {
+      "alias": "塞贝夫",
+      "confidence": 1
+    },
+    "eedb": {
+      "alias": "电子数据库",
+      "confidence": 1
+    },
+    "fcbd": {
+      "alias": "功能核心数据库",
+      "confidence": 1
+    },
+    "bbe": {
+      "alias": "基础商业实体",
+      "confidence": 1
+    },
+    "fffeaf": {
+      "alias": "FFFEAF",
+      "confidence": 1
+    },
+    "ebfc": {
+      "alias": "EBFC",
+      "confidence": 1
+    },
+    "cebc": {
+      "alias": "中央商务区",
+      "confidence": 1
+    },
+    "cdbb": {
+      "alias": "cdbb",
+      "confidence": 1
+    },
+    "bffe": {
+      "alias": "BFFE",
+      "confidence": 1
+    },
+    "eae": {
+      "alias": "伊阿埃",
+      "confidence": 1
+    },
+    "cddda": {
+      "alias": "cddda",
+      "confidence": 1
+    },
+    "deab": {
+      "alias": "德阿布",
+      "confidence": 1
+    },
+    "ebde": {
+      "alias": "埃布德",
+      "confidence": 1
+    },
+    "ebdcee": {
+      "alias": "埃布迪西",
+      "confidence": 1
+    },
+    "eabbe": {
+      "alias": "埃比",
+      "confidence": 1
+    },
+    "ccef": {
+      "alias": "看见",
+      "confidence": 1
+    },
+    "fbfd": {
+      "alias": "发生",
+      "confidence": 1
+    },
+    "acbd": {
+      "alias": "阿克布德",
+      "confidence": 1
+    },
+    "aadb": {
+      "alias": "阿德布",
+      "confidence": 1
+    },
+    "ecea": {
+      "alias": "欧洲共同体经济顾问委员会",
+      "confidence": 1
+    },
+    "dbeec": {
+      "alias": "迪比克",
+      "confidence": 1
+    },
+    "dcfa": {
+      "alias": "直流交流",
+      "confidence": 1
+    },
+    "bcdef": {
+      "alias": "bcdef",
+      "confidence": 1
+    },
+    "edbc": {
+      "alias": "教育发展银行公司",
+      "confidence": 1
+    },
+    "dbbb": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "cccc": {
+      "alias": "cccc",
+      "confidence": 1
+    },
+    "abdb": {
+      "alias": "阿布德布",
+      "confidence": 1
+    },
+    "aaec": {
+      "alias": "阿伊艾克",
+      "confidence": 1
+    },
+    "ebadd": {
+      "alias": "埃巴德",
+      "confidence": 1
+    },
+    "fbe": {
+      "alias": "FBE",
+      "confidence": 1
+    },
+    "baaaf": {
+      "alias": "巴阿夫",
+      "confidence": 1
+    },
+    "eaedc": {
+      "alias": "伊爱德克",
+      "confidence": 1
+    },
+    "cfc": {
+      "alias": "氯氟烃",
+      "confidence": 1
+    },
+    "fabf": {
+      "alias": "法布夫",
+      "confidence": 1
+    },
+    "ecd": {
+      "alias": "经济合作与发展",
+      "confidence": 1
+    },
+    "cbbd": {
+      "alias": "cbbd",
+      "confidence": 1
+    },
+    "accd": {
+      "alias": "阿克德",
+      "confidence": 1
+    },
+    "daff": {
+      "alias": "达夫",
+      "confidence": 1
+    },
+    "bcdd": {
+      "alias": "字节循环冗余校验",
+      "confidence": 1
+    },
+    "ecbbc": {
+      "alias": "埃克比克",
+      "confidence": 1
+    },
+    "efbc": {
+      "alias": "十六进制编码",
+      "confidence": 1
+    },
+    "deba": {
+      "alias": "德巴",
+      "confidence": 1
+    },
+    "efcab": {
+      "alias": "埃克法布",
+      "confidence": 1
+    },
+    "ffff": {
+      "alias": "福福福福",
+      "confidence": 1
+    },
+    "afec": {
+      "alias": "阿费克",
+      "confidence": 1
+    },
+    "fcaf": {
+      "alias": "FCAF",
+      "confidence": 1
+    },
+    "fdad": {
+      "alias": "法哒",
+      "confidence": 1
+    },
+    "dcbb": {
+      "alias": "直流偏置双二进制",
+      "confidence": 1
+    },
+    "afba": {
+      "alias": "阿夫巴",
+      "confidence": 1
+    },
+    "abbe": {
+      "alias": "阿贝",
+      "confidence": 1
+    },
+    "bcef": {
+      "alias": "贝塞夫",
+      "confidence": 1
+    },
+    "acbde": {
+      "alias": "阿克比德",
+      "confidence": 1
+    },
+    "defb": {
+      "alias": "德夫布",
+      "confidence": 1
+    },
+    "cbcbb": {
+      "alias": "cbcbb",
+      "confidence": 1
+    },
+    "caff": {
+      "alias": "咖啡",
+      "confidence": 1
+    },
+    "fbcce": {
+      "alias": "FBCCE",
+      "confidence": 1
+    },
+    "eded": {
+      "alias": "埃德德",
+      "confidence": 1
+    },
+    "faecd": {
+      "alias": "法埃克德",
+      "confidence": 1
+    },
+    "cccbc": {
+      "alias": "五环",
+      "confidence": 1
+    },
+    "bcae": {
+      "alias": "巴塞",
+      "confidence": 1
+    },
+    "edf": {
+      "alias": "埃德福",
+      "confidence": 1
+    },
+    "deee": {
+      "alias": "迪伊伊",
+      "confidence": 1
+    },
+    "bceb": {
+      "alias": "比西布",
+      "confidence": 1
+    },
+    "bfad": {
+      "alias": "波发德",
+      "confidence": 1
+    },
+    "bddbd": {
+      "alias": "布德布德",
+      "confidence": 1
+    },
+    "dbdfcb": {
+      "alias": "德布德夫茨布",
+      "confidence": 1
+    },
+    "bdbdb": {
+      "alias": "伯伯德伯伯",
+      "confidence": 1
+    },
+    "cedb": {
+      "alias": "CEDB",
+      "confidence": 1
+    },
+    "aaaf": {
+      "alias": "阿阿阿夫",
+      "confidence": 1
+    },
+    "bdae": {
+      "alias": "比达",
+      "confidence": 1
+    },
+    "daeff": {
+      "alias": "达伊夫",
+      "confidence": 1
+    },
+    "bdbdf": {
+      "alias": "bdbdf",
+      "confidence": 1
+    },
+    "fdaeaf": {
+      "alias": "费德阿法夫",
+      "confidence": 1
+    },
+    "afaef": {
+      "alias": "阿法埃夫",
+      "confidence": 1
+    },
+    "acadd": {
+      "alias": "阿卡德",
+      "confidence": 1
+    },
+    "def": {
+      "alias": "防御",
+      "confidence": 1
+    },
+    "fdbc": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "ccfb": {
+      "alias": "ccfb",
+      "confidence": 1
+    },
+    "beb": {
+      "alias": "宝贝",
+      "confidence": 1
+    },
+    "aced": {
+      "alias": "阿西德",
+      "confidence": 1
+    },
+    "bfaff": {
+      "alias": "比法夫",
+      "confidence": 1
+    },
+    "bbfce": {
+      "alias": "B-B-F-C-E",
+      "confidence": 1
+    },
+    "fbed": {
+      "alias": "费床",
+      "confidence": 1
+    },
+    "fafa": {
+      "alias": "法法",
+      "confidence": 1
+    },
+    "cda": {
+      "alias": "CDA",
+      "confidence": 1
+    },
+    "bedb": {
+      "alias": "床数据库",
+      "confidence": 1
+    },
+    "dacf": {
+      "alias": "达西福",
+      "confidence": 1
+    },
+    "abca": {
+      "alias": "阿巴卡",
+      "confidence": 1
+    },
+    "aace": {
+      "alias": "阿克",
+      "confidence": 1
+    },
+    "cfbd": {
+      "alias": "cfbd",
+      "confidence": 1
+    },
+    "fbab": {
+      "alias": "Fbab",
+      "confidence": 1
+    },
+    "dbcd": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "fbeb": {
+      "alias": "费波",
+      "confidence": 1
+    },
+    "bdb": {
+      "alias": "二进制数据库",
+      "confidence": 1
+    },
+    "fffe": {
+      "alias": "FFFE",
+      "confidence": 1
+    },
+    "beafd": {
+      "alias": "被阿夫德",
+      "confidence": 1
+    },
+    "afaf": {
+      "alias": "阿法阿法",
+      "confidence": 1
+    },
+    "aabcc": {
+      "alias": "啊 啊 比西西",
+      "confidence": 1
+    },
+    "fef": {
+      "alias": "费夫",
+      "confidence": 1
+    },
+    "ffbf": {
+      "alias": "FFBF",
+      "confidence": 1
+    },
+    "cabcfe": {
+      "alias": "卡贝夫",
+      "confidence": 1
+    },
+    "dedc": {
+      "alias": "德克",
+      "confidence": 1
+    },
+    "bcb": {
+      "alias": "比西比",
+      "confidence": 1
+    },
+    "abdeb": {
+      "alias": "阿贝德布",
+      "confidence": 1
+    },
+    "dacdb": {
+      "alias": "达克德布",
+      "confidence": 1
+    },
+    "fcdb": {
+      "alias": "文件控制数据库",
+      "confidence": 1
+    },
+    "bfb": {
+      "alias": "BFB",
+      "confidence": 1
+    },
+    "fdfe": {
+      "alias": "无效字符",
+      "confidence": 1
+    },
+    "dabdf": {
+      "alias": "达布德夫",
+      "confidence": 1
+    },
+    "edce": {
+      "alias": "埃德塞",
+      "confidence": 1
+    },
+    "eccea": {
+      "alias": "埃克萨",
+      "confidence": 1
+    },
+    "eaac": {
+      "alias": "东部非洲艾滋病委员会",
+      "confidence": 1
+    },
+    "dcb": {
+      "alias": "直流电容器",
+      "confidence": 1
+    },
+    "baaac": {
+      "alias": "巴阿克",
+      "confidence": 1
+    },
+    "addcc": {
+      "alias": "添加cc",
+      "confidence": 1
+    },
+    "fdbeb": {
+      "alias": "费德贝布",
+      "confidence": 1
+    },
+    "beac": {
+      "alias": "比克",
+      "confidence": 1
+    },
+    "fbbf": {
+      "alias": "FBBF",
+      "confidence": 1
+    },
+    "dfdac": {
+      "alias": "的达斯克",
+      "confidence": 1
+    },
+    "acfa": {
+      "alias": "阿克法",
+      "confidence": 1
+    },
+    "ddca": {
+      "alias": "的达卡",
+      "confidence": 1
+    },
+    "daee": {
+      "alias": "达伊",
+      "confidence": 1
+    },
+    "ebeb": {
+      "alias": "埃贝",
+      "confidence": 1
+    },
+    "aafa": {
+      "alias": "阿阿法",
+      "confidence": 1
+    },
+    "faee": {
+      "alias": "费伊",
+      "confidence": 1
+    },
+    "dcfb": {
+      "alias": "直流反馈",
+      "confidence": 1
+    },
+    "ffef": {
+      "alias": "无效字符",
+      "confidence": 1
+    },
+    "dadba": {
+      "alias": "达巴达",
+      "confidence": 1
+    },
+    "ceadc": {
+      "alias": "塞达克",
+      "confidence": 1
+    },
+    "aaea": {
+      "alias": "阿阿阿",
+      "confidence": 1
+    },
+    "ecdf": {
+      "alias": "生态累积分布函数",
+      "confidence": 1
+    },
+    "eddd": {
+      "alias": "埃德德",
+      "confidence": 1
+    },
+    "eab": {
+      "alias": "易受攻击的浏览器",
+      "confidence": 1
+    },
+    "bceab": {
+      "alias": "比西布",
+      "confidence": 1
+    },
+    "fefcdf": {
+      "alias": "费夫克达夫",
+      "confidence": 1
+    },
+    "cdc": {
+      "alias": "疾病控制中心",
+      "confidence": 1
+    },
+    "ccdabf": {
+      "alias": "碳镉铝溴氟",
+      "confidence": 1
+    },
+    "ebfe": {
+      "alias": "艾博飞",
+      "confidence": 1
+    },
+    "ebafa": {
+      "alias": "埃巴法",
+      "confidence": 1
+    },
+    "caa": {
+      "alias": "加拿大航空管理局",
+      "confidence": 1
+    },
+    "dccc": {
+      "alias": "DCCC",
+      "confidence": 1
+    },
+    "ddebd": {
+      "alias": "德德布德",
+      "confidence": 1
+    },
+    "decbd": {
+      "alias": "去中央数字",
+      "confidence": 1
+    },
+    "adfa": {
+      "alias": "阿德法",
+      "confidence": 1
+    },
+    "deed": {
+      "alias": "契约",
+      "confidence": 1
+    },
+    "efccb": {
+      "alias": "埃克西布",
+      "confidence": 1
+    },
+    "deac": {
+      "alias": "德拉克",
+      "confidence": 1
+    },
+    "dadc": {
+      "alias": "达德克",
+      "confidence": 1
+    },
+    "fada": {
+      "alias": "法达",
+      "confidence": 1
+    },
+    "edab": {
+      "alias": "埃达布",
+      "confidence": 1
+    },
+    "cfef": {
+      "alias": "西费夫",
+      "confidence": 1
+    },
+    "bddca": {
+      "alias": "布达卡",
+      "confidence": 1
+    },
+    "bdeeae": {
+      "alias": "比德伊爱",
+      "confidence": 1
+    },
+    "aefba": {
+      "alias": "哎夫巴",
+      "confidence": 1
+    },
+    "dffe": {
+      "alias": "DFFE",
+      "confidence": 1
+    },
+    "dcabb": {
+      "alias": "DCABB",
+      "confidence": 1
+    },
+    "ddeadc": {
+      "alias": "死dead死c",
+      "confidence": 1
+    },
+    "cabb": {
+      "alias": "cab b",
+      "confidence": 1
+    },
+    "eea": {
+      "alias": "欧洲经济区",
+      "confidence": 1
+    },
+    "ccb": {
+      "alias": "中国建设银行",
+      "confidence": 1
+    },
+    "eafa": {
+      "alias": "伊阿法",
+      "confidence": 1
+    },
+    "aabe": {
+      "alias": "阿阿贝",
+      "confidence": 1
+    },
+    "bddf": {
+      "alias": "二进制数据定义文件",
+      "confidence": 1
+    },
+    "beab": {
+      "alias": "比阿布",
+      "confidence": 1
+    },
+    "ecbddc": {
+      "alias": "电报控制缓冲区数据",
+      "confidence": 1
+    },
+    "dacc": {
+      "alias": "达茨",
+      "confidence": 1
+    },
+    "bbea": {
+      "alias": "比比爱",
+      "confidence": 1
+    },
+    "febf": {
+      "alias": "费布夫",
+      "confidence": 1
+    },
+    "aaba": {
+      "alias": "阿阿巴",
+      "confidence": 1
+    },
+    "fbfae": {
+      "alias": "费布费",
+      "confidence": 1
+    },
+    "cec": {
+      "alias": "塞斯",
+      "confidence": 1
+    },
+    "edba": {
+      "alias": "艾德巴",
+      "confidence": 1
+    },
+    "dbfc": {
+      "alias": "德布夫克",
+      "confidence": 1
+    },
+    "ffeb": {
+      "alias": "费费布",
+      "confidence": 1
+    },
+    "ecaf": {
+      "alias": "生态咖啡",
+      "confidence": 1
+    },
+    "bbba": {
+      "alias": "比比巴",
+      "confidence": 1
+    },
+    "cfea": {
+      "alias": "西费",
+      "confidence": 1
+    },
+    "cbaf": {
+      "alias": "卡巴夫",
+      "confidence": 1
+    },
+    "aecf": {
+      "alias": "阿埃克夫",
+      "confidence": 1
+    },
+    "eecc": {
+      "alias": "电子控制中心",
+      "confidence": 1
+    },
+    "abea": {
+      "alias": "阿贝阿",
+      "confidence": 1
+    },
+    "dcdd": {
+      "alias": "得克萨斯州达拉斯市",
+      "confidence": 1
+    },
+    "acb": {
+      "alias": "阿克布",
+      "confidence": 1
+    },
+    "edeca": {
+      "alias": "埃德卡",
+      "confidence": 1
+    },
+    "bdcd": {
+      "alias": "波段码",
+      "confidence": 1
+    },
+    "ccccc": {
+      "alias": "五c",
+      "confidence": 1
+    },
+    "cded": {
+      "alias": "参见",
+      "confidence": 1
+    },
+    "aeffde": {
+      "alias": "阿埃夫德",
+      "confidence": 1
+    },
+    "dffab": {
+      "alias": "迪法布",
+      "confidence": 1
+    },
+    "ebba": {
+      "alias": "埃巴",
+      "confidence": 1
+    },
+    "cfec": {
+      "alias": "cfec",
+      "confidence": 1
+    },
+    "dbad": {
+      "alias": "德巴德",
+      "confidence": 1
+    },
+    "ccfe": {
+      "alias": "ccfe",
+      "confidence": 1
+    },
+    "ebff": {
+      "alias": "ebff",
+      "confidence": 1
+    },
+    "ebcde": {
+      "alias": "埃比克德",
+      "confidence": 1
+    },
+    "fdfda": {
+      "alias": "费达达",
+      "confidence": 1
+    },
+    "decb": {
+      "alias": "德克布",
+      "confidence": 1
+    },
+    "bfea": {
+      "alias": "比费啊",
+      "confidence": 1
+    },
+    "fcbf": {
+      "alias": "功能控制块框架",
+      "confidence": 1
+    },
+    "fcbddd": {
+      "alias": "功能控制块数据定义域",
+      "confidence": 1
+    },
+    "ddfee": {
+      "alias": "迪迪费",
+      "confidence": 1
+    },
+    "bfdf": {
+      "alias": "波峰因子",
+      "confidence": 1
+    },
+    "fcffe": {
+      "alias": "FCFFE",
+      "confidence": 1
+    },
+    "aacf": {
+      "alias": "阿克夫",
+      "confidence": 1
+    },
+    "fddfb": {
+      "alias": "费德福布",
+      "confidence": 1
+    },
+    "fede": {
+      "alias": "费德",
+      "confidence": 1
+    },
+    "fedebd": {
+      "alias": "费德bd",
+      "confidence": 1
+    },
+    "efffce": {
+      "alias": "效率",
+      "confidence": 1
+    },
+    "bdca": {
+      "alias": "波段数据采集",
+      "confidence": 1
+    },
+    "feff": {
+      "alias": "费米能级",
+      "confidence": 1
+    },
+    "abecb": {
+      "alias": "阿贝克布",
+      "confidence": 1
+    },
+    "fbddf": {
+      "alias": "反馈数据缺陷框架",
+      "confidence": 1
+    },
+    "beaf": {
+      "alias": "牛肉",
+      "confidence": 1
+    },
+    "fdcc": {
+      "alias": "联邦存款保险公司",
+      "confidence": 1
+    },
+    "ecc": {
+      "alias": "ecc",
+      "confidence": 1
+    },
+    "ccee": {
+      "alias": "cccc ee",
+      "confidence": 1
+    },
+    "bbde": {
+      "alias": "乙二醇二乙酸酯",
+      "confidence": 1
+    },
+    "e": {
+      "alias": "电子",
+      "confidence": 1
+    },
+    "cceea": {
+      "alias": "西西伊诶啊",
+      "confidence": 1
+    },
+    "bfcddd": {
+      "alias": "BFCDDD",
+      "confidence": 1
+    },
+    "efab": {
+      "alias": "电子频率访问二进制",
+      "confidence": 1
+    },
+    "fcbfa": {
+      "alias": "FCBFA",
+      "confidence": 1
+    },
+    "eacbf": {
+      "alias": "伊阿克布夫",
+      "confidence": 1
+    },
+    "dacb": {
+      "alias": "达卡布",
+      "confidence": 1
+    },
+    "dfbeda": {
+      "alias": "德夫贝达",
+      "confidence": 1
+    },
+    "ddaf": {
+      "alias": "达达夫",
+      "confidence": 1
+    },
+    "eabb": {
+      "alias": "伊阿布",
+      "confidence": 1
+    },
+    "fadfa": {
+      "alias": "法法发",
+      "confidence": 1
+    },
+    "ddb": {
+      "alias": "数据库",
+      "confidence": 1
+    },
+    "dcbc": {
+      "alias": "直流字节",
+      "confidence": 1
+    },
+    "eebdb": {
+      "alias": "易贝数据库",
+      "confidence": 1
+    },
+    "feecbc": {
+      "alias": "费克比克",
+      "confidence": 1
+    },
+    "cfcea": {
+      "alias": "cfcea",
+      "confidence": 1
+    },
+    "addf": {
+      "alias": "广告数据帧",
+      "confidence": 1
+    },
+    "cabd": {
+      "alias": "卡布德",
+      "confidence": 1
+    },
+    "aecdb": {
+      "alias": "艾克迪布",
+      "confidence": 1
+    },
+    "fcadb": {
+      "alias": "法卡德布",
+      "confidence": 1
+    },
+    "dcdc": {
+      "alias": "直流直流",
+      "confidence": 1
+    },
+    "faca": {
+      "alias": "法卡",
+      "confidence": 1
+    },
+    "dcaca": {
+      "alias": "直流卡卡",
+      "confidence": 1
+    },
+    "efbb": {
+      "alias": "电二进制补码",
+      "confidence": 1
+    },
+    "ccbf": {
+      "alias": "中央商务区基金",
+      "confidence": 1
+    },
+    "dace": {
+      "alias": "达斯",
+      "confidence": 1
+    },
+    "deea": {
+      "alias": "迪雅",
+      "confidence": 1
+    },
+    "dbac": {
+      "alias": "数据库访问控制",
+      "confidence": 1
+    },
+    "baafa": {
+      "alias": "巴阿法",
+      "confidence": 1
+    },
+    "ccbb": {
+      "alias": "ccbb",
+      "confidence": 1
+    },
+    "dfcfc": {
+      "alias": "dfcfc",
+      "confidence": 1
+    },
+    "fefe": {
+      "alias": "菲菲",
+      "confidence": 1
+    },
+    "abcb": {
+      "alias": "阿布西",
+      "confidence": 1
+    },
+    "edfd": {
+      "alias": "埃德福德",
+      "confidence": 1
+    },
+    "ecad": {
+      "alias": "电子CAD",
+      "confidence": 1
+    },
+    "dddbd": {
+      "alias": "点点点",
+      "confidence": 1
+    },
+    "ebfa": {
+      "alias": "埃布法",
+      "confidence": 1
+    },
+    "bac": {
+      "alias": "巴科",
+      "confidence": 1
+    },
+    "fdae": {
+      "alias": "脂肪酸",
+      "confidence": 1
+    },
+    "daea": {
+      "alias": "达伊阿",
+      "confidence": 1
+    },
+    "baae": {
+      "alias": "巴埃",
+      "confidence": 1
+    },
+    "aeca": {
+      "alias": "阿克萨",
+      "confidence": 1
+    },
+    "daefb": {
+      "alias": "戴夫布",
+      "confidence": 1
+    },
+    "bbcead": {
+      "alias": "乙丙橡胶",
+      "confidence": 1
+    },
+    "bdff": {
+      "alias": "边界防御框架",
+      "confidence": 1
+    },
+    "ebcb": {
+      "alias": "电子控制制动系统",
+      "confidence": 1
+    },
+    "bbab": {
+      "alias": "巴巴布",
+      "confidence": 1
+    },
+    "fcebf": {
+      "alias": "费塞布夫",
+      "confidence": 1
+    },
+    "efcdb": {
+      "alias": "埃夫克德布",
+      "confidence": 1
+    },
+    "bbd": {
+      "alias": "BBD",
+      "confidence": 1
+    },
+    "edcfcf": {
+      "alias": "EDCFcf",
+      "confidence": 1
+    },
+    "baad": {
+      "alias": "坏的",
+      "confidence": 1
+    },
+    "beeb": {
+      "alias": "蜜蜂",
+      "confidence": 1
+    },
+    "bdba": {
+      "alias": "比德巴",
+      "confidence": 1
+    },
+    "cecff": {
+      "alias": "塞塞夫",
+      "confidence": 1
+    },
+    "cfebb": {
+      "alias": "看见我变",
+      "confidence": 1
+    },
+    "efea": {
+      "alias": "埃费亚",
+      "confidence": 1
+    },
+    "bbacd": {
+      "alias": "巴巴克德",
+      "confidence": 1
+    },
+    "afcf": {
+      "alias": "阿夫西夫",
+      "confidence": 1
+    },
+    "affc": {
+      "alias": "阿福克",
+      "confidence": 1
+    },
+    "fdac": {
+      "alias": "脂肪酸",
+      "confidence": 1
+    },
+    "bcbe": {
+      "alias": "bcbe",
+      "confidence": 1
+    },
+    "aaee": {
+      "alias": "aaee",
+      "confidence": 1
+    },
+    "dcad": {
+      "alias": "直流电容器",
+      "confidence": 1
+    },
+    "fedd": {
+      "alias": "费德",
+      "confidence": 1
+    },
+    "bdfc": {
+      "alias": "波段频率控制",
+      "confidence": 1
+    },
+    "cffa": {
+      "alias": "cffa",
+      "confidence": 1
+    },
+    "cbdb": {
+      "alias": "中央配电板数据库",
+      "confidence": 1
+    },
+    "acdb": {
+      "alias": "一个西的的 不",
+      "confidence": 1
+    },
+    "ded": {
+      "alias": "ded",
+      "confidence": 1
+    },
+    "cbbf": {
+      "alias": "cbbf",
+      "confidence": 1
+    },
+    "dadbd": {
+      "alias": "达德布德",
+      "confidence": 1
+    },
+    "fefff": {
+      "alias": "费福福",
+      "confidence": 1
+    },
+    "aefd": {
+      "alias": "阿埃夫德",
+      "confidence": 1
+    },
+    "cdbe": {
+      "alias": "光盘数据库引擎",
+      "confidence": 1
+    },
+    "dadb": {
+      "alias": "爸爸的",
+      "confidence": 1
+    },
+    "342ef03fdba130c08c752aac5a39f9632d8de7": {
+      "alias": "三十四二ef零三fdb一三零c零八c七五二aac五四九f九六三二d八de七",
+      "confidence": 1
+    },
+    "abcbe": {
+      "alias": "阿贝贝",
+      "confidence": 1
+    },
+    "dcbbbb": {
+      "alias": "直流哔哔",
+      "confidence": 1
+    },
+    "ccff": {
+      "alias": "玉米玉米",
+      "confidence": 1
+    },
+    "ccffd": {
+      "alias": "玉米玉米的",
+      "confidence": 1
+    },
+    "feca": {
+      "alias": "费卡",
+      "confidence": 1
+    },
+    "bdec": {
+      "alias": "比德克",
+      "confidence": 1
+    },
+    "dead": {
+      "alias": "死的",
+      "confidence": 1
+    },
+    "aeaf": {
+      "alias": "阿伊阿夫",
+      "confidence": 1
+    },
+    "bce": {
+      "alias": "公元前",
+      "confidence": 1
+    },
+    "ddbf": {
+      "alias": "ddbF",
+      "confidence": 1
+    },
+    "aafc": {
+      "alias": "阿阿福克",
+      "confidence": 1
+    },
+    "bdafa": {
+      "alias": "巴达法",
+      "confidence": 1
+    },
+    "dcbafb": {
+      "alias": "直流交流变换器",
+      "confidence": 1
+    },
+    "fdbe": {
+      "alias": "费德贝",
+      "confidence": 1
+    },
+    "caede": {
+      "alias": "切割",
+      "confidence": 1
+    },
+    "cbfa": {
+      "alias": "cbfa",
+      "confidence": 1
+    },
+    "bfbe": {
+      "alias": "bfbe",
+      "confidence": 1
+    },
+    "adcf": {
+      "alias": "阿德福",
+      "confidence": 1
+    },
+    "babc": {
+      "alias": "巴布克",
+      "confidence": 1
+    },
+    "cbab": {
+      "alias": "卡巴布",
+      "confidence": 1
+    },
+    "fcff": {
+      "alias": "FCFF",
+      "confidence": 1
+    },
+    "dceb": {
+      "alias": "直流电容器",
+      "confidence": 1
+    },
+    "addd": {
+      "alias": "添加",
+      "confidence": 1
+    },
+    "caab": {
+      "alias": "卡布",
+      "confidence": 1
+    },
+    "bdfe": {
+      "alias": "边界错误",
+      "confidence": 1
+    },
+    "ccab": {
+      "alias": "碳碳键",
+      "confidence": 1
+    },
+    "bbbce": {
+      "alias": "比比西",
+      "confidence": 1
+    },
+    "fdfbf": {
+      "alias": "斐德伯夫",
+      "confidence": 1
+    },
+    "edef": {
+      "alias": "埃德福",
+      "confidence": 1
+    },
+    "aaefa": {
+      "alias": "阿阿埃法",
+      "confidence": 1
+    },
+    "aebf": {
+      "alias": "艾博夫",
+      "confidence": 1
+    },
+    "acff": {
+      "alias": "阿克夫",
+      "confidence": 1
+    },
+    "dddec": {
+      "alias": "迪迪埃克",
+      "confidence": 1
+    },
+    "cdca": {
+      "alias": "西达卡",
+      "confidence": 1
+    },
+    "eabd": {
+      "alias": "伊阿布德",
+      "confidence": 1
+    },
+    "dbffc": {
+      "alias": "数据库ffc",
+      "confidence": 1
+    },
+    "ddbcc": {
+      "alias": "ddbcc",
+      "confidence": 1
+    },
+    "dcdb": {
+      "alias": "直流数据库",
+      "confidence": 1
+    },
+    "bbdcc": {
+      "alias": "宽带数字交叉连接",
+      "confidence": 1
+    },
+    "eedcf": {
+      "alias": "埃德克夫",
+      "confidence": 1
+    },
+    "cbccdf": {
+      "alias": "cbccdf",
+      "confidence": 1
+    },
+    "cadec": {
+      "alias": "卡德克",
+      "confidence": 1
+    },
+    "acfe": {
+      "alias": "阿克费",
+      "confidence": 1
+    },
+    "bfbd": {
+      "alias": "比福德",
+      "confidence": 1
+    },
+    "eaeccd": {
+      "alias": "伊爱克西德",
+      "confidence": 1
+    },
+    "edaaf": {
+      "alias": "埃达夫",
+      "confidence": 1
+    },
+    "edaf": {
+      "alias": "埃达夫",
+      "confidence": 1
+    },
+    "fbee": {
+      "alias": "F蜜蜂",
+      "confidence": 1
+    },
+    "ebbcce": {
+      "alias": "埃比比斯",
+      "confidence": 1
+    },
+    "cefc": {
+      "alias": "塞夫克",
+      "confidence": 1
+    },
+    "bcdb": {
+      "alias": "波克数据库",
+      "confidence": 1
+    },
+    "ecabb": {
+      "alias": "埃卡布",
+      "confidence": 1
+    },
+    "cddbe": {
+      "alias": "cddbe",
+      "confidence": 1
+    },
+    "deecf": {
+      "alias": "迪克夫",
+      "confidence": 1
+    },
+    "edbff": {
+      "alias": "埃德博夫",
+      "confidence": 1
+    },
+    "fdca": {
+      "alias": "食品、药品和化妆品法案",
+      "confidence": 1
+    },
+    "cdadc": {
+      "alias": "卡达克",
+      "confidence": 1
+    },
+    "daed": {
+      "alias": "戴德",
+      "confidence": 1
+    },
+    "bedd": {
+      "alias": "床铺",
+      "confidence": 1
+    },
+    "ecdbac": {
+      "alias": "埃克迪巴克",
+      "confidence": 1
+    },
+    "eccb": {
+      "alias": "欧洲央行",
+      "confidence": 1
+    },
+    "cecd": {
+      "alias": "中央选举委员会",
+      "confidence": 1
+    },
+    "efedc": {
+      "alias": "电子前端显示控制器",
+      "confidence": 1
+    },
+    "afadd": {
+      "alias": "阿法德德",
+      "confidence": 1
+    },
+    "ebdd": {
+      "alias": "埃布德德",
+      "confidence": 1
+    },
+    "aedd": {
+      "alias": "阿德德",
+      "confidence": 1
+    },
+    "beae": {
+      "alias": "比诶",
+      "confidence": 1
+    },
+    "acdd": {
+      "alias": "阿克德",
+      "confidence": 1
+    },
+    "effd": {
+      "alias": "效率",
+      "confidence": 1
+    },
+    "dfafa": {
+      "alias": "达法法",
+      "confidence": 1
+    },
+    "dbea": {
+      "alias": "德贝阿",
+      "confidence": 1
+    },
+    "acba": {
+      "alias": "阿克巴",
+      "confidence": 1
+    },
+    "fdfb": {
+      "alias": "斐德福布",
+      "confidence": 1
+    },
+    "efec": {
+      "alias": "埃费克",
+      "confidence": 1
+    },
+    "cbcfd": {
+      "alias": "加拿大广播公司联邦分台",
+      "confidence": 1
+    },
+    "eeada": {
+      "alias": "伊埃达",
+      "confidence": 1
+    },
+    "fcfdad": {
+      "alias": "fcfdad",
+      "confidence": 1
+    },
+    "befdf": {
+      "alias": "贝夫迪夫",
+      "confidence": 1
+    },
+    "efbebd": {
+      "alias": "埃夫贝布德",
+      "confidence": 1
+    },
+    "dcff": {
+      "alias": "直流场",
+      "confidence": 1
+    },
+    "aeda": {
+      "alias": "艾达",
+      "confidence": 1
+    },
+    "ffaace": {
+      "alias": "法法艾斯",
+      "confidence": 1
+    },
+    "bbbdc": {
+      "alias": "比比直流",
+      "confidence": 1
+    },
+    "dcbe": {
+      "alias": "直流平衡",
+      "confidence": 1
+    },
+    "ddba": {
+      "alias": "ddba",
+      "confidence": 1
+    },
+    "fccee": {
+      "alias": "FCCEE",
+      "confidence": 1
+    },
+    "ddeffb": {
+      "alias": "DDEFFB",
+      "confidence": 1
+    },
+    "cfbbd": {
+      "alias": "cfbbd",
+      "confidence": 1
+    },
+    "afbd": {
+      "alias": "阿福德",
+      "confidence": 1
+    },
+    "ffdba": {
+      "alias": "ffdba",
+      "confidence": 1
+    },
+    "aafbcb": {
+      "alias": "aafbcb",
+      "confidence": 1
+    },
+    "beed": {
+      "alias": "蜜蜂",
+      "confidence": 1
+    },
+    "cfaac": {
+      "alias": "西法啊吃",
+      "confidence": 1
+    },
+    "ccda": {
+      "alias": "西西哒啊",
+      "confidence": 1
+    },
+    "ffcff": {
+      "alias": "发发吃发发吃",
+      "confidence": 1
+    },
+    "aece": {
+      "alias": "艾斯",
+      "confidence": 1
+    },
+    "eeacd": {
+      "alias": "伊伊阿克德",
+      "confidence": 1
+    },
+    "dcee": {
+      "alias": "德西",
+      "confidence": 1
+    },
+    "ceba": {
+      "alias": "塞巴",
+      "confidence": 1
+    },
+    "adca": {
+      "alias": "阿德卡",
+      "confidence": 1
+    },
+    "cccd": {
+      "alias": "cccc",
+      "confidence": 1
+    },
+    "bcaacd": {
+      "alias": "bcaa cd",
+      "confidence": 1
+    },
+    "dbfef": {
+      "alias": "德贝费",
+      "confidence": 1
+    },
+    "eadb": {
+      "alias": "伊阿德布",
+      "confidence": 1
+    },
+    "aefc": {
+      "alias": "阿依夫斯",
+      "confidence": 1
+    },
+    "bcbf": {
+      "alias": "bcbf",
+      "confidence": 1
+    },
+    "eacfb": {
+      "alias": "埃克夫比",
+      "confidence": 1
+    },
+    "effde": {
+      "alias": "埃夫德",
+      "confidence": 1
+    },
+    "cebab": {
+      "alias": "塞巴布",
+      "confidence": 1
+    },
+    "dfbb": {
+      "alias": "Dfbb",
+      "confidence": 1
+    },
+    "abfd": {
+      "alias": "阿布夫德",
+      "confidence": 1
+    },
+    "cfdb": {
+      "alias": "斯福德布",
+      "confidence": 1
+    },
+    "daaeb": {
+      "alias": "达伊布",
+      "confidence": 1
+    },
+    "dafe": {
+      "alias": "达费",
+      "confidence": 1
+    },
+    "fbac": {
+      "alias": "福巴克",
+      "confidence": 1
+    },
+    "aabad": {
+      "alias": "阿阿巴德",
+      "confidence": 1
+    },
+    "bbaa": {
+      "alias": "巴芭阿",
+      "confidence": 1
+    },
+    "bcaf": {
+      "alias": "巴卡夫",
+      "confidence": 1
+    },
+    "bdcb": {
+      "alias": "BDCB",
+      "confidence": 1
+    },
+    "eaef": {
+      "alias": "伊阿埃夫",
+      "confidence": 1
+    },
+    "cdbaa": {
+      "alias": "cdbaa",
+      "confidence": 1
+    },
+    "faac": {
+      "alias": "faac",
+      "confidence": 1
+    },
+    "cfdc": {
+      "alias": "C F D C",
+      "confidence": 1
+    },
+    "bebe": {
+      "alias": "B E B E",
+      "confidence": 1
+    },
+    "afbe": {
+      "alias": "阿贝",
+      "confidence": 1
+    },
+    "feee": {
+      "alias": "费伊",
+      "confidence": 1
+    },
+    "acbf": {
+      "alias": "阿克布夫",
+      "confidence": 1
+    },
+    "eecd": {
+      "alias": "电子电气设备认证",
+      "confidence": 1
+    },
+    "dfaf": {
+      "alias": "达法夫",
+      "confidence": 1
+    },
+    "ecdb": {
+      "alias": "电控数据库",
+      "confidence": 1
+    },
+    "cbea": {
+      "alias": "厘米波段电子对抗",
+      "confidence": 1
+    },
+    "bcad": {
+      "alias": "生物计算机辅助设计",
+      "confidence": 1
+    },
+    "accde": {
+      "alias": "阿克德",
+      "confidence": 1
+    },
+    "fbce": {
+      "alias": "费布塞",
+      "confidence": 1
+    },
+    "cbcd": {
+      "alias": "斯比德",
+      "confidence": 1
+    },
+    "efdbbb": {
+      "alias": "埃夫德比比",
+      "confidence": 1
+    },
+    "bada": {
+      "alias": "巴达",
+      "confidence": 1
+    },
+    "bceca": {
+      "alias": "比西卡",
+      "confidence": 1
+    },
+    "cbae": {
+      "alias": "CBAE",
+      "confidence": 1
+    },
+    "efff": {
+      "alias": "效率",
+      "confidence": 1
+    },
+    "efdf": {
+      "alias": "埃菲",
+      "confidence": 1
+    },
+    "cdefe": {
+      "alias": "参见定义",
+      "confidence": 1
+    },
+    "cacf": {
+      "alias": "卡克夫",
+      "confidence": 1
+    },
+    "ebfff": {
+      "alias": "埃布福夫",
+      "confidence": 1
+    },
+    "dbdfa": {
+      "alias": "数据库数据文件架构",
+      "confidence": 1
+    },
+    "bdaa": {
+      "alias": "巴达",
+      "confidence": 1
+    },
+    "eafd": {
+      "alias": "伊阿夫德",
+      "confidence": 1
+    },
+    "acdeb": {
+      "alias": "阿克德布",
+      "confidence": 1
+    },
+    "ebfd": {
+      "alias": "埃布夫德",
+      "confidence": 1
+    },
+    "fcba": {
+      "alias": "足球俱乐部",
+      "confidence": 1
+    },
+    "caea": {
+      "alias": "卡埃阿",
+      "confidence": 1
+    },
+    "babff": {
+      "alias": "巴布夫",
+      "confidence": 1
+    },
+    "fbcdc": {
+      "alias": "联邦疾病控制中心",
+      "confidence": 1
+    },
+    "dbdf": {
+      "alias": "数据库文件",
+      "confidence": 1
+    },
+    "dbbd": {
+      "alias": "数据库bd",
+      "confidence": 1
+    },
+    "bcfbf": {
+      "alias": "bcfbf",
+      "confidence": 1
+    },
+    "pack": {
+      "alias": "打包",
+      "confidence": 1
+    },
+    "tags": {
+      "alias": "标签",
+      "confidence": 1
+    },
+    "editmsg": {
+      "alias": "编辑信息",
+      "confidence": 1
+    },
+    "description": {
+      "alias": "描述",
+      "confidence": 1
+    },
+    "fetch": {
+      "alias": "获取",
+      "confidence": 1
+    },
+    "orig": {
+      "alias": "原始",
+      "confidence": 1
+    },
+    "issue": {
+      "alias": "问题",
+      "confidence": 1
+    },
+    "template": {
+      "alias": "模板",
+      "confidence": 1
+    },
+    "bug": {
+      "alias": "错误",
+      "confidence": 1
+    },
+    "report": {
+      "alias": "报告",
+      "confidence": 1
+    },
+    "feature": {
+      "alias": "特性",
+      "confidence": 1
+    },
+    "question": {
+      "alias": "问题",
+      "confidence": 1
+    },
+    "workflows": {
+      "alias": "工作流程",
+      "confidence": 1
+    },
+    "pr": {
+      "alias": "项目",
+      "confidence": 1
+    },
+    "release": {
+      "alias": "释放",
+      "confidence": 1
+    },
+    "security": {
+      "alias": "安全",
+      "confidence": 1
+    },
+    "launch": {
+      "alias": "发射",
+      "confidence": 1
+    },
+    "mcp": {
+      "alias": "主控制面板",
+      "confidence": 1
+    },
+    "settings": {
+      "alias": "设置",
+      "confidence": 1
+    },
+    "tasks": {
+      "alias": "任务",
+      "confidence": 1
+    },
+    "graph": {
+      "alias": "图",
+      "confidence": 1
+    },
+    "type": {
+      "alias": "类型",
+      "confidence": 1
+    },
+    "copy": {
+      "alias": "复制",
+      "confidence": 1
+    },
+    "vs": {
+      "alias": "对比",
+      "confidence": 1
+    },
+    "phase": {
+      "alias": "阶段",
+      "confidence": 1
+    },
+    "phase2": {
+      "alias": "阶段二",
+      "confidence": 1
+    },
+    "ready": {
+      "alias": "准备好的",
+      "confidence": 1
+    },
+    "changelog": {
+      "alias": "变更日志",
+      "confidence": 1
+    },
+    "blueprint": {
+      "alias": "蓝图",
+      "confidence": 1
+    },
+    "java": {
+      "alias": "爪哇",
+      "confidence": 1
+    },
+    "ai": {
+      "alias": "人工智能",
+      "confidence": 1
+    },
+    "api": {
+      "alias": "应用程序编程接口",
+      "confidence": 1
+    },
+    "key": {
+      "alias": "钥匙",
+      "confidence": 1
+    },
+    "architecture": {
+      "alias": "架构",
+      "confidence": 1
+    },
+    "roadmap": {
+      "alias": "路线图",
+      "confidence": 1
+    },
+    "cache": {
+      "alias": "缓存",
+      "confidence": 1
+    },
+    "monitoring": {
+      "alias": "监控",
+      "confidence": 1
+    },
+    "guide": {
+      "alias": "指南",
+      "confidence": 1
+    },
+    "collaboration": {
+      "alias": "合作",
+      "confidence": 1
+    },
+    "features": {
+      "alias": "特征",
+      "confidence": 1
+    },
+    "transform": {
+      "alias": "变换",
+      "confidence": 1
+    },
+    "mvp": {
+      "alias": "最小可行产品",
+      "confidence": 1
+    },
+    "modules": {
+      "alias": "模块",
+      "confidence": 1
+    },
+    "media": {
+      "alias": "媒体",
+      "confidence": 1
+    },
+    "filetree": {
+      "alias": "文件树",
+      "confidence": 1
+    },
+    "breadcrumb": {
+      "alias": "面包屑",
+      "confidence": 1
+    },
+    "card": {
+      "alias": "卡片",
+      "confidence": 1
+    },
+    "layer": {
+      "alias": "层",
+      "confidence": 1
+    },
+    "contracts": {
+      "alias": "合同",
+      "confidence": 1
+    },
+    "message": {
+      "alias": "消息",
+      "confidence": 1
+    },
+    "layout": {
+      "alias": "布局",
+      "confidence": 1
+    },
+    "engine": {
+      "alias": "引擎",
+      "confidence": 1
+    },
+    "hub": {
+      "alias": "中心",
+      "confidence": 1
+    },
+    "renderer": {
+      "alias": "渲染器",
+      "confidence": 1
+    },
+    "runtime": {
+      "alias": "运行时",
+      "confidence": 1
+    },
+    "style": {
+      "alias": "样式",
+      "confidence": 1
+    },
+    "interactions": {
+      "alias": "交互",
+      "confidence": 1
+    },
+    "interaction": {
+      "alias": "交互",
+      "confidence": 1
+    },
+    "drag": {
+      "alias": "拖动",
+      "confidence": 1
+    },
+    "manager": {
+      "alias": "管理器",
+      "confidence": 1
+    },
+    "zoom": {
+      "alias": "变焦",
+      "confidence": 1
+    },
+    "pan": {
+      "alias": "平移",
+      "confidence": 1
+    },
+    "analysis": {
+      "alias": "分析",
+      "confidence": 1
+    },
+    "enhanced": {
+      "alias": "增强的",
+      "confidence": 1
+    },
+    "notes": {
+      "alias": "笔记",
+      "confidence": 1
+    },
+    "toolbar": {
+      "alias": "工具栏",
+      "confidence": 1
+    },
+    "stylesheet": {
+      "alias": "样式表",
+      "confidence": 1
+    },
+    "warning": {
+      "alias": "警告",
+      "confidence": 1
+    },
+    "boot": {
+      "alias": "启动",
+      "confidence": 1
+    },
+    "bp": {
+      "alias": "基点",
+      "confidence": 1
+    },
+    "channel": {
+      "alias": "频道",
+      "confidence": 1
+    },
+    "probe": {
+      "alias": "探测",
+      "confidence": 1
+    },
+    "debug": {
+      "alias": "调试",
+      "confidence": 1
+    },
+    "dblclick": {
+      "alias": "双击",
+      "confidence": 1
+    },
+    "banner": {
+      "alias": "横幅",
+      "confidence": 1
+    },
+    "elk": {
+      "alias": "麋鹿",
+      "confidence": 1
+    },
+    "view": {
+      "alias": "视图",
+      "confidence": 1
+    },
+    "slim": {
+      "alias": "纤细",
+      "confidence": 1
+    },
+    "graphview": {
+      "alias": "图表视图",
+      "confidence": 1
+    },
+    "smoke": {
+      "alias": "烟",
+      "confidence": 1
+    },
+    "validation": {
+      "alias": "验证",
+      "confidence": 1
+    },
+    "bundled": {
+      "alias": "捆绑",
+      "confidence": 1
+    },
+    "prompts": {
+      "alias": "提示",
+      "confidence": 1
+    },
+    "dir": {
+      "alias": "目录",
+      "confidence": 1
+    },
+    "summary": {
+      "alias": "摘要",
+      "confidence": 1
+    },
+    "system": {
+      "alias": "系统",
+      "confidence": 1
+    },
+    "webview": {
+      "alias": "网页视图",
+      "confidence": 1
+    },
+    "clear": {
+      "alias": "清除",
+      "confidence": 1
+    },
+    "tokenizer": {
+      "alias": "分词器",
+      "confidence": 1
+    },
+    "translation": {
+      "alias": "翻译",
+      "confidence": 1
+    },
+    "fix": {
+      "alias": "修复",
+      "confidence": 1
+    },
+    "provider": {
+      "alias": "提供者",
+      "confidence": 1
+    },
+    "config": {
+      "alias": "配置",
+      "confidence": 1
+    },
+    "fallback": {
+      "alias": "回落",
+      "confidence": 1
+    },
+    "force": {
+      "alias": "力量",
+      "confidence": 1
+    },
+    "delimiter": {
+      "alias": "分隔符",
+      "confidence": 1
+    },
+    "hunyuan": {
+      "alias": "浑元",
+      "confidence": 1
+    },
+    "literal": {
+      "alias": "字面的",
+      "confidence": 1
+    },
+    "pro": {
+      "alias": "专业的",
+      "confidence": 1
+    },
+    "new": {
+      "alias": "新的",
+      "confidence": 1
+    },
+    "files": {
+      "alias": "文件",
+      "confidence": 1
+    },
+    "smart": {
+      "alias": "聪明",
+      "confidence": 1
+    },
+    "styles": {
+      "alias": "样式",
+      "confidence": 1
+    },
+    "verify": {
+      "alias": "验证",
+      "confidence": 1
+    },
+    "logic": {
+      "alias": "逻辑",
+      "confidence": 1
+    },
+    "servers": {
+      "alias": "服务器",
+      "confidence": 1
+    },
+    "explorer": {
+      "alias": "探索者",
+      "confidence": 1
+    },
+    "tools": {
+      "alias": "工具",
+      "confidence": 1
+    },
+    "final": {
+      "alias": "最终的",
+      "confidence": 1
+    },
+    "old": {
+      "alias": "旧的",
+      "confidence": 1
+    },
+    "my": {
+      "alias": "我的",
+      "confidence": 1
+    },
+    "secret": {
+      "alias": "秘密",
+      "confidence": 1
+    },
+    "package": {
+      "alias": "包裹",
+      "confidence": 1
+    },
+    "lock": {
+      "alias": "锁",
+      "confidence": 1
+    },
+    "secure": {
+      "alias": "安全的",
+      "confidence": 1
+    },
+    "call": {
+      "alias": "呼叫",
+      "confidence": 1
+    },
+    "tsconfig": {
+      "alias": "类型脚本配置",
+      "confidence": 1
+    },
+    "multi": {
+      "alias": "多",
+      "confidence": 1
+    },
+    "client": {
+      "alias": "客户端",
+      "confidence": 1
+    },
+    "open": {
+      "alias": "打开",
+      "confidence": 1
+    },
+    "profiles": {
+      "alias": "轮廓",
+      "confidence": 1
+    },
+    "analyzer": {
+      "alias": "分析器",
+      "confidence": 1
+    },
+    "ast": {
+      "alias": "抽象语法树",
+      "confidence": 1
+    },
+    "heuristic": {
+      "alias": "启发式",
+      "confidence": 1
+    },
+    "llm": {
+      "alias": "大型语言模型",
+      "confidence": 1
+    },
+    "model": {
+      "alias": "模型",
+      "confidence": 1
+    },
+    "router": {
+      "alias": "路由器",
+      "confidence": 1
+    },
+    "orchestrator": {
+      "alias": "编排者",
+      "confidence": 1
+    },
+    "kv": {
+      "alias": "键值",
+      "confidence": 1
+    },
+    "di": {
+      "alias": "迪",
+      "confidence": 1
+    },
+    "container": {
+      "alias": "容器",
+      "confidence": 1
+    },
+    "logger": {
+      "alias": "记录器",
+      "confidence": 1
+    },
+    "path": {
+      "alias": "路径",
+      "confidence": 1
+    },
+    "mapper": {
+      "alias": "映射器",
+      "confidence": 1
+    },
+    "workspace": {
+      "alias": "工作区",
+      "confidence": 1
+    },
+    "aiguard": {
+      "alias": "人工智能守护",
+      "confidence": 1
+    },
+    "stats": {
+      "alias": "统计数据",
+      "confidence": 1
+    },
+    "panel": {
+      "alias": "面板",
+      "confidence": 1
+    },
+    "guard": {
+      "alias": "守卫",
+      "confidence": 1
+    },
+    "commands": {
+      "alias": "命令",
+      "confidence": 1
+    },
+    "alias": {
+      "alias": "别名",
+      "confidence": 1
+    },
+    "translate": {
+      "alias": "翻译",
+      "confidence": 1
+    },
+    "batch": {
+      "alias": "批次",
+      "confidence": 1
+    },
+    "use": {
+      "alias": "使用",
+      "confidence": 1
+    },
+    "case": {
+      "alias": "情况",
+      "confidence": 1
+    },
+    "dictionary": {
+      "alias": "字典",
+      "confidence": 1
+    },
+    "domain": {
+      "alias": "域",
+      "confidence": 1
+    },
+    "policies": {
+      "alias": "政策",
+      "confidence": 1
+    },
+    "rule": {
+      "alias": "规则",
+      "confidence": 1
+    },
+    "coverage": {
+      "alias": "覆盖",
+      "confidence": 1
+    },
+    "builder": {
+      "alias": "建造者",
+      "confidence": 1
+    },
+    "infra": {
+      "alias": "基础设施",
+      "confidence": 1
+    },
+    "translators": {
+      "alias": "翻译者",
+      "confidence": 1
+    },
+    "tree": {
+      "alias": "树",
+      "confidence": 1
+    },
+    "item": {
+      "alias": "项",
+      "confidence": 1
+    },
+    "hover": {
+      "alias": "悬停",
+      "confidence": 1
+    },
+    "service": {
+      "alias": "服务",
+      "confidence": 1
+    },
+    "capsule": {
+      "alias": "胶囊",
+      "confidence": 1
+    },
+    "errors": {
+      "alias": "错误",
+      "confidence": 1
+    },
+    "static": {
+      "alias": "静态",
+      "confidence": 1
+    },
+    "generate": {
+      "alias": "生成",
+      "confidence": 1
+    },
+    "scanner": {
+      "alias": "扫描器",
+      "confidence": 1
+    },
+    "relevance": {
+      "alias": "相关性",
+      "confidence": 1
+    },
+    "scorer": {
+      "alias": "评分器",
+      "confidence": 1
+    },
+    "status": {
+      "alias": "状态",
+      "confidence": 1
+    },
+    "bar": {
+      "alias": "条",
+      "confidence": 1
+    },
+    "resolve": {
+      "alias": "解决",
+      "confidence": 1
+    },
+    "target": {
+      "alias": "目标",
+      "confidence": 1
+    },
+    "storage": {
+      "alias": "存储",
+      "confidence": 1
+    },
+    "store": {
+      "alias": "存储",
+      "confidence": 1
+    },
+    "positions": {
+      "alias": "位置",
+      "confidence": 1
+    },
+    "positionsstore": {
+      "alias": "位置存储",
+      "confidence": 1
+    },
+    "context": {
+      "alias": "上下文",
+      "confidence": 1
+    },
+    "host": {
+      "alias": "主机",
+      "confidence": 1
+    },
+    "uml": {
+      "alias": "统一建模语言",
+      "confidence": 1
+    },
+    "canvas": {
+      "alias": "画布",
+      "confidence": 1
+    },
+    "messages": {
+      "alias": "消息",
+      "confidence": 1
+    },
+    "naming": {
+      "alias": "命名",
+      "confidence": 1
+    },
+    "name": {
+      "alias": "名字",
+      "confidence": 1
+    },
+    "resolver": {
+      "alias": "解析器",
+      "confidence": 1
+    },
+    "numeral": {
+      "alias": "数字",
+      "confidence": 1
+    },
+    "split": {
+      "alias": "分裂",
+      "confidence": 1
+    },
+    "with": {
+      "alias": "和",
+      "confidence": 1
+    },
+    "concurrency": {
+      "alias": "并发性",
+      "confidence": 1
+    },
+    "pool": {
+      "alias": "池",
+      "confidence": 1
+    },
+    "retry": {
+      "alias": "重试",
+      "confidence": 1
+    },
+    "protocol": {
+      "alias": "协议",
+      "confidence": 1
+    },
+    "integration": {
+      "alias": "集成",
+      "confidence": 1
+    },
+    "extension": {
+      "alias": "扩展",
+      "confidence": 1
+    },
+    "contributing": {
+      "alias": "贡献",
+      "confidence": 1
+    },
+    "diagnose": {
+      "alias": "诊断",
+      "confidence": 1
+    },
+    "quickstart": {
+      "alias": "快速启动",
+      "confidence": 1
+    },
+    "temp": {
+      "alias": "临时",
+      "confidence": 1
+    }
+  },
+  "phrases": {
+    "fsmonitor watchman": {
+      "alias": "文件系统监视器守望者",
+      "confidence": 1
+    },
+    "post update": {
+      "alias": "发布更新",
+      "confidence": 1
+    },
+    "github actions": {
+      "alias": "吉特哈布行动",
+      "confidence": 1
+    },
+    "download artifact": {
+      "alias": "下载工件",
+      "confidence": 1
+    },
+    "setup node": {
+      "alias": "设置节点",
+      "confidence": 1
+    },
+    "pull request": {
+      "alias": "拉请求",
+      "confidence": 1
+    },
+    "npm and yarn": {
+      "alias": "节点包管理器和纱线",
+      "confidence": 1
+    },
+    "bd bf": {
+      "alias": "二进制数据 bf",
+      "confidence": 1
+    },
+    "bf dac": {
+      "alias": "bf 数模转换器",
+      "confidence": 1
+    },
+    "faf bfce": {
+      "alias": "法夫比费斯",
+      "confidence": 1
+    },
+    "dad cbc": {
+      "alias": "爸爸加拿大广播公司",
+      "confidence": 1
+    },
+    "ccfa fd bb acd ac": {
+      "alias": "厘米立方英尺文件描述符球酸酐交流",
+      "confidence": 1
+    },
+    "be dea": {
+      "alias": "是药物执法局",
+      "confidence": 1
+    },
+    "eeb bbac": {
+      "alias": "电子工程局工商管理硕士",
+      "confidence": 1
+    },
+    "bbac ec": {
+      "alias": "工商管理硕士经济共同体",
+      "confidence": 1
+    },
+    "eda add": {
+      "alias": "电子设计自动化增加",
+      "confidence": 1
+    },
+    "add aae": {
+      "alias": "增加平均绝对误差",
+      "confidence": 1
+    },
+    "aae cea": {
+      "alias": "平均绝对误差消费电子协会",
+      "confidence": 1
+    },
+    "cc ad": {
+      "alias": "抄送广告",
+      "confidence": 1
+    },
+    "ad ceb": {
+      "alias": "广告中国电子出版物中心",
+      "confidence": 1
+    },
+    "fa cbb": {
+      "alias": "法 CBB",
+      "confidence": 1
+    },
+    "cbb bfa": {
+      "alias": "CBB BFA",
+      "confidence": 1
+    },
+    "fa cbb bfa": {
+      "alias": "法 CBB BFA",
+      "confidence": 1
+    },
+    "ff ef": {
+      "alias": "十六进制数ff ef",
+      "confidence": 1
+    },
+    "faa bdc": {
+      "alias": "联邦航空局二进制数据存储",
+      "confidence": 1
+    },
+    "bdc cdba": {
+      "alias": "二进制数据存储中央配电板",
+      "confidence": 1
+    },
+    "abf ba": {
+      "alias": "阿贝夫巴",
+      "confidence": 1
+    },
+    "bab ce": {
+      "alias": "巴布塞",
+      "confidence": 1
+    },
+    "cdb df": {
+      "alias": "中央配电板发展基金",
+      "confidence": 1
+    },
+    "df ee": {
+      "alias": "发展基金电气工程",
+      "confidence": 1
+    },
+    "cdb ee": {
+      "alias": "中央配电板电气工程",
+      "confidence": 1
+    },
+    "aa fc": {
+      "alias": "阿阿英尺立方",
+      "confidence": 1
+    },
+    "fc dcebc": {
+      "alias": "英尺立方德塞布克",
+      "confidence": 1
+    },
+    "aa dcebc": {
+      "alias": "阿阿德塞布克",
+      "confidence": 1
+    },
+    "ae da": {
+      "alias": "艾达",
+      "confidence": 1
+    },
+    "aff dcba": {
+      "alias": "阿福dcba",
+      "confidence": 1
+    },
+    "dcba bcc": {
+      "alias": "dcba bcc",
+      "confidence": 1
+    },
+    "daf fbacbe": {
+      "alias": "达夫费巴克比",
+      "confidence": 1
+    },
+    "cf dd": {
+      "alias": "常数数据",
+      "confidence": 1
+    },
+    "dd cca": {
+      "alias": "数据相关系数分析",
+      "confidence": 1
+    },
+    "cca bdcdc": {
+      "alias": "相关系数分析病毒",
+      "confidence": 1
+    },
+    "bfae ffd": {
+      "alias": "波法伊Ffd",
+      "confidence": 1
+    },
+    "cadb eb": {
+      "alias": "卡德布艾布",
+      "confidence": 1
+    },
+    "adac dfae": {
+      "alias": "阿达克斯迪法伊",
+      "confidence": 1
+    },
+    "eee ebdf": {
+      "alias": "电子电气领域东部边界防御设施",
+      "confidence": 1
+    },
+    "ebdf cdac": {
+      "alias": "东部边界防御设施加拿大国防部航空航天中心",
+      "confidence": 1
+    },
+    "ffbc fab": {
+      "alias": "ffbc fab",
+      "confidence": 1
+    },
+    "ddf b": {
+      "alias": "D D F B",
+      "confidence": 1
+    },
+    "fd de aa": {
+      "alias": "F D  D E A A",
+      "confidence": 1
+    },
+    "ddf bfd de aa": {
+      "alias": "D D F B F D  D E A A",
+      "confidence": 1
+    },
+    "aaf bad": {
+      "alias": "阿阿夫坏",
+      "confidence": 1
+    },
+    "fee bed": {
+      "alias": "费用床",
+      "confidence": 1
+    },
+    "fbc bed": {
+      "alias": "费城广播公司床",
+      "confidence": 1
+    },
+    "fff ddc": {
+      "alias": "三个f三个d",
+      "confidence": 1
+    },
+    "bfcf baac": {
+      "alias": "比福克夫巴阿克",
+      "confidence": 1
+    },
+    "baac bbbbbb": {
+      "alias": "巴阿克比比比比比比",
+      "confidence": 1
+    },
+    "bbbbbb ccf": {
+      "alias": "比比比比比比斯西夫",
+      "confidence": 1
+    },
+    "eebbd bda": {
+      "alias": "伊博德巴达",
+      "confidence": 1
+    },
+    "cbcb dddca": {
+      "alias": "中央数字中央数字德尔德尔塞尔",
+      "confidence": 1
+    },
+    "dddca cafe": {
+      "alias": "德尔德尔塞尔咖啡馆",
+      "confidence": 1
+    },
+    "edcaf bba": {
+      "alias": "埃德卡夫巴布",
+      "confidence": 1
+    },
+    "cfd cad": {
+      "alias": "计算流体动力学计算机辅助设计",
+      "confidence": 1
+    },
+    "cad dec": {
+      "alias": "计算机辅助设计十二月",
+      "confidence": 1
+    },
+    "ebc fac": {
+      "alias": "易贝可 法克",
+      "confidence": 1
+    },
+    "dab ebe": {
+      "alias": "轻拍易贝",
+      "confidence": 1
+    },
+    "bef fdc": {
+      "alias": "在联邦存款公司前面",
+      "confidence": 1
+    },
+    "abaa baea": {
+      "alias": "阿巴阿巴诶阿",
+      "confidence": 1
+    },
+    "ffc deb": {
+      "alias": "联邦基金委员会辩论",
+      "confidence": 1
+    },
+    "edbe faccad": {
+      "alias": "埃德贝法卡德",
+      "confidence": 1
+    },
+    "dbe cbe": {
+      "alias": "数据库中央商务区",
+      "confidence": 1
+    },
+    "beee cbe": {
+      "alias": "比伊中央商务区",
+      "confidence": 1
+    },
+    "fea fdb": {
+      "alias": "特征故障数据库",
+      "confidence": 1
+    },
+    "afc affa": {
+      "alias": "自动频率控制非洲足球联合会",
+      "confidence": 1
+    },
+    "eabf cdd": {
+      "alias": "伊阿布夫 西迪",
+      "confidence": 1
+    },
+    "fdd ebb": {
+      "alias": "频分双工退潮",
+      "confidence": 1
+    },
+    "bee fbbb": {
+      "alias": "蜜蜂FBBB",
+      "confidence": 1
+    },
+    "cfe cccbf": {
+      "alias": "cfe cccbf",
+      "confidence": 1
+    },
+    "aed dfe": {
+      "alias": "艾德德费",
+      "confidence": 1
+    },
+    "efe a befae": {
+      "alias": "埃费一个贝法伊",
+      "confidence": 1
+    },
+    "cabe ace": {
+      "alias": "头一点",
+      "confidence": 1
+    },
+    "ffdec cdedd": {
+      "alias": "ff解码cde增加",
+      "confidence": 1
+    },
+    "edd ffdf": {
+      "alias": "埃德菲菲德芙",
+      "confidence": 1
+    },
+    "eebd aca": {
+      "alias": "伊伊布德阿卡",
+      "confidence": 1
+    },
+    "aca cfae": {
+      "alias": "阿卡西法伊",
+      "confidence": 1
+    },
+    "ffe bbc": {
+      "alias": "ffe 英国广播公司",
+      "confidence": 1
+    },
+    "fbba eef": {
+      "alias": "非波比伊夫",
+      "confidence": 1
+    },
+    "efcea fbfb": {
+      "alias": "埃夫西阿 非非",
+      "confidence": 1
+    },
+    "ffdc ade": {
+      "alias": "FFDC 阿德",
+      "confidence": 1
+    },
+    "abfa cebb": {
+      "alias": "阿布法塞布布",
+      "confidence": 1
+    },
+    "ead bca": {
+      "alias": "ead头英国认证机构",
+      "confidence": 1
+    },
+    "eccf eac": {
+      "alias": "东非共同体论坛东非共同体",
+      "confidence": 1
+    },
+    "abe acf": {
+      "alias": "阿贝阿克夫",
+      "confidence": 1
+    },
+    "feaf ced": {
+      "alias": "费夫塞德",
+      "confidence": 1
+    },
+    "bbfa eced": {
+      "alias": "比比发埃塞德",
+      "confidence": 1
+    },
+    "afffc eaec": {
+      "alias": "阿福福伊阿艾克",
+      "confidence": 1
+    },
+    "fcaec aebb": {
+      "alias": "脂肪酸阿贝",
+      "confidence": 1
+    },
+    "bdbb dcc": {
+      "alias": "bdbb dcc",
+      "confidence": 1
+    },
+    "eeaa cfa": {
+      "alias": "伊伊啊阿 西法",
+      "confidence": 1
+    },
+    "ccac daa": {
+      "alias": "碳碳酰氯二氨基苯甲酸",
+      "confidence": 1
+    },
+    "ccae caadd": {
+      "alias": "卡卡伊卡阿德",
+      "confidence": 1
+    },
+    "bbed adf": {
+      "alias": "被咬的广告文件",
+      "confidence": 1
+    },
+    "bcdc eababb": {
+      "alias": "波士顿儿童医院伊阿巴巴布",
+      "confidence": 1
+    },
+    "eababb efdd": {
+      "alias": "伊阿巴巴布埃弗德",
+      "confidence": 1
+    },
+    "efdd dae": {
+      "alias": "埃弗德大",
+      "confidence": 1
+    },
+    "afcd dee": {
+      "alias": "阿夫克德迪",
+      "confidence": 1
+    },
+    "ecae fdce": {
+      "alias": "伊凯费德西",
+      "confidence": 1
+    },
+    "cecb befff": {
+      "alias": "塞克布贝福夫",
+      "confidence": 1
+    },
+    "abc bfabd": {
+      "alias": "abc bfabd",
+      "confidence": 1
+    },
+    "aecc adde": {
+      "alias": "艾克阿德",
+      "confidence": 1
+    },
+    "cdfec ecda": {
+      "alias": "参见文档欧洲社区发展援助",
+      "confidence": 1
+    },
+    "fbfe fcd": {
+      "alias": "非广播多访问光纤通道扩展功能设计文档",
+      "confidence": 1
+    },
+    "dfb eacf": {
+      "alias": "德福欧洲文化交流基金会",
+      "confidence": 1
+    },
+    "ebcf bfeefe": {
+      "alias": "埃博克夫比费伊费",
+      "confidence": 1
+    },
+    "cdea cadc": {
+      "alias": "塞德阿卡达克",
+      "confidence": 1
+    },
+    "faaa dcca": {
+      "alias": "法啊阿德卡卡",
+      "confidence": 1
+    },
+    "aaa abebed": {
+      "alias": "阿阿阿阿贝贝德",
+      "confidence": 1
+    },
+    "aeeba becea": {
+      "alias": "阿伊巴贝塞亚",
+      "confidence": 1
+    },
+    "becea eddf": {
+      "alias": "贝塞亚埃德福",
+      "confidence": 1
+    },
+    "eddf dcaf": {
+      "alias": "埃德福达卡夫",
+      "confidence": 1
+    },
+    "cdf facc": {
+      "alias": "累积分布函数面部表情肌肉",
+      "confidence": 1
+    },
+    "facc febc": {
+      "alias": "面部表情肌肉前端业务组件",
+      "confidence": 1
+    },
+    "cdf febc": {
+      "alias": "累积分布函数前端业务组件",
+      "confidence": 1
+    },
+    "cde cac": {
+      "alias": "CDE CAC",
+      "confidence": 1
+    },
+    "cac bbffac": {
+      "alias": "CAC BBFFAC",
+      "confidence": 1
+    },
+    "cde bbffac": {
+      "alias": "CDE BBFFAC",
+      "confidence": 1
+    },
+    "fcbd bbe": {
+      "alias": "功能核心数据库基础商业实体",
+      "confidence": 1
+    },
+    "fffeaf ebfc": {
+      "alias": "FFFEAF EBFC",
+      "confidence": 1
+    },
+    "ebdcee eabbe": {
+      "alias": "埃布迪西埃比",
+      "confidence": 1
+    },
+    "baaaf eaedc": {
+      "alias": "巴阿夫伊爱德克",
+      "confidence": 1
+    },
+    "ecd cde": {
+      "alias": "经济合作与发展中心",
+      "confidence": 1
+    },
+    "accd daff": {
+      "alias": "阿克德达夫",
+      "confidence": 1
+    },
+    "efcab ffff": {
+      "alias": "埃克法布福福福福",
+      "confidence": 1
+    },
+    "ffff afec": {
+      "alias": "福福福福阿费克",
+      "confidence": 1
+    },
+    "abbe bcef": {
+      "alias": "阿贝贝塞夫",
+      "confidence": 1
+    },
+    "acbde defb": {
+      "alias": "阿克比德 德夫布",
+      "confidence": 1
+    },
+    "bcae edf": {
+      "alias": "巴塞埃德福",
+      "confidence": 1
+    },
+    "dbdfcb bdbdb": {
+      "alias": "德布德夫茨布伯伯德伯伯",
+      "confidence": 1
+    },
+    "fdaeaf afae": {
+      "alias": "费德阿法夫阿法埃夫",
+      "confidence": 1
+    },
+    "def fdbc": {
+      "alias": "定义数据库",
+      "confidence": 1
+    },
+    "dbcd fbeb": {
+      "alias": "数据库费波",
+      "confidence": 1
+    },
+    "afaf aabcc": {
+      "alias": "阿法阿法 啊 啊 比西西",
+      "confidence": 1
+    },
+    "dfdac acfa": {
+      "alias": "的达斯克阿克法",
+      "confidence": 1
+    },
+    "acfa ddca": {
+      "alias": "阿克法的达卡",
+      "confidence": 1
+    },
+    "dfdac ddca": {
+      "alias": "的达斯克的达卡",
+      "confidence": 1
+    },
+    "daee ebeb": {
+      "alias": "达伊埃贝",
+      "confidence": 1
+    },
+    "bdeeae aefba": {
+      "alias": "比德伊爱哎夫巴",
+      "confidence": 1
+    },
+    "ddeadc cabb": {
+      "alias": "死dead死c cab b",
+      "confidence": 1
+    },
+    "fbfae cec": {
+      "alias": "费布费塞斯",
+      "confidence": 1
+    },
+    "edba dbfc": {
+      "alias": "艾德巴德布夫克",
+      "confidence": 1
+    },
+    "abea dcdd": {
+      "alias": "阿贝阿得克萨斯州达拉斯市",
+      "confidence": 1
+    },
+    "acb edeca": {
+      "alias": "阿克布埃德卡",
+      "confidence": 1
+    },
+    "cded aeffde": {
+      "alias": "参见阿埃夫德",
+      "confidence": 1
+    },
+    "ebba f": {
+      "alias": "埃巴F",
+      "confidence": 1
+    },
+    "ccfe ebff": {
+      "alias": "ccfe ebff",
+      "confidence": 1
+    },
+    "bdca feff": {
+      "alias": "波段数据采集费米能级",
+      "confidence": 1
+    },
+    "cfbff c": {
+      "alias": "彩色电影背景色",
+      "confidence": 1
+    },
+    "cfbff c fefe": {
+      "alias": "彩色电影背景色菲菲",
+      "confidence": 1
+    },
+    "bbcead bdff": {
+      "alias": "乙丙橡胶边界防御框架",
+      "confidence": 1
+    },
+    "bdba cecff": {
+      "alias": "比德巴塞塞夫",
+      "confidence": 1
+    },
+    "bcbe aaee": {
+      "alias": "bcbe aaee",
+      "confidence": 1
+    },
+    "feca bdec": {
+      "alias": "费卡比德克",
+      "confidence": 1
+    },
+    "dddec cdca": {
+      "alias": "迪迪埃克 西达卡",
+      "confidence": 1
+    },
+    "dcdb bbdcc": {
+      "alias": "直流数据库宽带数字交叉连接",
+      "confidence": 1
+    },
+    "cecd efedc": {
+      "alias": "中央选举委员会电子前端显示控制器",
+      "confidence": 1
+    },
+    "ffe ba": {
+      "alias": "费费巴",
+      "confidence": 1
+    },
+    "befdf efbebd": {
+      "alias": "贝夫迪夫埃夫贝布德",
+      "confidence": 1
+    },
+    "fccee ddeffb": {
+      "alias": "FCCEE DDEFFB",
+      "confidence": 1
+    },
+    "cfaac ccda": {
+      "alias": "西法啊吃西西哒啊",
+      "confidence": 1
+    },
+    "ccda ffcff": {
+      "alias": "西西哒啊发发吃发发吃",
+      "confidence": 1
+    },
+    "cfaac ffcff": {
+      "alias": "西法啊吃发发吃发发吃",
+      "confidence": 1
+    },
+    "cccd bcaacd": {
+      "alias": "cccc bcaa cd",
+      "confidence": 1
+    },
+    "abfd cfdb": {
+      "alias": "阿布夫德斯福德布",
+      "confidence": 1
+    },
+    "dafe fbac": {
+      "alias": "达费福巴克",
+      "confidence": 1
+    },
+    "aabad bbaa": {
+      "alias": "阿阿巴德巴芭阿",
+      "confidence": 1
+    },
+    "cdbaa faac": {
+      "alias": "cdbaa faac",
+      "confidence": 1
+    },
+    "cfdc bebe": {
+      "alias": "C F D C B E B E",
+      "confidence": 1
+    },
+    "fbce cbcd": {
+      "alias": "费布塞斯比德",
+      "confidence": 1
+    },
+    "efff efdf": {
+      "alias": "效率埃菲",
+      "confidence": 1
+    },
+    "orig head": {
+      "alias": "原始头部",
+      "confidence": 1
+    },
+    "issue template": {
+      "alias": "问题模板",
+      "confidence": 1
+    },
+    "bug report": {
+      "alias": "错误报告",
+      "confidence": 1
+    },
+    "feature request": {
+      "alias": "特性请求",
+      "confidence": 1
+    },
+    "release yml": {
+      "alias": "释放yml",
+      "confidence": 1
+    },
+    "release yaml": {
+      "alias": "释放yaml",
+      "confidence": 1
+    },
+    "launch example": {
+      "alias": "发射示例",
+      "confidence": 1
+    },
+    "graph type": {
+      "alias": "图类型",
+      "confidence": 1
+    },
+    "copy 2": {
+      "alias": "复制 2",
+      "confidence": 1
+    },
+    "example blueprint": {
+      "alias": "示例蓝图",
+      "confidence": 1
+    },
+    "api key": {
+      "alias": "应用程序编程接口钥匙",
+      "confidence": 1
+    },
+    "blueprint roadmap": {
+      "alias": "蓝图路线图",
+      "confidence": 1
+    },
+    "cache monitoring": {
+      "alias": "缓存监控",
+      "confidence": 1
+    },
+    "monitoring guide": {
+      "alias": "监控指南",
+      "confidence": 1
+    },
+    "cache monitoring test guide": {
+      "alias": "缓存监控测试指南",
+      "confidence": 1
+    },
+    "collaboration guide": {
+      "alias": "合作指南",
+      "confidence": 1
+    },
+    "core features": {
+      "alias": "核心特征",
+      "confidence": 1
+    },
+    "filetree blueprint": {
+      "alias": "文件树蓝图",
+      "confidence": 1
+    },
+    "card layer": {
+      "alias": "卡片层",
+      "confidence": 1
+    },
+    "layout engine": {
+      "alias": "布局引擎",
+      "confidence": 1
+    },
+    "message hub": {
+      "alias": "消息中心",
+      "confidence": 1
+    },
+    "runtime style": {
+      "alias": "运行时样式",
+      "confidence": 1
+    },
+    "drag manager": {
+      "alias": "拖动管理器",
+      "confidence": 1
+    },
+    "zoom pan": {
+      "alias": "变焦平移",
+      "confidence": 1
+    },
+    "enhanced notes": {
+      "alias": "增强的笔记",
+      "confidence": 1
+    },
+    "channel probe": {
+      "alias": "频道探测",
+      "confidence": 1
+    },
+    "debug dblclick": {
+      "alias": "调试双击",
+      "confidence": 1
+    },
+    "debug banner": {
+      "alias": "调试横幅",
+      "confidence": 1
+    },
+    "graph view": {
+      "alias": "图表视图",
+      "confidence": 1
+    },
+    "view slim": {
+      "alias": "视图纤细",
+      "confidence": 1
+    },
+    "dir summary": {
+      "alias": "目录摘要",
+      "confidence": 1
+    },
+    "summary system": {
+      "alias": "摘要系统",
+      "confidence": 1
+    },
+    "fix provider": {
+      "alias": "修复提供者",
+      "confidence": 1
+    },
+    "provider config": {
+      "alias": "提供者配置",
+      "confidence": 1
+    },
+    "fix provider config": {
+      "alias": "修复提供者配置",
+      "confidence": 1
+    },
+    "force delimiter": {
+      "alias": "力量分隔符",
+      "confidence": 1
+    },
+    "literal pro": {
+      "alias": "字面上的专业",
+      "confidence": 1
+    },
+    "new files": {
+      "alias": "新文件",
+      "confidence": 1
+    },
+    "verify logic": {
+      "alias": "验证逻辑",
+      "confidence": 1
+    },
+    "my secret": {
+      "alias": "我的秘密",
+      "confidence": 1
+    },
+    "tool call": {
+      "alias": "工具呼叫",
+      "confidence": 1
+    },
+    "multi client": {
+      "alias": "多客户端",
+      "confidence": 1
+    },
+    "prompt profiles": {
+      "alias": "提示轮廓",
+      "confidence": 1
+    },
+    "analysis orchestrator": {
+      "alias": "分析编排者",
+      "confidence": 1
+    },
+    "aiguard stats": {
+      "alias": "人工智能守护统计数据",
+      "confidence": 1
+    },
+    "use case": {
+      "alias": "用例",
+      "confidence": 1
+    },
+    "translate batch": {
+      "alias": "翻译批次",
+      "confidence": 1
+    },
+    "batch use case": {
+      "alias": "批次用例",
+      "confidence": 1
+    },
+    "dictionary manager": {
+      "alias": "字典管理器",
+      "confidence": 1
+    },
+    "smart rule": {
+      "alias": "智能规则",
+      "confidence": 1
+    },
+    "rule engine": {
+      "alias": "规则引擎",
+      "confidence": 1
+    },
+    "literal alias": {
+      "alias": "字面别名",
+      "confidence": 1
+    },
+    "alias builder": {
+      "alias": "别名建造者",
+      "confidence": 1
+    },
+    "tree item": {
+      "alias": "树项",
+      "confidence": 1
+    },
+    "hover service": {
+      "alias": "悬停服务",
+      "confidence": 1
+    },
+    "capsule cache": {
+      "alias": "胶囊缓存",
+      "confidence": 1
+    },
+    "relevance scorer": {
+      "alias": "相关性评分器",
+      "confidence": 1
+    },
+    "status bar": {
+      "alias": "状态条",
+      "confidence": 1
+    },
+    "resolve target": {
+      "alias": "解决目标",
+      "confidence": 1
+    },
+    "feature context": {
+      "alias": "特征上下文",
+      "confidence": 1
+    },
+    "webview host": {
+      "alias": "网页视图主机",
+      "confidence": 1
+    },
+    "numeral policy": {
+      "alias": "数字政策",
+      "confidence": 1
+    },
+    "split with": {
+      "alias": "与分裂",
+      "confidence": 1
+    },
+    "concurrency pool": {
+      "alias": "并发性池",
+      "confidence": 1
+    },
+    "retry helper": {
+      "alias": "重试助手",
+      "confidence": 1
+    }
+  }
+}
