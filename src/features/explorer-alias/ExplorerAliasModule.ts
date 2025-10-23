@@ -46,6 +46,9 @@ export class ExplorerAliasModule extends BaseModule {
         // 注册命令处理器
         this.registerCommands(context);
 
+        // 设置文件变更监听器
+        this.setupFileWatchers(context);
+
         this.logger.info('AI 资源管理器模块激活完成');
     }
 
@@ -198,6 +201,23 @@ export class ExplorerAliasModule extends BaseModule {
 
         this.registerCommand(context, 'aiExplorer.clearCacheForNode', async (item) => {
             await this.treeProvider?.clearCacheForNode(item);
+        });
+
+        // 🔍 文件分析命令
+        this.registerCommand(context, 'aiExplorer.analyzePath', async (item) => {
+            await this.handleAnalyzePathCommand(item);
+        });
+
+        this.registerCommand(context, 'aiExplorer.reanalyzePath', async (item) => {
+            await this.handleReanalyzePathCommand(item);
+        });
+
+        this.registerCommand(context, 'aiExplorer.showAnalysisSummary', async (item) => {
+            await this.handleShowAnalysisSummary(item);
+        });
+
+        this.registerCommand(context, 'aiExplorer.batchAnalyzeFolder', async (item) => {
+            await this.handleBatchAnalyzeFolderCommand(item);
         });
 
         // API Key 管理命令
@@ -452,6 +472,471 @@ export class ExplorerAliasModule extends BaseModule {
         } catch (error) {
             this.logger.error('AI翻译测试失败', error);
             vscode.window.showErrorMessage(`AI翻译测试失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    // 🔍 =============文件分析命令处理器=============
+
+    /**
+     * 分析指定路径的文件或文件夹
+     */
+    private async handleAnalyzePathCommand(item: any): Promise<void> {
+        try {
+            const filePath = this.getPathFromItem(item);
+            if (!filePath) return;
+
+            this.logger.info(`开始分析路径: ${filePath}`);
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `正在分析: ${filePath.split(/[/\\]/).pop()}`,
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 0, message: '启动分析引擎...' });
+
+                // 这里集成你的 HoverInfoService 或 AnalysisOrchestrator
+                // 暂时使用简化版本，后面完善
+                const result = await this.performPathAnalysis(filePath);
+
+                progress.report({ increment: 100, message: '分析完成' });
+                
+                // 显示分析结果
+                const message = `🔍 文件分析结果\n\n${result}`;
+                vscode.window.showInformationMessage(message, { modal: true });
+            });
+
+            // 刷新TreeView以更新悬停提示
+            this.treeProvider?.refresh();
+
+        } catch (error) {
+            this.logger.error('文件分析失败', error);
+            vscode.window.showErrorMessage(`文件分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 重新分析指定路径（清除缓存）
+     */
+    private async handleReanalyzePathCommand(item: any): Promise<void> {
+        try {
+            const filePath = this.getPathFromItem(item);
+            if (!filePath) return;
+
+            this.logger.info(`重新分析路径: ${filePath}`);
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `重新分析: ${filePath.split(/[/\\]/).pop()}`,
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 0, message: '清除旧缓存...' });
+
+                // 清除分析缓存
+                await this.clearAnalysisCache(filePath);
+
+                progress.report({ increment: 50, message: '执行新分析...' });
+
+                // 重新分析
+                const result = await this.performPathAnalysis(filePath);
+
+                progress.report({ increment: 100, message: '重新分析完成' });
+
+                vscode.window.showInformationMessage(`✅ 重新分析完成: ${filePath.split(/[/\\]/).pop()}`);
+            });
+
+            // 刷新TreeView
+            this.treeProvider?.refresh();
+
+        } catch (error) {
+            this.logger.error('重新分析失败', error);
+            vscode.window.showErrorMessage(`重新分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 显示详细的分析摘要
+     */
+    private async handleShowAnalysisSummary(item: any): Promise<void> {
+        try {
+            const filePath = this.getPathFromItem(item);
+            if (!filePath) return;
+
+            this.logger.info(`显示分析摘要: ${filePath}`);
+
+            // 获取详细分析结果
+            const summary = await this.getDetailedAnalysisSummary(filePath);
+            
+            // 创建并显示 Webview
+            const panel = vscode.window.createWebviewPanel(
+                'aiExplorerAnalysis',
+                `🔍 分析摘要: ${filePath.split(/[/\\]/).pop()}`,
+                vscode.ViewColumn.Beside,
+                {
+                    enableScripts: true,
+                    retainContextWhenHidden: true
+                }
+            );
+
+            panel.webview.html = this.getAnalysisSummaryHTML(summary);
+
+        } catch (error) {
+            this.logger.error('显示分析摘要失败', error);
+            vscode.window.showErrorMessage(`显示分析摘要失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 批量分析文件夹
+     */
+    private async handleBatchAnalyzeFolderCommand(item: any): Promise<void> {
+        try {
+            const folderPath = this.getPathFromItem(item);
+            if (!folderPath) return;
+
+            this.logger.info(`批量分析文件夹: ${folderPath}`);
+
+            const confirmation = await vscode.window.showWarningMessage(
+                `确定要分析文件夹 "${folderPath.split(/[/\\]/).pop()}" 中的所有文件吗？\n这可能需要较长时间。`,
+                { modal: true },
+                '确定分析',
+                '取消'
+            );
+
+            if (confirmation !== '确定分析') {
+                return;
+            }
+
+            let processed = 0;
+            const startTime = Date.now();
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `批量分析: ${folderPath.split(/[/\\]/).pop()}`,
+                cancellable: false
+            }, async (progress) => {
+                // 这里实现批量分析逻辑
+                // 暂时简化，后面完善
+                const files = await this.getAllFilesInFolder(folderPath);
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    progress.report({ 
+                        increment: (100 / files.length),
+                        message: `分析 ${file.split(/[/\\]/).pop()} (${i + 1}/${files.length})` 
+                    });
+                    
+                    try {
+                        await this.performPathAnalysis(file);
+                        processed++;
+                    } catch (error) {
+                        this.logger.warn(`分析文件失败: ${file}`, error);
+                    }
+                }
+            });
+
+            const duration = (Date.now() - startTime) / 1000;
+            vscode.window.showInformationMessage(
+                `✅ 批量分析完成！\n处理了 ${processed} 个文件，耗时 ${duration.toFixed(1)} 秒`
+            );
+
+            // 刷新TreeView
+            this.treeProvider?.refresh();
+
+        } catch (error) {
+            this.logger.error('批量分析文件夹失败', error);
+            vscode.window.showErrorMessage(`批量分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    // 🛠️ =============辅助方法=============
+
+    private getPathFromItem(item: any): string | null {
+        if (item?.resourceUri) {
+            return item.resourceUri.fsPath; // VS Code URI
+        }
+        if (item?.node?.path) {
+            return item.node.path; // TreeItem
+        }
+        if (typeof item === 'string') {
+            return item; // 直接路径
+        }
+        return null;
+    }
+
+    private async performPathAnalysis(filePath: string): Promise<string> {
+        // 这里接入 HoverInfoService 或 AnalysisOrchestrator
+        // 暂时返回简化结果
+        const fs = await import('fs/promises');
+        try {
+            const stats = await fs.stat(filePath);
+            const isFile = stats.isFile();
+            const size = stats.size;
+            
+            let content = '';
+            if (isFile && size < 100000) { // 小于100KB的文件才分析内容
+                try {
+                    const fileContent = await fs.readFile(filePath, 'utf-8');
+                    const lines = fileContent.split('\n');
+                    content = `\n📄 文件行数: ${lines.length}\n`;
+                    
+                    // 简单的文件类型检测
+                    const ext = filePath.split('.').pop()?.toLowerCase();
+                    if (ext === 'ts' || ext === 'js') {
+                        const exports = fileContent.match(/export\s+(class|function|const|let|var)\s+(\w+)/g);
+                        if (exports) {
+                            content += `📤 导出: ${exports.length} 个\n`;
+                        }
+                    }
+                } catch (error) {
+                    content = '\n⚠️ 无法读取文件内容\n';
+                }
+            }
+
+            return `📁 路径: ${filePath}\n` +
+                   `📝 类型: ${isFile ? '文件' : '文件夹'}\n` +
+                   `📏 大小: ${this.formatFileSize(size)}${content}\n` +
+                   `⏰ 修改时间: ${stats.mtime.toLocaleString()}\n` +
+                   `🔍 分析时间: ${new Date().toLocaleString()}`;
+        } catch (error) {
+            return `❌ 分析失败: ${error instanceof Error ? error.message : '未知错误'}`;
+        }
+    }
+
+    private async clearAnalysisCache(filePath: string): Promise<void> {
+        // 这里实现清除分析缓存的逻辑
+        // 可以调用 AnalysisOrchestrator 的相关方法
+        this.logger.info(`清除分析缓存: ${filePath}`);
+    }
+
+    private async getDetailedAnalysisSummary(filePath: string): Promise<any> {
+        // 这里获取详细的分析结果
+        return {
+            path: filePath,
+            basicInfo: await this.performPathAnalysis(filePath),
+            // 可以添加更多详细信息
+        };
+    }
+
+    private getAnalysisSummaryHTML(summary: any): string {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>AI Explorer - 分析摘要</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; }
+                    .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+                    .path { font-family: monospace; color: #0066cc; }
+                    pre { background: #f0f0f0; padding: 10px; border-radius: 3px; overflow-x: auto; }
+                </style>
+            </head>
+            <body>
+                <h1>🔍 文件分析摘要</h1>
+                <div class="summary">
+                    <h3>路径</h3>
+                    <div class="path">${summary.path}</div>
+                    
+                    <h3>基础信息</h3>
+                    <pre>${summary.basicInfo}</pre>
+                </div>
+            </body>
+            </html>
+        `;
+    }
+
+    private async getAllFilesInFolder(folderPath: string): Promise<string[]> {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const files: string[] = [];
+        
+        async function scanDir(dir: string): Promise<void> {
+            try {
+                const entries = await fs.readdir(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isFile()) {
+                        files.push(fullPath);
+                    } else if (entry.isDirectory() && !entry.name.startsWith('.')) {
+                        await scanDir(fullPath);
+                    }
+                }
+            } catch (error) {
+                // 忽略权限错误等
+            }
+        }
+        
+        await scanDir(folderPath);
+        return files;
+    }
+
+    private formatFileSize(bytes: number): string {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // 🔍 =============文件监听器=============
+
+    /**
+     * 设置文件变更监听器，自动刷新分析缓存
+     */
+    private setupFileWatchers(context: vscode.ExtensionContext): void {
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                this.logger.warn('没有工作区文件夹，跳过文件监听器设置');
+                return;
+            }
+
+            // 创建分析刷新队列（去重、防抖）
+            const analysisQueue = new Map<string, NodeJS.Timeout>();
+            const DEBOUNCE_DELAY = 500; // 500ms 防抖
+
+            const scheduleAnalysisRefresh = (filePath: string) => {
+                // 过滤掉不需要分析的文件
+                if (this.shouldIgnoreFile(filePath)) {
+                    return;
+                }
+
+                // 清除之前的定时器
+                const existingTimer = analysisQueue.get(filePath);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                }
+
+                // 设置新的防抖定时器
+                const timer = setTimeout(async () => {
+                    try {
+                        this.logger.info(`文件变更，刷新分析: ${filePath}`);
+                        await this.refreshAnalysisForPath(filePath);
+                        analysisQueue.delete(filePath);
+                    } catch (error) {
+                        this.logger.error(`刷新分析失败: ${filePath}`, error);
+                        analysisQueue.delete(filePath);
+                    }
+                }, DEBOUNCE_DELAY);
+
+                analysisQueue.set(filePath, timer);
+            };
+
+            // 1. 监听文档保存事件
+            const onDidSaveDisposable = vscode.workspace.onDidSaveTextDocument((document) => {
+                scheduleAnalysisRefresh(document.uri.fsPath);
+            });
+            context.subscriptions.push(onDidSaveDisposable);
+
+            // 2. 监听文件重命名事件
+            const onDidRenameDisposable = vscode.workspace.onDidRenameFiles((event) => {
+                event.files.forEach(({ oldUri, newUri }) => {
+                    // 清除旧路径的缓存
+                    this.clearAnalysisCache(oldUri.fsPath);
+                    // 分析新路径
+                    scheduleAnalysisRefresh(newUri.fsPath);
+                });
+            });
+            context.subscriptions.push(onDidRenameDisposable);
+
+            // 3. 监听文件删除事件
+            const onDidDeleteDisposable = vscode.workspace.onDidDeleteFiles((event) => {
+                event.files.forEach(({ fsPath }) => {
+                    this.clearAnalysisCache(fsPath);
+                });
+            });
+            context.subscriptions.push(onDidDeleteDisposable);
+
+            // 4. 创建文件系统监听器（监听整个工作区）
+            const fileWatcher = vscode.workspace.createFileSystemWatcher(
+                new vscode.RelativePattern(workspaceFolder, '**/*'),
+                false, // 不忽略创建
+                false, // 不忽略变更  
+                false  // 不忽略删除
+            );
+
+            // 监听文件创建
+            fileWatcher.onDidCreate((uri) => {
+                scheduleAnalysisRefresh(uri.fsPath);
+            });
+
+            // 监听文件变更
+            fileWatcher.onDidChange((uri) => {
+                scheduleAnalysisRefresh(uri.fsPath);
+            });
+
+            // 监听文件删除
+            fileWatcher.onDidDelete((uri) => {
+                this.clearAnalysisCache(uri.fsPath);
+                // 清除队列中的任务
+                const timer = analysisQueue.get(uri.fsPath);
+                if (timer) {
+                    clearTimeout(timer);
+                    analysisQueue.delete(uri.fsPath);
+                }
+            });
+
+            context.subscriptions.push(fileWatcher);
+
+            this.logger.info('文件变更监听器设置完成');
+
+        } catch (error) {
+            this.logger.error('设置文件监听器失败', error);
+        }
+    }
+
+    /**
+     * 判断是否应该忽略某个文件的分析
+     */
+    private shouldIgnoreFile(filePath: string): boolean {
+        const ignoredPatterns = [
+            /node_modules/,
+            /\.git/,
+            /dist/,
+            /out/,
+            /build/,
+            /coverage/,
+            /\.vscode/,
+            /\.idea/,
+            /\.DS_Store/,
+            /\.log$/,
+            /\.tmp$/,
+            /\.cache$/,
+            /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i,
+            /\.(mp4|avi|mov|wmv|flv|webm)$/i,
+            /\.(zip|rar|7z|tar|gz|bz2)$/i,
+            /\.(exe|dll|so|dylib)$/i,
+            /\.(pdf|doc|docx|xls|xlsx)$/i
+        ];
+
+        return ignoredPatterns.some(pattern => pattern.test(filePath));
+    }
+
+    /**
+     * 刷新指定路径的分析缓存
+     */
+    private async refreshAnalysisForPath(filePath: string): Promise<void> {
+        try {
+            // 这里可以集成 HoverInfoService 或 AnalysisOrchestrator
+            // 暂时使用简化逻辑
+            
+            // 如果有 HoverInfoService 实例，调用其刷新方法
+            try {
+                const { HoverInfoService } = await import('./ui/HoverInfoService');
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (workspaceRoot) {
+                    const hoverService = HoverInfoService.getInstance(workspaceRoot);
+                    await hoverService.refresh(filePath);
+                    
+                    // 刷新TreeView（暂时刷新整个树，后续可优化为仅刷新特定节点）
+                    this.treeProvider?.refresh();
+                }
+            } catch (error) {
+                this.logger.warn(`刷新悬停分析失败: ${filePath}`, error);
+            }
+
+        } catch (error) {
+            throw error; // 重新抛出，由上层处理
         }
     }
 }

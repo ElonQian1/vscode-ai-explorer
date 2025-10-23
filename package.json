@@ -156,6 +156,26 @@
         "command": "ai-explorer.aiguard.refreshStats",
         "title": "🛡️ AI守卫：刷新统计显示",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "aiExplorer.analyzePath",
+        "title": "🔍 AI 分析：分析此文件/文件夹",
+        "icon": "$(search)"
+      },
+      {
+        "command": "aiExplorer.reanalyzePath",  
+        "title": "🔄 AI 分析：重新分析",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "aiExplorer.showAnalysisSummary",
+        "title": "📋 AI 分析：查看详细摘要",
+        "icon": "$(note)"
+      },
+      {
+        "command": "aiExplorer.batchAnalyzeFolder",
+        "title": "🚀 AI 分析：批量分析此文件夹",
+        "icon": "$(folder-active)"
       }
     ],
     "menus": {
@@ -211,6 +231,26 @@
           "command": "filetreeBlueprint.openFromPath",
           "when": "view == aiExplorer && (viewItem == folder || viewItem == folderHasAlias)",
           "group": "navigation@17"
+        },
+        {
+          "command": "aiExplorer.analyzePath",
+          "when": "view == aiExplorer",
+          "group": "analysis@20"
+        },
+        {
+          "command": "aiExplorer.reanalyzePath",
+          "when": "view == aiExplorer",
+          "group": "analysis@21"
+        },
+        {
+          "command": "aiExplorer.showAnalysisSummary", 
+          "when": "view == aiExplorer",
+          "group": "analysis@22"
+        },
+        {
+          "command": "aiExplorer.batchAnalyzeFolder",
+          "when": "view == aiExplorer && (viewItem == folder || viewItem == folderHasAlias)",
+          "group": "analysis@23"
         }
       ],
       "explorer/context": [
@@ -233,6 +273,26 @@
           "command": "umlCanvas.generateFromFile",
           "when": "resourceExtname =~ /\\.(ts|js|py|java|cs|cpp|c|h)$/",
           "group": "navigation@1"
+        },
+        {
+          "command": "aiExplorer.analyzePath",
+          "when": "resourceScheme == file",
+          "group": "analysis@900"
+        },
+        {
+          "command": "aiExplorer.reanalyzePath",
+          "when": "resourceScheme == file",
+          "group": "analysis@901"  
+        },
+        {
+          "command": "aiExplorer.showAnalysisSummary",
+          "when": "resourceScheme == file",
+          "group": "analysis@902"
+        },
+        {
+          "command": "aiExplorer.batchAnalyzeFolder",
+          "when": "resourceScheme == file && explorerResourceIsFolder",
+          "group": "analysis@903"
         }
       ],
       "editor/context": [

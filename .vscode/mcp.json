@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "ai-explorer": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./servers/ai-explorer-mcp/index.js"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "HUNYUAN_SECRET_ID": "${env:HUNYUAN_SECRET_ID}",
+        "HUNYUAN_SECRET_KEY": "${env:HUNYUAN_SECRET_KEY}"
+      }
+    }
+  }
+}

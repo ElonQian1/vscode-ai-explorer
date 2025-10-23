@@ -12,7 +12,7 @@
         "HUNYUAN_SECRET_ID": "${env:HUNYUAN_SECRET_ID}",
         "HUNYUAN_SECRET_KEY": "${env:HUNYUAN_SECRET_KEY}"
       },
-      "description": "AI Explorer - 项目文件智能分析工具，提供文件用途识别、依赖分析、相关文件查找等功能"
+      "description": "🔍 AI Explorer - 项目文件智能分析工具\n\n提供以下分析工具:\n• analyze_file - 智能分析文件用途和依赖\n• analyze_folder_structure - 分析项目结构\n• get_file_summary - 获取文件摘要\n• find_related_files - 查找相关文件\n• refresh_analysis_cache - 刷新分析缓存\n• refresh_changed_since_commit - 批量刷新Git变更\n• get_project_insights - 项目架构洞察\n\n支持 TypeScript, JavaScript, Python, Java 等多种语言"
     }
   }
 }
