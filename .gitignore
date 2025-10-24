@@ -27,3 +27,6 @@ build/
 analysis/.ai/
 **/.ai/
 *.jsonl
+
+# 开发者个人工具脚本
+debug.js
