@@ -132,27 +132,50 @@ export class OpenAIModel implements ChatModel {
       { role: 'user', content: this.formatInputs(inputs) }
     ];
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages,
-        max_tokens: 4000,
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
-      })
-    });
+    // 创建带超时的AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API 错误: ${response.status} ${response.statusText}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages,
+          max_tokens: 4000,
+          temperature: 0.1,
+          response_format: { type: 'json_object' }
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API 错误: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content || '{}';
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // 检查是否是网络或超时错误
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('OpenAI API 请求超时 (30秒)');
+        }
+        if (error.message.includes('fetch failed') || error.message.includes('TIMED_OUT')) {
+          throw new Error(`网络连接失败: ${error.message}`);
+        }
+      }
+      
+      throw error;
     }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || '{}';
   }
 
   private formatInputs(inputs: Record<string, any>): string {

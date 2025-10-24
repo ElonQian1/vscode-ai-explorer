@@ -773,7 +773,7 @@ export class ExplorerAliasModule extends BaseModule {
             itemType: typeof item,
             itemKeys: item ? Object.keys(item) : 'null',
             itemConstructor: item?.constructor?.name,
-            itemProto: Object.getPrototypeOf(item)?.constructor?.name
+            itemProto: item ? Object.getPrototypeOf(item)?.constructor?.name : 'null'
         });
 
         // VS Code右键菜单传递的URI对象
