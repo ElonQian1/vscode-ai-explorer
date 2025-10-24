@@ -21,3 +21,9 @@ build/
 !.vscode/settings.example.json
 !.vscode/launch.example.json
 !.vscode/tasks.example.json
+
+# AI Explorer 缓存文件
+.ai-explorer-cache/
+analysis/.ai/
+**/.ai/
+*.jsonl
