@@ -23,6 +23,7 @@ export class ExplorerAliasModule extends BaseModule {
     private apiKeyCommands?: APIKeyCommands;
     private dictionaryManager?: DictionaryManager;
     private smartAnalyzer?: SmartFileAnalyzer;
+    private extensionContext?: vscode.ExtensionContext; // 保存 context 以便后续使用
 
     constructor(container: DIContainer) {
         super(container, 'explorer-alias');
@@ -30,6 +31,9 @@ export class ExplorerAliasModule extends BaseModule {
 
     async activate(context: vscode.ExtensionContext): Promise<void> {
         this.logger.info('AI 资源管理器模块正在激活...');
+
+        // 保存 context 以便后续使用
+        this.extensionContext = context;
 
         // 注册服务到 DI 容器
         this.registerServices(context);
@@ -1099,7 +1103,8 @@ export class ExplorerAliasModule extends BaseModule {
                 const { HoverInfoService } = await import('./ui/HoverInfoService');
                 const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
                 if (workspaceRoot) {
-                    const hoverService = HoverInfoService.getInstance(workspaceRoot);
+                    // 传递 ExtensionContext 以便访问 SmartFileAnalyzer 缓存
+                    const hoverService = HoverInfoService.getInstance(workspaceRoot, this.extensionContext);
                     await hoverService.refresh(filePath);
                     
                     // 刷新TreeView（暂时刷新整个树，后续可优化为仅刷新特定节点）
