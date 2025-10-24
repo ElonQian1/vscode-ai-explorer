@@ -3,6 +3,15 @@
   "displayName": "AI Explorer - 智能资源管理器",
   "description": "AI驱动的文件翻译和UML图表生成插件",
   "version": "0.1.0",
+  "publisher": "ElonQian1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ElonQian1/vscode-ai-explorer.git"
+  },
+  "homepage": "https://github.com/ElonQian1/vscode-ai-explorer#readme",
+  "bugs": {
+    "url": "https://github.com/ElonQian1/vscode-ai-explorer/issues"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
