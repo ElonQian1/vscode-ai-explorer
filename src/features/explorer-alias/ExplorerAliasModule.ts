@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { BaseModule } from '../../shared/base/BaseModule';
 import { DIContainer } from '../../core/di/Container';
 import { MultiProviderAIClient } from '../../core/ai/MultiProviderAIClient';
+import { SmartFileAnalyzer, SmartAnalysisResult } from '../../core/ai/SmartFileAnalyzer';
 import { KVCache } from '../../core/cache/KVCache';
 import { DictionaryManager } from './core/DictionaryManager';
 import { AIExplorerProvider } from './ui/AIExplorerProvider';
@@ -21,6 +22,7 @@ export class ExplorerAliasModule extends BaseModule {
     private translateUseCase?: EnhancedTranslateBatchUseCase;
     private apiKeyCommands?: APIKeyCommands;
     private dictionaryManager?: DictionaryManager;
+    private smartAnalyzer?: SmartFileAnalyzer;
 
     constructor(container: DIContainer) {
         super(container, 'explorer-alias');
@@ -39,6 +41,9 @@ export class ExplorerAliasModule extends BaseModule {
         // 初始化 AI 客户端
         const aiClient = this.container.get<MultiProviderAIClient>('aiClient');
         await aiClient.initialize();
+
+        // 初始化智能文件分析器
+        this.smartAnalyzer = this.container.get<SmartFileAnalyzer>('smartAnalyzer');
 
         // 创建树视图提供者
         await this.createTreeProvider(context);
@@ -80,6 +85,12 @@ export class ExplorerAliasModule extends BaseModule {
         // 注册 API Key 命令处理器
         this.container.registerSingleton('apiKeyCommands', () => 
             new APIKeyCommands(this.logger));
+
+        // 注册智能文件分析器
+        this.container.registerSingleton('smartAnalyzer', () => {
+            const aiClient = this.container.get<MultiProviderAIClient>('aiClient');
+            return new SmartFileAnalyzer(this.logger, aiClient, context);
+        });
 
         this.logger.debug('Explorer-Alias 模块服务注册完成');
     }
@@ -482,10 +493,19 @@ export class ExplorerAliasModule extends BaseModule {
      */
     private async handleAnalyzePathCommand(item: any): Promise<void> {
         try {
+            // 立即显示调试通知，证明命令被触发了
+            vscode.window.showInformationMessage('🔍 AI分析命令已触发！正在诊断...');
+            
+            this.logger.info('🔍 handleAnalyzePathCommand 被调用', { item });
+            
             const filePath = this.getPathFromItem(item);
-            if (!filePath) return;
+            if (!filePath) {
+                this.logger.error('⚠️ 无法获取文件路径，分析终止');
+                vscode.window.showErrorMessage('❌ 无法获取文件路径，请检查选中的文件');
+                return;
+            }
 
-            this.logger.info(`开始分析路径: ${filePath}`);
+            this.logger.info(`✅ 开始分析路径: ${filePath}`);
 
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
@@ -494,9 +514,8 @@ export class ExplorerAliasModule extends BaseModule {
             }, async (progress) => {
                 progress.report({ increment: 0, message: '启动分析引擎...' });
 
-                // 这里集成你的 HoverInfoService 或 AnalysisOrchestrator
-                // 暂时使用简化版本，后面完善
-                const result = await this.performPathAnalysis(filePath);
+                // 集成真正的AI分析服务
+                const result = await this.performSmartAnalysis(filePath);
 
                 progress.report({ increment: 100, message: '分析完成' });
                 
@@ -536,8 +555,8 @@ export class ExplorerAliasModule extends BaseModule {
 
                 progress.report({ increment: 50, message: '执行新分析...' });
 
-                // 重新分析
-                const result = await this.performPathAnalysis(filePath);
+                // 重新分析（使用AI智能分析）
+                const result = await this.performSmartAnalysis(filePath);
 
                 progress.report({ increment: 100, message: '重新分析完成' });
 
@@ -626,7 +645,7 @@ export class ExplorerAliasModule extends BaseModule {
                     });
                     
                     try {
-                        await this.performPathAnalysis(file);
+                        await this.performSmartAnalysis(file);
                         processed++;
                     } catch (error) {
                         this.logger.warn(`分析文件失败: ${file}`, error);
@@ -650,16 +669,113 @@ export class ExplorerAliasModule extends BaseModule {
 
     // 🛠️ =============辅助方法=============
 
+    /**
+     * 🤖 智能文件分析 - 调用腾讯元宝AI
+     */
+    private async performSmartAnalysis(filePath: string): Promise<string> {
+        try {
+            if (!this.smartAnalyzer) {
+                // 如果智能分析器未初始化，使用回退方法
+                this.logger.warn('智能文件分析器未初始化，使用基础分析');
+                return await this.performPathAnalysis(filePath);
+            }
+
+            this.logger.info(`🤖 开始AI智能分析: ${filePath}`);
+            
+            // 调用SmartFileAnalyzer进行AI分析
+            const analysisResult: SmartAnalysisResult = await this.smartAnalyzer.analyzeFileSmartly(filePath);
+            
+            // 格式化分析结果
+            return this.formatSmartAnalysisResult(analysisResult, filePath);
+            
+        } catch (error) {
+            this.logger.error('AI智能分析失败，使用基础分析', error);
+            // 分析失败时回退到基础分析
+            return await this.performPathAnalysis(filePath);
+        }
+    }
+
+    /**
+     * 📊 格式化智能分析结果
+     */
+    private formatSmartAnalysisResult(result: SmartAnalysisResult, filePath: string): string {
+        const parts: string[] = [];
+        
+        // 文件路径
+        parts.push(`📁 路径: ${filePath}`);
+        
+        // AI分析的用途
+        parts.push(`🤖 AI分析: ${result.purpose}`);
+        
+        // 详细描述
+        if (result.description) {
+            parts.push(`📝 详细: ${result.description}`);
+        }
+        
+        // 技术标签
+        if (result.tags?.length) {
+            parts.push(`🏷️ 标签: ${result.tags.join(', ')}`);
+        }
+        
+        // 重要性评分
+        const importanceEmoji = result.importance >= 8 ? '🔥' : result.importance >= 6 ? '⭐' : '📄';
+        parts.push(`${importanceEmoji} 重要性: ${result.importance}/10`);
+        
+        // 分析来源
+        const sourceEmoji = result.source === 'ai-analysis' ? '🤖' : 
+                           result.source === 'rule-based' ? '⚡' : '💾';
+        const sourceName = result.source === 'ai-analysis' ? 'AI智能分析' :
+                          result.source === 'rule-based' ? '规则推测' : '缓存';
+        parts.push(`${sourceEmoji} 来源: ${sourceName}${result.source === 'ai-analysis' ? ' (腾讯元宝)' : ''}`);
+        
+        // 关键文件标识
+        if (result.isKeyFile) {
+            parts.push(`🎯 关键文件`);
+        }
+        
+        // 相关文件建议
+        if (result.relatedFiles?.length) {
+            parts.push(`🔗 相关文件: ${result.relatedFiles.slice(0, 3).join(', ')}`);
+        }
+        
+        // 分析时间
+        parts.push(`⏰ 分析时间: ${new Date(result.analyzedAt).toLocaleString()}`);
+        
+        return parts.join('\n');
+    }
+
     private getPathFromItem(item: any): string | null {
+        // VS Code右键菜单传递的URI对象
+        if (item?.fsPath) {
+            this.logger.debug(`从URI获取路径: ${item.fsPath}`);
+            return item.fsPath;
+        }
+        
+        // TreeView项目
         if (item?.resourceUri) {
-            return item.resourceUri.fsPath; // VS Code URI
+            this.logger.debug(`从TreeView项目获取路径: ${item.resourceUri.fsPath}`);
+            return item.resourceUri.fsPath;
         }
+        
+        // TreeItem节点
         if (item?.node?.path) {
-            return item.node.path; // TreeItem
+            this.logger.debug(`从TreeItem节点获取路径: ${item.node.path}`);
+            return item.node.path;
         }
+        
+        // 直接字符串路径
         if (typeof item === 'string') {
-            return item; // 直接路径
+            this.logger.debug(`直接字符串路径: ${item}`);
+            return item;
         }
+        
+        // 调试：记录无法识别的item结构
+        this.logger.warn('无法从item获取路径', { 
+            itemType: typeof item,
+            itemKeys: item ? Object.keys(item) : 'null',
+            item: item 
+        });
+        
         return null;
     }
 
