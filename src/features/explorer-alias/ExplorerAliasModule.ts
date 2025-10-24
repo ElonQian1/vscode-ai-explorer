@@ -1082,6 +1082,15 @@ export class ExplorerAliasModule extends BaseModule {
      */
     private async refreshAnalysisForPath(filePath: string): Promise<void> {
         try {
+            // 检查是否启用自动分析 (临时减少API调用)
+            const config = vscode.workspace.getConfiguration('ai-explorer');
+            const autoAnalysisEnabled = config.get<boolean>('enableAutoAnalysis', false); // 默认关闭
+            
+            if (!autoAnalysisEnabled) {
+                this.logger.debug(`自动分析已禁用，跳过: ${filePath}`);
+                return;
+            }
+            
             // 这里可以集成 HoverInfoService 或 AnalysisOrchestrator
             // 暂时使用简化逻辑
             

@@ -459,12 +459,12 @@ export class MultiProviderAIClient {
         // 获取或创建该提供商的速率限制器
         let limiter = this.rateLimiters.get(providerName);
         if (!limiter) {
-            // 针对不同提供商使用不同的限制策略
+            // 针对不同提供商使用不同的限制策略 - 更保守的设置
             const isHunyuan = providerName.includes('hunyuan') || providerName.includes('腾讯');
             limiter = new RateLimiter(
-                isHunyuan ? 5 : 10,    // 腾讯元宝更严格的限制
+                isHunyuan ? 3 : 5,     // 大幅降低频率：腾讯元宝3次/分钟，其他5次/分钟
                 60000,                 // 1分钟窗口
-                isHunyuan ? 2000 : 1000 // 腾讯元宝2秒间隔，其他1秒
+                isHunyuan ? 5000 : 3000 // 大幅增加间隔：腾讯元宝5秒，其他3秒
             );
             this.rateLimiters.set(providerName, limiter);
             this.logger.info(`为提供商 ${providerName} 创建速率限制器: ${isHunyuan ? '严格模式' : '标准模式'}`);
