@@ -215,8 +215,8 @@ export class ExplorerAliasModule extends BaseModule {
         });
 
         // 🔍 文件分析命令
-        this.registerCommand(context, 'aiExplorer.analyzePath', async (item) => {
-            await this.handleAnalyzePathCommand(item);
+        this.registerCommand(context, 'aiExplorer.analyzePath', async (...args) => {
+            await this.handleAnalyzePathCommand(...args);
         });
 
         this.registerCommand(context, 'aiExplorer.reanalyzePath', async (item) => {
@@ -491,18 +491,40 @@ export class ExplorerAliasModule extends BaseModule {
     /**
      * 分析指定路径的文件或文件夹
      */
-    private async handleAnalyzePathCommand(item: any): Promise<void> {
+    private async handleAnalyzePathCommand(...args: any[]): Promise<void> {
         try {
             // 立即显示调试通知，证明命令被触发了
             vscode.window.showInformationMessage('🔍 AI分析命令已触发！正在诊断...');
             
-            this.logger.info('🔍 handleAnalyzePathCommand 被调用', { item });
+            this.logger.info('🔍 handleAnalyzePathCommand 被调用', { 
+                args: args,
+                argsLength: args.length,
+                firstArg: args[0]
+            });
+
+            // 尝试从不同的参数获取路径
+            let filePath: string | null = null;
             
-            const filePath = this.getPathFromItem(item);
+            // 遍历所有参数寻找有效路径
+            for (let i = 0; i < args.length; i++) {
+                filePath = this.getPathFromItem(args[i]);
+                if (filePath) {
+                    this.logger.info(`✅ 从参数${i}获取到路径: ${filePath}`);
+                    break;
+                }
+            }
+
+            // 如果还是没有路径，尝试使用当前活动编辑器的文件
             if (!filePath) {
-                this.logger.error('⚠️ 无法获取文件路径，分析终止');
-                vscode.window.showErrorMessage('❌ 无法获取文件路径，请检查选中的文件');
-                return;
+                const activeEditor = vscode.window.activeTextEditor;
+                if (activeEditor) {
+                    filePath = activeEditor.document.uri.fsPath;
+                    this.logger.info(`✅ 从活动编辑器获取路径: ${filePath}`);
+                } else {
+                    this.logger.error('⚠️ 无法从任何来源获取文件路径，分析终止');
+                    vscode.window.showErrorMessage('❌ 无法获取文件路径，请检查选中的文件或在编辑器中打开一个文件');
+                    return;
+                }
             }
 
             this.logger.info(`✅ 开始分析路径: ${filePath}`);
@@ -745,6 +767,15 @@ export class ExplorerAliasModule extends BaseModule {
     }
 
     private getPathFromItem(item: any): string | null {
+        // 详细调试：输出完整的item信息
+        this.logger.info('🔍 调试getPathFromItem', {
+            item: item,
+            itemType: typeof item,
+            itemKeys: item ? Object.keys(item) : 'null',
+            itemConstructor: item?.constructor?.name,
+            itemProto: Object.getPrototypeOf(item)?.constructor?.name
+        });
+
         // VS Code右键菜单传递的URI对象
         if (item?.fsPath) {
             this.logger.debug(`从URI获取路径: ${item.fsPath}`);
@@ -761,6 +792,24 @@ export class ExplorerAliasModule extends BaseModule {
         if (item?.node?.path) {
             this.logger.debug(`从TreeItem节点获取路径: ${item.node.path}`);
             return item.node.path;
+        }
+
+        // 检查是否有path属性
+        if (item?.path) {
+            this.logger.debug(`从path属性获取路径: ${item.path}`);
+            return item.path;
+        }
+
+        // 检查是否有uri属性
+        if (item?.uri?.fsPath) {
+            this.logger.debug(`从uri.fsPath获取路径: ${item.uri.fsPath}`);
+            return item.uri.fsPath;
+        }
+
+        // 检查是否是vscode.Uri对象
+        if (item && typeof item.toString === 'function' && item.scheme) {
+            this.logger.debug(`从vscode.Uri对象获取路径: ${item.fsPath}`);
+            return item.fsPath;
         }
         
         // 直接字符串路径
