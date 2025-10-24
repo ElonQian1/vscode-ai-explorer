@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import * as path from 'path';
 import { Logger } from '../../../core/logging/Logger';
 import { MultiProviderAIClient } from '../../../core/ai/MultiProviderAIClient';
 import { EnhancedCapsuleCache, CapsuleData, AIAnalysisResult } from '../cache/EnhancedCapsuleCache';
@@ -328,18 +329,24 @@ export class EnhancedAnalysisUseCase {
         // 异步执行，不阻塞主流程
         setTimeout(async () => {
             try {
+                this.logger.info(`[EnhancedAnalysis] 🚀 开始后台AI分析: ${path.basename(filePath)}`);
                 progressCallback?.(AnalysisStage.AIAnalysis, 70);
                 
                 // 确保AI客户端已初始化
                 await this.ensureAIClient();
                 
                 if (!this.aiClient) {
-                    this.logger.warn('[EnhancedAnalysis] AI客户端未可用，跳过AI分析');
+                    this.logger.warn(`[EnhancedAnalysis] ❌ AI客户端未可用，跳过AI分析: ${path.basename(filePath)}`);
                     return;
                 }
+                
+                this.logger.info(`[EnhancedAnalysis] ✅ AI客户端已准备就绪: ${path.basename(filePath)}`);
 
                 // 执行AI分析
+                this.logger.info(`[EnhancedAnalysis] 📝 正在执行AI分析: ${path.basename(filePath)}`);
                 const aiResult = await this.performAIAnalysis(content, staticResult);
+                
+                this.logger.info(`[EnhancedAnalysis] 🎯 AI分析完成: ${path.basename(filePath)}, 推断:${aiResult.inferences.length}条, 建议:${aiResult.suggestions.length}条`);
                 
                 // 增量更新AI结果
                 await this.cache.mergeAIAnalysis(filePath, contentHash, {
@@ -348,6 +355,8 @@ export class EnhancedAnalysisUseCase {
                     analyzedAt: Date.now(),
                     aiVersion: '1.0'
                 });
+                
+                this.logger.info(`[EnhancedAnalysis] 💾 AI分析结果已缓存: ${path.basename(filePath)}`);
 
                 progressCallback?.(AnalysisStage.Complete, 100);
                 this.logger.info(`[EnhancedAnalysis] 🤖 AI分析完成: ${filePath}`);
@@ -356,7 +365,21 @@ export class EnhancedAnalysisUseCase {
                 this.notifyAIAnalysisComplete(filePath, aiResult);
 
             } catch (error) {
-                this.logger.error(`[EnhancedAnalysis] AI分析失败: ${filePath}`, error);
+                this.logger.error(`[EnhancedAnalysis] ❌ 后台AI分析失败: ${path.basename(filePath)}`, error);
+                
+                // 提供兜底的分析结果
+                try {
+                    const fallbackResult = this.generateFallbackAnalysis(staticResult);
+                    await this.cache.mergeAIAnalysis(filePath, contentHash, {
+                        inferences: fallbackResult.inferences,
+                        suggestions: fallbackResult.suggestions,
+                        analyzedAt: Date.now(),
+                        aiVersion: '1.0-fallback'
+                    });
+                    this.logger.info(`[EnhancedAnalysis] 🛡️ 已保存兜底分析结果: ${path.basename(filePath)}`);
+                } catch (fallbackError) {
+                    this.logger.error(`[EnhancedAnalysis] ❌ 兜底分析也失败了: ${path.basename(filePath)}`, fallbackError);
+                }
             }
         }, 100); // 短延迟确保主流程先完成
     }

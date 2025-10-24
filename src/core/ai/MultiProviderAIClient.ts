@@ -15,6 +15,7 @@ import { OpenAI } from 'openai';
 import * as vscode from 'vscode';
 import { Logger } from '../logging/Logger';
 import { AIRequest, AIResponse } from '../../shared/types';
+import { RateLimiter } from './RateLimiter';
 
 interface AIProvider {
     name: string;
@@ -36,6 +37,7 @@ export class MultiProviderAIClient {
     private rateLimiter: Map<string, number> = new Map();
     private requestQueue: Array<() => Promise<void>> = [];
     private processing = false;
+    private rateLimiters: Map<string, RateLimiter> = new Map();
     
     private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5分钟
     private readonly MAX_RETRIES = 3;
@@ -289,13 +291,31 @@ export class MultiProviderAIClient {
             } catch (error) {
                 lastError = error instanceof Error ? error : new Error(String(error));
                 const errorMsg = lastError.message || String(error);
+                
+                // 检查是否是429速率限制错误
+                const is429Error = errorMsg.includes('429') || errorMsg.includes('Too Many Requests');
+                
                 this.logger.warn(
                     `[${providerName}] 请求失败 (尝试 ${attempt}/${this.MAX_RETRIES}): ${errorMsg}`,
                     error
                 );
                 
                 if (attempt < this.MAX_RETRIES) {
-                    await this.delay(Math.pow(2, attempt) * 1000); // 指数退避
+                    let delayTime = Math.pow(2, attempt) * 1000; // 指数退避
+                    
+                    // 对于429错误，使用更长的等待时间
+                    if (is429Error) {
+                        delayTime = Math.min(60000, delayTime * 5); // 最长1分钟
+                        this.logger.info(`遇到速率限制，等待 ${delayTime/1000} 秒后重试`);
+                        
+                        // 重置该提供商的速率限制器
+                        const limiter = this.rateLimiters.get(providerName);
+                        if (limiter) {
+                            limiter.reset();
+                        }
+                    }
+                    
+                    await this.delay(delayTime);
                 }
             }
         }
@@ -436,16 +456,21 @@ export class MultiProviderAIClient {
     }
 
     private async enforceRateLimit(providerName: string): Promise<void> {
-        const lastRequest = this.rateLimiter.get(providerName) || 0;
-        const now = Date.now();
-        const timeSinceLastRequest = now - lastRequest;
-        
-        if (timeSinceLastRequest < this.RATE_LIMIT_DELAY) {
-            const delayTime = this.RATE_LIMIT_DELAY - timeSinceLastRequest;
-            await this.delay(delayTime);
+        // 获取或创建该提供商的速率限制器
+        let limiter = this.rateLimiters.get(providerName);
+        if (!limiter) {
+            // 针对不同提供商使用不同的限制策略
+            const isHunyuan = providerName.includes('hunyuan') || providerName.includes('腾讯');
+            limiter = new RateLimiter(
+                isHunyuan ? 5 : 10,    // 腾讯元宝更严格的限制
+                60000,                 // 1分钟窗口
+                isHunyuan ? 2000 : 1000 // 腾讯元宝2秒间隔，其他1秒
+            );
+            this.rateLimiters.set(providerName, limiter);
+            this.logger.info(`为提供商 ${providerName} 创建速率限制器: ${isHunyuan ? '严格模式' : '标准模式'}`);
         }
         
-        this.rateLimiter.set(providerName, Date.now());
+        await limiter.waitIfNeeded();
     }
 
     private delay(ms: number): Promise<void> {
