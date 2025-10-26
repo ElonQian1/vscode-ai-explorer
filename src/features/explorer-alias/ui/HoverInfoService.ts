@@ -393,7 +393,7 @@ export class HoverInfoService {
     for (let i = 0; i < filePath.length; i++) {
       hash = ((hash << 5) - hash + filePath.charCodeAt(i)) & 0xffffffff;
     }
-    return hash.toString(36);
+    return Math.abs(hash).toString(36); // 🔧 修复：添加 Math.abs() 与 SmartFileAnalyzer 保持一致
   }
 
   /**
