@@ -24,7 +24,8 @@ export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {
         private workspaceFolder: vscode.WorkspaceFolder,
         private cache?: any, // KVCache instance for loading aliases
         private dictionary?: any, // DictionaryManager instance
-        translateUseCase?: any // Optional translation use case
+        translateUseCase?: any, // Optional translation use case
+        private context?: vscode.ExtensionContext // 🔧 新增：传递 extension context
     ) {
         this.translateUseCase = translateUseCase;
         this.loadFileTree().catch(error => {
@@ -45,7 +46,7 @@ export class AIExplorerProvider implements vscode.TreeDataProvider<FileNode> {
     }
 
     getTreeItem(element: FileNode): vscode.TreeItem {
-        return new ExplorerTreeItem(element, this.showAlias);
+        return new ExplorerTreeItem(element, this.showAlias, this.context);
     }
 
     getChildren(element?: FileNode): Thenable<FileNode[]> {

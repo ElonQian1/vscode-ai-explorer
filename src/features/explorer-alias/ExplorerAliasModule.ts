@@ -142,7 +142,8 @@ export class ExplorerAliasModule extends BaseModule {
                 workspaceFolder,
                 cache,
                 dictionaryManager,
-                translateUseCase // 传入翻译用例
+                translateUseCase, // 传入翻译用例
+                context // 🔧 传递 extension context
             );
 
             // 注册树视图到 VS Code

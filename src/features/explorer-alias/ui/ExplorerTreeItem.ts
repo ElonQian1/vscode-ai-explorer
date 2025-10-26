@@ -13,7 +13,8 @@ import { HoverInfoService } from './HoverInfoService';
 export class ExplorerTreeItem extends vscode.TreeItem {
     constructor(
         public readonly node: FileNode,
-        private showAlias: boolean
+        private showAlias: boolean,
+        private context?: vscode.ExtensionContext // 🔧 新增：extension context
     ) {
         const displayName = showAlias && node.alias ? node.alias : node.name;
         
@@ -211,7 +212,7 @@ export class ExplorerTreeItem extends vscode.TreeItem {
                 return null;
             }
 
-            const hoverService = HoverInfoService.getInstance(workspaceRoot);
+            const hoverService = HoverInfoService.getInstance(workspaceRoot, this.context);
             const analysisText = await hoverService.getExistingTooltip(this.node.path);
             
             if (analysisText) {
@@ -237,7 +238,7 @@ export class ExplorerTreeItem extends vscode.TreeItem {
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!workspaceRoot) return null;
 
-            const hoverService = HoverInfoService.getInstance(workspaceRoot);
+            const hoverService = HoverInfoService.getInstance(workspaceRoot, this.context);
             const analysisText = await hoverService.getTooltip(this.node.path);
             
             // 将纯文本转为 Markdown 格式
