@@ -60,6 +60,10 @@ export class SmartFileAnalyzer {
     private cache: KVCache;
     private contextCache: KVCache;
     private readonly moduleId = 'smart-analyzer';
+    private readonly _onAnalysisComplete = new vscode.EventEmitter<string>();
+    
+    /** AI分析完成事件（参数为文件路径） */
+    public readonly onAnalysisComplete = this._onAnalysisComplete.event;
     
     constructor(
         private logger: Logger,
@@ -90,18 +94,20 @@ export class SmartFileAnalyzer {
         // 1. 检查缓存
         const cached = await this.cache.get<SmartAnalysisResult>(cacheKey, this.moduleId);
         if (cached) {
-            this.logger.debug(`[SmartAnalyzer] 缓存命中: ${filePath}`);
+            this.logger.info(`[SmartAnalyzer] 💾 缓存命中: ${filePath}`);
             return { ...cached, source: 'cache' as const };
         }
 
         // 2. 基于规则的快速分析
         const ruleBasedResult = this.analyzeByRules(filePath);
         if (ruleBasedResult) {
+            this.logger.info(`[SmartAnalyzer] 📏 规则分析命中: ${filePath} -> ${ruleBasedResult.purpose}`);
             await this.cache.set(cacheKey, ruleBasedResult, undefined, this.moduleId);
             return ruleBasedResult;
         }
 
         // 3. AI深度分析（后台执行）
+        this.logger.info(`[SmartAnalyzer] 🚀 启动后台AI分析: ${filePath}`);
         this.performAIAnalysis(filePath, cacheKey);
         
         // 4. 返回默认结果
@@ -114,6 +120,7 @@ export class SmartFileAnalyzer {
             isKeyFile: false
         };
         
+        this.logger.info(`[SmartAnalyzer] 📦 返回默认结果: ${filePath} -> ${defaultResult.purpose}`);
         return defaultResult;
     }
 
@@ -268,10 +275,12 @@ export class SmartFileAnalyzer {
      */
     private async performAIAnalysis(filePath: string, cacheKey: string): Promise<void> {
         try {
-            this.logger.info(`[SmartAnalyzer] 开始AI分析: ${filePath}`);
+            this.logger.info(`[SmartAnalyzer] ⏳ 开始AI分析: ${filePath}`);
             
             // 读取文件内容（限制大小）
             const content = await this.readFileContent(filePath, 2000); // 前2000字符
+            this.logger.info(`[SmartAnalyzer] 📝 已读取文件内容，长度: ${content.length}`);
+            
             const fileName = path.basename(filePath);
             const dirStructure = await this.getDirectoryContext(path.dirname(filePath));
 
@@ -302,7 +311,9 @@ ${content}
                 temperature: 0.3
             };
             
+            this.logger.info(`[SmartAnalyzer] 🚀 发送AI请求...`);
             const response = await this.aiClient.sendRequest(aiRequest);
+            this.logger.info(`[SmartAnalyzer] ✅ 请求返回，内容长度: ${response.content?.length || 0}`);
 
             const aiResult = this.parseAIResponse(response.content, filePath);
             if (aiResult) {
@@ -310,11 +321,16 @@ ${content}
                 aiResult.analyzedAt = Date.now();
                 await this.cache.set(cacheKey, aiResult, undefined, this.moduleId);
                 
-                this.logger.info(`[SmartAnalyzer] AI分析完成: ${filePath} -> ${aiResult.purpose}`);
+                this.logger.info(`[SmartAnalyzer] ✨ AI分析完成并缓存: ${filePath} -> ${aiResult.purpose}`);
+                
+                // 🔔 触发分析完成事件
+                this._onAnalysisComplete.fire(filePath);
+            } else {
+                this.logger.warn(`[SmartAnalyzer] ⚠️ AI响应解析失败: ${filePath}`);
             }
 
         } catch (error) {
-            this.logger.error(`[SmartAnalyzer] AI分析失败: ${filePath}`, error);
+            this.logger.error(`[SmartAnalyzer] ❌ AI分析失败: ${filePath}`, error);
         }
     }
 

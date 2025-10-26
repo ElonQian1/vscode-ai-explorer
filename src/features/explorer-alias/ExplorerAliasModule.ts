@@ -24,9 +24,28 @@ export class ExplorerAliasModule extends BaseModule {
     private dictionaryManager?: DictionaryManager;
     private smartAnalyzer?: SmartFileAnalyzer;
     private extensionContext?: vscode.ExtensionContext; // 保存 context 以便后续使用
+    
+    // 🚀 防抖刷新机制，避免频繁UI更新
+    private refreshTimer?: NodeJS.Timeout;
+    private readonly REFRESH_DEBOUNCE_DELAY = 300; // 300ms 防抖延迟
 
     constructor(container: DIContainer) {
         super(container, 'explorer-alias');
+    }
+    
+    /**
+     * 🚀 防抖刷新TreeView - 避免频繁UI更新导致性能问题
+     */
+    private debouncedRefresh(): void {
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+        }
+        
+        this.refreshTimer = setTimeout(() => {
+            this.logger.info('刷新 AI 资源管理器树视图');
+            this.treeProvider?.refresh();
+            this.refreshTimer = undefined;
+        }, this.REFRESH_DEBOUNCE_DELAY);
     }
 
     async activate(context: vscode.ExtensionContext): Promise<void> {
@@ -141,6 +160,16 @@ export class ExplorerAliasModule extends BaseModule {
 
             this.logger.info('AI 资源管理器树视图创建成功');
             
+            // 🔔 监听AI分析完成事件，自动刷新TreeView
+            const smartAnalyzer = this.container.get<SmartFileAnalyzer>('smartAnalyzer');
+            context.subscriptions.push(
+                smartAnalyzer.onAnalysisComplete((filePath) => {
+                    this.logger.info(`[AI分析完成] 刷新TreeView: ${filePath}`);
+                    this.treeProvider?.refresh();
+                    vscode.window.showInformationMessage(`✨ AI分析完成，请hover查看结果！`);
+                })
+            );
+            
         } catch (error) {
             this.logger.error('创建 AI 资源管理器树视图失败', error);
             vscode.window.showErrorMessage(`AI 资源管理器初始化失败: ${error}`);
@@ -224,7 +253,12 @@ export class ExplorerAliasModule extends BaseModule {
         });
 
         this.registerCommand(context, 'aiExplorer.reanalyzePath', async (item) => {
-            await this.handleReanalyzePathCommand(item);
+            await this.handleAnalyzePathCommand(item, true);
+        });
+
+        // 🔄 刷新AI分析命令 - 用户主动触发
+        this.registerCommand(context, 'aiExplorer.refreshAnalysis', async (item) => {
+            await this.handleRefreshAnalysis(item);
         });
 
         this.registerCommand(context, 'aiExplorer.showAnalysisSummary', async (item) => {
@@ -497,9 +531,6 @@ export class ExplorerAliasModule extends BaseModule {
      */
     private async handleAnalyzePathCommand(...args: any[]): Promise<void> {
         try {
-            // 立即显示调试通知，证明命令被触发了
-            vscode.window.showInformationMessage('🔍 AI分析命令已触发！正在诊断...');
-            
             this.logger.info('🔍 handleAnalyzePathCommand 被调用', { 
                 args: args,
                 argsLength: args.length,
@@ -525,8 +556,8 @@ export class ExplorerAliasModule extends BaseModule {
                     filePath = activeEditor.document.uri.fsPath;
                     this.logger.info(`✅ 从活动编辑器获取路径: ${filePath}`);
                 } else {
-                    this.logger.error('⚠️ 无法从任何来源获取文件路径，分析终止');
-                    vscode.window.showErrorMessage('❌ 无法获取文件路径，请检查选中的文件或在编辑器中打开一个文件');
+                    this.logger.warn('⚠️ 无法从任何来源获取文件路径，分析终止');
+                    vscode.window.showErrorMessage('❌ 无法获取文件路径，请在编辑器中打开一个文件或从资源管理器右键点击');
                     return;
                 }
             }
@@ -1071,10 +1102,20 @@ export class ExplorerAliasModule extends BaseModule {
             /\.log$/,
             /\.tmp$/,
             /\.cache$/,
+            // 🛡️ 排除内部缓存文件，避免循环刷新
+            /\.ai-explorer-cache/,
+            /analysis[\/\\]\.ai[\/\\]cache\.jsonl/,
+            /\.db-shm$/,  // SQLite共享内存文件
+            /\.db-wal$/,  // SQLite写前日志文件
+            /\.lock$/,    // Git锁文件
+            // 媒体文件
             /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i,
             /\.(mp4|avi|mov|wmv|flv|webm)$/i,
+            // 压缩文件
             /\.(zip|rar|7z|tar|gz|bz2)$/i,
+            // 二进制文件
             /\.(exe|dll|so|dylib)$/i,
+            // 文档文件
             /\.(pdf|doc|docx|xls|xlsx)$/i
         ];
 
@@ -1086,32 +1127,132 @@ export class ExplorerAliasModule extends BaseModule {
      */
     private async refreshAnalysisForPath(filePath: string): Promise<void> {
         try {
-            // 检查是否启用自动分析 (临时减少API调用)
-            const config = vscode.workspace.getConfiguration('ai-explorer');
-            const autoAnalysisEnabled = config.get<boolean>('enableAutoAnalysis', false); // 默认关闭
+            // 🔄 文件变更时，仅标记分析过期，不自动触发AI请求
+            this.logger.info(`文件变更检测: ${filePath} - 标记分析结果需要更新`);
             
-            if (!autoAnalysisEnabled) {
-                this.logger.debug(`自动分析已禁用，跳过: ${filePath}`);
+            // 1. 标记缓存过期（但不删除，让用户决定是否刷新）
+            await this.markAnalysisAsStale(filePath);
+            
+            // 2. 显示用户提示（可选的通知）
+            await this.showFileChangedNotification(filePath);
+            
+            // 3. 使用防抖刷新TreeView，避免频繁UI更新
+            this.debouncedRefresh();
+            
+        } catch (error) {
+            this.logger.error(`处理文件变更失败: ${filePath}`, error);
+        }
+    }
+
+    /**
+     * 🔄 处理手动刷新分析命令
+     */
+    private async handleRefreshAnalysis(item?: any): Promise<void> {
+        try {
+            const path = this.getPathFromItem(item);
+            if (!path) {
+                vscode.window.showErrorMessage('无法获取文件路径');
                 return;
             }
-            
-            // 这里可以集成 HoverInfoService 或 AnalysisOrchestrator
-            // 暂时使用简化逻辑
-            
-            // 如果有 HoverInfoService 实例，调用其刷新方法
-            try {
+
+            // 显示进度提示
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: '正在刷新AI分析...',
+                cancellable: false
+            }, async (progress) => {
+                progress.report({ increment: 0, message: `分析 ${require('path').basename(path)}` });
+                
+                await this.performManualRefresh(path);
+                
+                progress.report({ increment: 100, message: '完成' });
+            });
+
+        } catch (error) {
+            this.logger.error('刷新分析失败', error);
+            vscode.window.showErrorMessage(`刷新分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 📝 标记分析结果为过期状态
+     */
+    private async markAnalysisAsStale(filePath: string): Promise<void> {
+        try {
+            const { HoverInfoService } = await import('./ui/HoverInfoService');
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (workspaceRoot) {
+                const hoverService = HoverInfoService.getInstance(workspaceRoot, this.extensionContext);
+                await hoverService.markAsStale(filePath);
+            }
+        } catch (error) {
+            this.logger.warn(`标记分析过期失败: ${filePath}`, error);
+        }
+    }
+
+    /**
+     * 💬 显示文件变更提示或自动刷新（可配置）
+     */
+    private async showFileChangedNotification(filePath: string): Promise<void> {
+        const config = vscode.workspace.getConfiguration('ai-explorer');
+        const autoRefresh = config.get<boolean>('autoRefreshOnFileChange', false);
+        const showNotifications = config.get<boolean>('showFileChangeNotifications', false);
+        
+        // 如果启用了自动刷新（不推荐）
+        if (autoRefresh) {
+            this.logger.warn(`⚠️ 自动刷新已启用，将自动请求AI分析: ${filePath}`);
+            await this.performManualRefresh(filePath);
+            return;
+        }
+        
+        // 显示通知让用户选择
+        if (!showNotifications) {
+            return;
+        }
+
+        const fileName = require('path').basename(filePath);
+        const action = await vscode.window.showInformationMessage(
+            `📝 文件 ${fileName} 已修改，分析结果可能过期`,
+            '🔄 立即刷新', '⚙️ 设置', '❌ 忽略'
+        );
+
+        switch (action) {
+            case '🔄 立即刷新':
+                await this.performManualRefresh(filePath);
+                break;
+            case '⚙️ 设置':
+                await vscode.commands.executeCommand('workbench.action.openSettings', 'aiExplorer.showFileChangeNotifications');
+                break;
+            // 忽略则什么都不做
+        }
+    }
+
+    /**
+     * 🔄 执行手动刷新（用户主动触发）
+     */
+    private async performManualRefresh(filePath: string): Promise<void> {
+        try {
+            // 🆕 使用新的 SmartFileAnalyzer 而不是旧的 HoverInfoService
+            if (this.smartAnalyzer) {
+                this.logger.info(`🔄 使用 SmartFileAnalyzer 刷新分析: ${filePath}`);
+                await this.smartAnalyzer.analyzeFileSmartly(filePath);
+                this.treeProvider?.refresh();
+                
+                const fileName = require('path').basename(filePath);
+                vscode.window.showInformationMessage(`✅ ${fileName} 分析已更新`);
+            } else {
+                // Fallback 到旧系统（但这不应该发生）
+                this.logger.warn('SmartFileAnalyzer 未初始化，使用旧系统');
                 const { HoverInfoService } = await import('./ui/HoverInfoService');
                 const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
                 if (workspaceRoot) {
-                    // 传递 ExtensionContext 以便访问 SmartFileAnalyzer 缓存
                     const hoverService = HoverInfoService.getInstance(workspaceRoot, this.extensionContext);
                     await hoverService.refresh(filePath);
-                    
-                    // 刷新TreeView（暂时刷新整个树，后续可优化为仅刷新特定节点）
                     this.treeProvider?.refresh();
+                    
+                    const fileName = require('path').basename(filePath);
+                    vscode.window.showInformationMessage(`✅ ${fileName} 分析已更新`);
                 }
-            } catch (error) {
-                this.logger.warn(`刷新悬停分析失败: ${filePath}`, error);
             }
 
         } catch (error) {

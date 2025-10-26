@@ -656,7 +656,12 @@ export class EnhancedCapsuleCache {
                         
                         // ✅ 防御性检查：跳过格式不正确的缓存
                         if (!capsule || !capsule.meta || !capsule.meta.filePath) {
-                            this.logger.warn(`[EnhancedCache] 跳过格式不正确的缓存文件: ${fileName}`);
+                            // 🧹 静默删除格式不正确的缓存文件（避免日志污染）
+                            try {
+                                await vscode.workspace.fs.delete(fileUri);
+                            } catch {
+                                // 忽略删除失败
+                            }
                             continue;
                         }
                         
@@ -664,7 +669,13 @@ export class EnhancedCapsuleCache {
                         this.memoryCache.set(cacheKey, capsule);
                         loadedCount++;
                     } catch (error) {
-                        this.logger.warn(`[EnhancedCache] 加载缓存文件失败: ${fileName}`, error);
+                        // 🧹 如果JSON解析失败，静默删除损坏的文件
+                        try {
+                            const fileUri = vscode.Uri.joinPath(this.cacheDir, fileName);
+                            await vscode.workspace.fs.delete(fileUri);
+                        } catch {
+                            // 忽略删除失败
+                        }
                     }
                 }
             }
@@ -711,12 +722,18 @@ export class EnhancedCapsuleCache {
         if (!this.cacheDir) return;
 
         try {
+            // ✅ 防御性检查：确保必要字段存在
+            if (!capsule || !capsule.meta || !capsule.meta.filePath) {
+                this.logger.warn('[EnhancedCache] ⚠️ 跳过保存：缓存数据格式不正确');
+                return;
+            }
+
             const fileName = this.getCacheFileName(capsule.meta.filePath);
             const fileUri = vscode.Uri.joinPath(this.cacheDir, fileName);
             const content = Buffer.from(JSON.stringify(capsule, null, 2), 'utf8');
             await vscode.workspace.fs.writeFile(fileUri, content);
         } catch (error) {
-            this.logger.error(`[EnhancedCache] 磁盘写入失败: ${capsule.meta.filePath}`, error);
+            this.logger.error(`[EnhancedCache] 磁盘写入失败: ${capsule?.meta?.filePath || 'unknown'}`, error);
         }
     }
 

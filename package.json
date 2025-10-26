@@ -177,6 +177,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "aiExplorer.refreshAnalysis",
+        "title": "♻️ 刷新AI分析（文件已修改）",
+        "icon": "$(sync)"
+      },
+      {
         "command": "aiExplorer.showAnalysisSummary",
         "title": "📋 AI 分析：查看详细摘要",
         "icon": "$(note)"
@@ -250,6 +255,11 @@
           "command": "aiExplorer.reanalyzePath",
           "when": "view == aiExplorer",
           "group": "analysis@21"
+        },
+        {
+          "command": "aiExplorer.refreshAnalysis",
+          "when": "view == aiExplorer",
+          "group": "analysis@21.5"
         },
         {
           "command": "aiExplorer.showAnalysisSummary", 
@@ -349,6 +359,31 @@
           "type": "boolean",
           "default": true,
           "description": "文件分析时是否启用AI增强(生成推断和建议)"
+        },
+        "aiExplorer.showFileChangeNotifications": {
+          "type": "boolean",
+          "default": false,
+          "description": "文件修改后是否显示提示通知"
+        },
+        "aiExplorer.autoRefreshOnFileChange": {
+          "type": "boolean",
+          "default": false,
+          "description": "文件修改后是否自动刷新分析（不推荐，会产生大量AI请求）"
+        },
+        "aiExplorer.hoverMode": {
+          "type": "string",
+          "default": "manual",
+          "enum": [
+            "manual",
+            "auto",
+            "disabled"
+          ],
+          "enumDescriptions": [
+            "手动模式：hover时显示'点击分析'按钮，需要用户主动触发",
+            "自动模式：hover时自动触发AI分析（可能消耗大量API）", 
+            "禁用模式：hover时不显示AI分析选项"
+          ],
+          "description": "悬停时的AI分析行为"
         },
         "filetreeBlueprint.excludes": {
           "type": "array",

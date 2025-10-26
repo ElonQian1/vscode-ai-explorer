@@ -147,23 +147,90 @@ export class ExplorerTreeItem extends vscode.TreeItem {
             baseInfo += `⚠️ 需要翻译\n`;
         }
 
-        // 2. 异步加载智能分析（不阻塞UI）
-        this.loadSmartAnalysis().then(analysis => {
-            if (analysis) {
-                const smartInfo = `\n---\n**🤖 AI 分析**\n\n${analysis}`;
-                tooltip.appendMarkdown(baseInfo + smartInfo);
-                // 这里可以触发TreeView刷新（如果需要）
-            }
-        }).catch(error => {
-            console.warn(`智能分析失败 ${this.node.path}:`, error);
-        });
+        // 检查hover模式配置
+        const config = vscode.workspace.getConfiguration('aiExplorer');
+        const hoverMode = config.get<string>('hoverMode', 'manual');
 
-        tooltip.appendMarkdown(baseInfo + `\n---\n⏳ AI 分析中...`);
+        // 先设置基础信息
+        tooltip.appendMarkdown(baseInfo);
+
+        // 2. 根据配置模式处理AI分析
+        if (hoverMode === 'disabled') {
+            // 禁用模式：不显示AI分析选项
+            return tooltip;
+        }
+
+        if (hoverMode === 'auto') {
+            // 自动模式：保持原有的自动分析行为（兼容性）
+            tooltip.appendMarkdown(`\n---\n⏳ AI 分析中...`);
+            this.loadSmartAnalysis().then(analysis => {
+                if (analysis) {
+                    const smartInfo = `\n---\n**🤖 AI 分析**\n\n${analysis}`;
+                    tooltip.value = baseInfo + smartInfo; // 替换整个内容
+                }
+            }).catch((error: any) => {
+                console.warn(`智能分析失败 ${this.node.path}:`, error);
+            });
+        } else {
+            // 手动模式（默认）：只显示现有结果，提供手动触发选项
+            this.checkExistingAnalysis().then((analysis: string | null) => {
+                let aiSection = '';
+                if (analysis) {
+                    // 显示已有的分析结果
+                    aiSection = `\n---\n**🤖 AI 分析**\n\n${analysis}`;
+                } else {
+                    // 显示手动分析选项
+                    aiSection = `\n---\n💡 **AI 分析**\n\n`;
+                    aiSection += `🔍 [点击进行智能分析](command:aiExplorer.refreshAnalysis?${encodeURIComponent(JSON.stringify([this.node]))})\n`;
+                    aiSection += `📋 或右键选择 "刷新AI分析"`;
+                }
+                tooltip.value = baseInfo + aiSection; // 替换整个内容
+            }).catch((error: any) => {
+                console.warn(`检查分析结果失败 ${this.node.path}:`, error);
+                // 发生错误时也显示手动分析选项
+                const fallbackInfo = `\n---\n💡 右键选择 "刷新AI分析" 来分析此文件`;
+                tooltip.value = baseInfo + fallbackInfo;
+            });
+            // 不添加 loading 文本，让异步结果自然更新
+        }
+
+        
         return tooltip;
     }
 
     /**
-     * 📊 异步加载智能分析
+     * 🔍 检查现有分析结果（不触发新分析）
+     */
+    private async checkExistingAnalysis(): Promise<string | null> {
+        try {
+            console.log(`[ExplorerTreeItem] 🔍 开始检查现有分析: ${this.node.path}`);
+            
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) {
+                console.log(`[ExplorerTreeItem] ❌ 没有工作区根目录`);
+                return null;
+            }
+
+            const hoverService = HoverInfoService.getInstance(workspaceRoot);
+            const analysisText = await hoverService.getExistingTooltip(this.node.path);
+            
+            if (analysisText) {
+                console.log(`[ExplorerTreeItem] ✅ 获取到分析文本，长度: ${analysisText.length}字符`);
+                console.log(`[ExplorerTreeItem] 📝 文本预览: ${analysisText.substring(0, 100)}...`);
+            } else {
+                console.log(`[ExplorerTreeItem] ❌ 没有获取到分析文本`);
+            }
+            
+            // 将纯文本转为 Markdown 格式
+            return analysisText ? analysisText.replace(/\n/g, '  \n') : null;
+        } catch (error) {
+            console.warn('[ExplorerTreeItem] ❌ 检查现有分析失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * �📊 异步加载智能分析（保留用于兼容性）
      */
     private async loadSmartAnalysis(): Promise<string | null> {
         try {

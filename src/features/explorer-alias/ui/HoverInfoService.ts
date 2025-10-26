@@ -23,6 +23,8 @@ export class HoverInfoService {
   private orchestrator: AnalysisOrchestrator;
   private smartCache?: KVCache;  // SmartFileAnalyzer 的缓存 (可选)
   private pendingUpdates = new Map<string, Promise<void>>();
+  private recentAnalyzes = new Map<string, number>(); // 记录最近分析的文件，避免频繁分析
+  private readonly AI_ANALYSIS_COOLDOWN = 5 * 60 * 1000; // 5分钟冷却时间
 
   private constructor(workspaceRoot: string, context?: vscode.ExtensionContext) {
     // 初始化分析内核
@@ -74,8 +76,10 @@ export class HoverInfoService {
       // 1. 立即尝试快速分析（缓存 + 启发式）
       const result = await this.orchestrator.quickAnalyze(path);
       
-      // 2. 异步触发完整分析（不阻塞UI）
-      this.triggerAsyncUpdate(path);
+      // 2. 🚫 仅在没有完整分析结果时才触发AI分析
+      if (result.source !== 'llm' && this.shouldTriggerAIAnalysis(path)) {
+        this.triggerAsyncUpdate(path);
+      }
       
       // 3. 格式化输出
       return this.formatTooltip(result);
@@ -87,12 +91,44 @@ export class HoverInfoService {
   }
 
   /**
+   * 🎯 判断是否应该触发AI分析
+   */
+  private shouldTriggerAIAnalysis(path: string): boolean {
+    // 1. 检查是否已经在分析中
+    if (this.pendingUpdates.has(path)) {
+      return false;
+    }
+
+    // 2. 检查冷却时间 - 避免对同一文件频繁分析
+    const lastAnalyzed = this.recentAnalyzes.get(path);
+    if (lastAnalyzed && (Date.now() - lastAnalyzed) < this.AI_ANALYSIS_COOLDOWN) {
+      return false;
+    }
+
+    // 3. 检查是否已有AI分析缓存
+    // 这里可以通过检查 AnalysisCache 来判断是否已有 LLM 分析结果
+    // 但为了简化，我们依赖上面的冷却机制
+    return true;
+  }
+
+  /**
+   * 🕐 检查分析是否过期（文件变更后）
+   */
+  private isAnalysisStale(path: string): boolean {
+    const lastAnalyzed = this.recentAnalyzes.get(path);
+    return lastAnalyzed === 0; // 被标记为过期
+  }
+
+  /**
    * 🔄 异步触发完整分析（防重复）
    */
   private triggerAsyncUpdate(path: string): void {
     if (this.pendingUpdates.has(path)) {
       return; // 已经在分析中
     }
+
+    // 记录分析时间
+    this.recentAnalyzes.set(path, Date.now());
 
     const updatePromise = this.performAsyncUpdate(path);
     this.pendingUpdates.set(path, updatePromise);
@@ -121,6 +157,13 @@ export class HoverInfoService {
    */
   private formatTooltip(result: AnalysisResult): string {
     const parts: string[] = [];
+
+    // 🚨 检查是否过期
+    if (this.isAnalysisStale(result.path)) {
+      parts.push(`⚠️ 文件已修改，分析结果可能过期`);
+      parts.push(`💡 提示: 右键选择"刷新AI分析"来更新`);
+      parts.push('---');
+    }
 
     // 主要概要
     parts.push(`📝 ${result.summary}`);
@@ -229,6 +272,23 @@ export class HoverInfoService {
    */
   async cleanup(): Promise<void> {
     await this.orchestrator.cleanupCache();
+    this.cleanupExpiredAnalyzes();
+  }
+
+  /**
+   * 🧹 清理过期的分析记录
+   */
+  private cleanupExpiredAnalyzes(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+    
+    for (const [path, timestamp] of this.recentAnalyzes.entries()) {
+      if (now - timestamp > this.AI_ANALYSIS_COOLDOWN) {
+        expiredKeys.push(path);
+      }
+    }
+    
+    expiredKeys.forEach(key => this.recentAnalyzes.delete(key));
   }
 
   /**
@@ -237,8 +297,65 @@ export class HoverInfoService {
   async refresh(path: string): Promise<void> {
     try {
       await this.orchestrator.analyze(path, true); // forceRefresh = true
+      // 清除过期标记
+      this.recentAnalyzes.delete(path);
     } catch (error) {
       console.warn(`刷新分析失败 ${path}:`, error);
+    }
+  }
+
+  /**
+   * 📝 标记分析结果为过期状态（文件变更时调用）
+   */
+  async markAsStale(path: string): Promise<void> {
+    // 将分析时间设置为很久以前，这样下次hover会显示"需要更新"
+    this.recentAnalyzes.set(path, 0);
+    
+    // 可以考虑在缓存中添加"stale"标记，但这需要修改缓存结构
+    // 暂时通过时间戳来处理
+  }
+
+  /**
+   * 🔍 获取现有工具提示（仅查缓存，不触发新分析）
+   */
+  async getExistingTooltip(path: string): Promise<string | null> {
+    try {
+      console.log(`[HoverInfoService] 🔍 开始获取悬停信息: ${path}`);
+      
+      // 🔥 优先检查 SmartFileAnalyzer 的AI分析结果
+      if (this.smartCache) {
+        console.log(`[HoverInfoService] ✅ smartCache可用，检查智能分析缓存...`);
+        const smartResult = await this.checkSmartAnalysisCache(path);
+        if (smartResult) {
+          console.log(`[HoverInfoService] ✅ 找到智能分析结果:`, {
+            purpose: smartResult.purpose,
+            source: smartResult.source,
+            importance: smartResult.importance
+          });
+          const formatted = this.formatSmartTooltip(smartResult, path);
+          console.log(`[HoverInfoService] ✅ 格式化后的tooltip长度: ${formatted.length}字符`);
+          return formatted;
+        } else {
+          console.log(`[HoverInfoService] ⚠️ 智能分析缓存中没有结果`);
+        }
+      } else {
+        console.log(`[HoverInfoService] ⚠️ smartCache不可用`);
+      }
+      
+      // 检查本地缓存（但不触发新的分析）
+      console.log(`[HoverInfoService] 检查本地缓存...`);
+      const cachedResult = await (this.orchestrator as any).cache.get(path);
+      if (cachedResult) {
+        console.log(`[HoverInfoService] ✅ 找到本地缓存结果`);
+        return this.formatTooltip(cachedResult);
+      }
+      
+      console.log(`[HoverInfoService] ❌ 没有找到任何缓存结果`);
+      return null; // 没有现有结果
+      
+    } catch (error) {
+      console.warn(`[HoverInfoService] ❌ 获取现有悬停信息失败 ${path}:`, error);
+      return null;
     }
   }
 
@@ -249,13 +366,34 @@ export class HoverInfoService {
     if (!this.smartCache) return null;
     
     try {
-      const moduleId = 'smartAnalyzer'; // 和 SmartFileAnalyzer 使用相同的 moduleId
-      const cacheKey = `analysis:${path}`;
-      return await this.smartCache.get<SmartAnalysisResult>(cacheKey, moduleId);
+      const moduleId = 'smart-analyzer'; // 和 SmartFileAnalyzer 使用相同的 moduleId
+      const cacheKey = `file-analysis-${this.hashPath(path)}`; // 🔧 修复：使用和 SmartFileAnalyzer 相同的缓存键格式
+      console.log(`[HoverInfoService] 🔍 查询缓存 - moduleId: ${moduleId}, cacheKey: ${cacheKey}`);
+      
+      const result = await this.smartCache.get<SmartAnalysisResult>(cacheKey, moduleId);
+      
+      if (result) {
+        console.log(`[HoverInfoService] ✅ 缓存命中! 结果:`, result);
+      } else {
+        console.log(`[HoverInfoService] ❌ 缓存未命中`);
+      }
+      
+      return result;
     } catch (error) {
-      console.warn(`检查智能分析缓存失败 ${path}:`, error);
+      console.warn(`[HoverInfoService] ❌ 检查智能分析缓存失败 ${path}:`, error);
       return null;
     }
+  }
+
+  /**
+   * 🔧 路径哈希（和 SmartFileAnalyzer 保持一致）
+   */
+  private hashPath(filePath: string): string {
+    let hash = 0;
+    for (let i = 0; i < filePath.length; i++) {
+      hash = ((hash << 5) - hash + filePath.charCodeAt(i)) & 0xffffffff;
+    }
+    return hash.toString(36);
   }
 
   /**
