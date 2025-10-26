@@ -158,9 +158,35 @@ export class ExplorerTreeItem extends vscode.TreeItem {
             return tooltip;
         }
 
-        // 2. 添加AI分析选项（但不立即检查）
-        tooltip.appendMarkdown(`\n---\n💡 **AI 分析**\n\n`);
-        tooltip.appendMarkdown(`🔍 悬停查看智能分析或右键分析此文件`);
+        // 2. 根据模式处理AI分析显示
+        if (hoverMode === 'manual') {
+            // 手动模式：检查是否有现有分析，但不自动分析
+            tooltip.appendMarkdown(`\n---\n💡 **AI 分析**\n\n`);
+            
+            // 异步检查并使用回调更新（因为tooltip可能无法异步更新）
+            this.checkExistingAnalysis().then((analysis: string | null) => {
+                let aiSection = '';
+                if (analysis) {
+                    // 有分析结果，显示状态
+                    aiSection = `\n---\n🤖 **AI 智能分析**\n\n✅ 已完成分析，鼠标悬停查看详细结果`;
+                } else {
+                    // 没有分析结果
+                    aiSection = `\n---\n💡 **AI 分析**\n\n🔍 右键选择"AI分析"来分析此文件`;
+                }
+                // 尝试更新tooltip（可能在某些情况下不生效）
+                tooltip.value = baseInfo + aiSection;
+            }).catch(() => {
+                // 出错时显示默认提示  
+                const fallbackInfo = `\n---\n💡 **AI 分析**\n\n🔍 右键选择"AI分析"来分析此文件`;
+                tooltip.value = baseInfo + fallbackInfo;
+            });
+            
+            // 先返回基础提示
+            tooltip.appendMarkdown(`⏳ 检查分析状态...`);
+        } else {
+            // 其他模式保持原有逻辑
+            tooltip.appendMarkdown(`🔍 右键选择"AI分析"来分析此文件`);
+        }
         
         return tooltip;
     }
@@ -236,6 +262,25 @@ export class ExplorerTreeItem extends vscode.TreeItem {
 
         
         return tooltip;
+    }
+
+    /**
+     * ⚡ 快速检查是否有现有分析结果（轻量级，仅返回true/false）
+     */
+    private async quickCheckExistingAnalysis(): Promise<boolean> {
+        try {
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot || !this.context) {
+                return false;
+            }
+
+            const hoverService = HoverInfoService.getInstance(workspaceRoot, this.context);
+            const analysisText = await hoverService.getExistingTooltip(this.node.path);
+            return Boolean(analysisText && analysisText.trim().length > 0);
+        } catch (error) {
+            console.warn(`[ExplorerTreeItem] ⚠️ 快速检查失败: ${this.node.path}`, error);
+            return false;
+        }
     }
 
     /**
