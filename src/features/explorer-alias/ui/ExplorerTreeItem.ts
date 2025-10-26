@@ -42,8 +42,8 @@ export class ExplorerTreeItem extends vscode.TreeItem {
             ? (hasAlias ? 'fileHasAlias' : 'file')
             : (hasAlias ? 'folderHasAlias' : 'folder');
 
-        // 设置智能工具提示
-        this.tooltip = this.buildSmartTooltip();
+        // 设置智能工具提示 - 延迟加载，避免树视图刷新时的性能问题
+        this.tooltip = this.buildLightweightTooltip();
 
         // 设置描述（显示在右侧的灰色文字）
         if (this.showAlias && this.node.alias) {
@@ -127,7 +127,46 @@ export class ExplorerTreeItem extends vscode.TreeItem {
     }
 
     /**
-     * 🎯 构建智能工具提示 - 集成AI分析
+     * 🎯 构建轻量级悬停提示（避免性能问题）
+     */
+    private buildLightweightTooltip(): vscode.MarkdownString | string {
+        const tooltip = new vscode.MarkdownString();
+        tooltip.isTrusted = true; // 允许命令链接
+        tooltip.supportHtml = false;
+
+        // 1. 基本文件信息
+        let baseInfo = `**${this.showAlias && this.node.alias ? this.node.alias : this.node.name}**\n\n`;
+        baseInfo += `📁 \`${this.node.path}\`\n`;
+        baseInfo += `📝 类型: ${this.node.type === 'file' ? '文件' : '文件夹'}\n`;
+        
+        if (this.node.alias) {
+            baseInfo += `🔤 别名: ${this.node.alias}\n`;
+        }
+
+        if (this.needsTranslation()) {
+            baseInfo += `⚠️ 需要翻译\n`;
+        }
+
+        tooltip.appendMarkdown(baseInfo);
+
+        // 检查hover模式配置
+        const config = vscode.workspace.getConfiguration('aiExplorer');
+        const hoverMode = config.get<string>('hoverMode', 'manual');
+
+        if (hoverMode === 'disabled') {
+            // 禁用模式：只显示基本信息
+            return tooltip;
+        }
+
+        // 2. 添加AI分析选项（但不立即检查）
+        tooltip.appendMarkdown(`\n---\n💡 **AI 分析**\n\n`);
+        tooltip.appendMarkdown(`🔍 悬停查看智能分析或右键分析此文件`);
+        
+        return tooltip;
+    }
+
+    /**
+     * 🎯 构建完整智能悬停提示（按需加载）
      */
     private buildSmartTooltip(): vscode.MarkdownString | string {
         // 创建可更新的 Markdown 提示
