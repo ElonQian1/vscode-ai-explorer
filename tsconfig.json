@@ -12,11 +12,10 @@
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
     "resolveJsonModule": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "ignoreDeprecations": "5.0"
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src/**/*"

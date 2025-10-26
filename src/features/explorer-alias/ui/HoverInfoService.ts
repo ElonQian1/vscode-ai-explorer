@@ -25,6 +25,7 @@ export class HoverInfoService {
   private pendingUpdates = new Map<string, Promise<void>>();
   private recentAnalyzes = new Map<string, number>(); // 记录最近分析的文件，避免频繁分析
   private readonly AI_ANALYSIS_COOLDOWN = 5 * 60 * 1000; // 5分钟冷却时间
+  private _lastTooltipCache = new Map<string, string>(); // 最后一次tooltip结果缓存
 
   private constructor(workspaceRoot: string, context?: vscode.ExtensionContext) {
     // 初始化分析内核
@@ -320,41 +321,24 @@ export class HoverInfoService {
    */
   async getExistingTooltip(path: string): Promise<string | null> {
     try {
-      console.log(`[HoverInfoService] 🔍 开始获取悬停信息: ${path}`);
-      
       // 🔥 优先检查 SmartFileAnalyzer 的AI分析结果
       if (this.smartCache) {
-        console.log(`[HoverInfoService] ✅ smartCache可用，检查智能分析缓存...`);
         const smartResult = await this.checkSmartAnalysisCache(path);
         if (smartResult) {
-          console.log(`[HoverInfoService] ✅ 找到智能分析结果:`, {
-            purpose: smartResult.purpose,
-            source: smartResult.source,
-            importance: smartResult.importance
-          });
           const formatted = this.formatSmartTooltip(smartResult, path);
-          console.log(`[HoverInfoService] ✅ 格式化后的tooltip长度: ${formatted.length}字符`);
           return formatted;
-        } else {
-          console.log(`[HoverInfoService] ⚠️ 智能分析缓存中没有结果`);
         }
-      } else {
-        console.log(`[HoverInfoService] ⚠️ smartCache不可用`);
       }
       
       // 检查本地缓存（但不触发新的分析）
-      console.log(`[HoverInfoService] 检查本地缓存...`);
       const cachedResult = await (this.orchestrator as any).cache.get(path);
       if (cachedResult) {
-        console.log(`[HoverInfoService] ✅ 找到本地缓存结果`);
         return this.formatTooltip(cachedResult);
       }
       
-      console.log(`[HoverInfoService] ❌ 没有找到任何缓存结果`);
       return null; // 没有现有结果
       
     } catch (error) {
-      console.warn(`[HoverInfoService] ❌ 获取现有悬停信息失败 ${path}:`, error);
       return null;
     }
   }
@@ -368,19 +352,38 @@ export class HoverInfoService {
     try {
       const moduleId = 'smart-analyzer'; // 和 SmartFileAnalyzer 使用相同的 moduleId
       const cacheKey = `file-analysis-${this.hashPath(path)}`; // 🔧 修复：使用和 SmartFileAnalyzer 相同的缓存键格式
-      console.log(`[HoverInfoService] 🔍 查询缓存 - moduleId: ${moduleId}, cacheKey: ${cacheKey}`);
       
       const result = await this.smartCache.get<SmartAnalysisResult>(cacheKey, moduleId);
-      
-      if (result) {
-        console.log(`[HoverInfoService] ✅ 缓存命中! 结果:`, result);
-      } else {
-        console.log(`[HoverInfoService] ❌ 缓存未命中`);
-      }
-      
       return result;
     } catch (error) {
       console.warn(`[HoverInfoService] ❌ 检查智能分析缓存失败 ${path}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 🚀 同步版本：获取现有tooltip（用于TreeItem，不支持异步）
+   */
+  getExistingTooltipSync(path: string): string | null {
+    try {
+      // 🔥 使用一个非阻塞的Promise检查，立即返回可用结果
+      if (this.smartCache) {
+        // 启动异步检查，但不等待结果
+        this.checkSmartAnalysisCache(path).then(result => {
+          if (result) {
+            // 缓存结果供下次同步访问
+            this._lastTooltipCache.set(path, this.formatSmartTooltip(result, path));
+          }
+        }).catch(() => {
+          // 忽略错误，静默失败
+        });
+        
+        // 返回上次缓存的结果（如果有的话）
+        return this._lastTooltipCache.get(path) || null;
+      }
+      
+      return null;
+    } catch (error) {
       return null;
     }
   }
