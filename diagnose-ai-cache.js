@@ -1,79 +1,116 @@
-// AI分析缓存诊断工具
-const vscode = require('vscode');
+// 🔍 AI分析缓存诊断工具 - 深度分析"秒回答"问题
 
-/**
- * 诊断AI分析缓存问题
- */
-async function diagnoseAIAnalysisCache() {
-    console.log('=== AI分析缓存诊断 ===\n');
+console.log('🔍 AI分析缓存诊断 - "秒回答"问题分析\n');
 
-    // 1. 检查AI配置
-    console.log('1. 🔧 AI配置检查:');
-    const config = vscode.workspace.getConfiguration('aiExplorer');
-    const openaiKey = config.get('openaiApiKey');
-    const hunyuanKey = config.get('hunyuanApiKey');
-    const primaryProvider = config.get('provider.primary', 'openai');
-    
-    console.log(`   主提供商: ${primaryProvider}`);
-    console.log(`   OpenAI密钥: ${openaiKey ? '✅ 已配置' : '❌ 未配置'}`);
-    console.log(`   混元密钥: ${hunyuanKey ? '✅ 已配置' : '❌ 未配置'}`);
+console.log('🚨 问题症状分析:');
+console.log('   📍 现象: AI分析"秒回答"，没有真正调用腾讯混元');
+console.log('   📍 怀疑: 返回了缓存结果，而非实时AI分析');
+console.log('   � 影响: DetailedAnalysisPanel显示旧的或硬编码内容\n');
 
-    // 2. 检查缓存目录
-    console.log('\n2. 📁 缓存目录检查:');
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (workspaceFolder) {
-        const cacheDir = vscode.Uri.joinPath(workspaceFolder.uri, '.ai-explorer-cache');
-        try {
-            const stat = await vscode.workspace.fs.stat(cacheDir);
-            console.log(`   ✅ 缓存目录存在: ${cacheDir.fsPath}`);
-            
-            // 检查胶囊文件
-            const files = await vscode.workspace.fs.readDirectory(cacheDir);
-            const capsuleFiles = files.filter(([name]) => name.endsWith('.json'));
-            console.log(`   📦 胶囊文件数量: ${capsuleFiles.length}`);
-            
-            if (capsuleFiles.length > 0) {
-                console.log('   最近的胶囊文件:');
-                capsuleFiles.slice(0, 3).forEach(([name]) => {
-                    console.log(`     - ${name}`);
-                });
-            }
-        } catch (error) {
-            console.log(`   ❌ 缓存目录不存在或无法访问`);
-        }
-    } else {
-        console.log('   ❌ 未打开工作区');
+console.log('🔎 缓存机制分析:');
+console.log('');
+console.log('1️⃣ SmartFileAnalyzer缓存策略:');
+console.log('   📂 缓存位置: VS Code globalState');
+console.log('   🔑 缓存键格式: file-analysis-{hash(filePath)}');
+console.log('   ⏱️ 缓存策略: 文件修改时间比较');
+console.log('   🔄 AI触发条件: 缓存不存在 或 文件已修改');
+console.log('');
+console.log('2️⃣ "秒回答"可能原因:');
+console.log('   ✅ 缓存命中 (正常行为)');
+console.log('   ❌ 文件时间戳未正确更新');
+console.log('   ❌ 缓存键计算错误');
+console.log('   ❌ AI客户端配置问题');
+console.log('   ❌ 网络请求被拦截');
+console.log('');
+
+console.log('�️ 诊断步骤:');
+console.log('');
+console.log('步骤A: 检查AI提供商配置');
+console.log('   📌 Ctrl+Shift+P → "AI Explorer: Choose Provider"');
+console.log('   📌 确认选择了"hunyuan"(腾讯混元)');
+console.log('   📌 检查API Key是否正确配置');
+console.log('');
+console.log('步骤B: 强制清除缓存');
+console.log('   📌 Ctrl+Shift+P → "Clear AI Explorer Analysis Cache"');
+console.log('   📌 或右键文件 → "清除节点缓存"');
+console.log('');
+console.log('步骤C: 监控AI请求');
+console.log('   📌 打开开发者工具 (Ctrl+Shift+I)');
+console.log('   📌 查看Console输出');
+console.log('   📌 寻找AI请求日志');
+console.log('');
+console.log('步骤D: 手动触发分析');
+console.log('   📌 右键文件 → "🔄 AI 分析：重新分析"');
+console.log('   📌 观察是否有网络延迟');
+console.log('   📌 检查Console是否有错误');
+console.log('');
+
+console.log('🔍 缓存键计算演示:');
+const path = require('path'); // 添加path模块
+
+const testFiles = [
+    'd:\\rust\\active-projects\\ai-explorer\\src\\core\\ai\\OpenAIClient.ts',
+    'd:\\rust\\active-projects\\ai-explorer\\src\\core\\ai\\MultiProviderAIClient.ts'
+];
+
+// 模拟缓存键计算
+function hashPath(filePath) {
+    let hash = 0;
+    for (let i = 0; i < filePath.length; i++) {
+        hash = ((hash << 5) - hash + filePath.charCodeAt(i)) & 0xffffffff;
     }
-
-    // 3. 模拟AI分析请求
-    console.log('\n3. 🧠 AI分析测试:');
-    try {
-        const testPrompt = "请分析这个简单的JavaScript函数：function add(a, b) { return a + b; }";
-        console.log(`   测试提示词: ${testPrompt.substring(0, 50)}...`);
-        
-        // 这里我们无法直接测试，因为需要实际的MultiProviderAIClient实例
-        console.log('   ⏳ 需要在扩展内部进行实际测试');
-        
-    } catch (error) {
-        console.log(`   ❌ AI测试失败: ${error.message}`);
-    }
-
-    // 4. 检查日志输出
-    console.log('\n4. 📝 建议检查项:');
-    console.log('   - 在VS Code开发者控制台中查找 "[EnhancedAnalysis]" 日志');
-    console.log('   - 查找 "AI客户端未可用，跳过AI分析" 警告');
-    console.log('   - 查找 "AI分析失败" 错误信息');
-    console.log('   - 检查 "🧠 保存AI分析" 成功日志');
-
-    console.log('\n=== 诊断完成 ===');
-    return {
-        hasAIConfig: !!(openaiKey || hunyuanKey),
-        primaryProvider,
-        cacheExists: !!workspaceFolder
-    };
+    return Math.abs(hash).toString(36);
 }
 
-// 导出诊断函数
-if (typeof module !== 'undefined') {
-    module.exports = { diagnoseAIAnalysisCache };
+console.log('📋 当前文件的缓存键:');
+for (const filePath of testFiles) {
+    const fileName = path.basename(filePath);
+    const cacheKey = `smart-analyzer:file-analysis-${hashPath(filePath)}`;
+    console.log(`   📄 ${fileName}`);
+    console.log(`      🔑 缓存键: ${cacheKey}`);
 }
+console.log('');
+
+console.log('⚡ 快速验证方法:');
+console.log('');
+console.log('方法1: 时间测试');
+console.log('   1. 计时器开始');
+console.log('   2. 右键文件 → "🤖 AI智能分析"');
+console.log('   3. 记录响应时间');
+console.log('   4. 真实AI调用应该需要2-5秒');
+console.log('   5. 缓存返回通常<100ms');
+console.log('');
+console.log('方法2: 内容对比');
+console.log('   1. 修改文件内容(添加注释)');
+console.log('   2. 保存文件');
+console.log('   3. 重新分析');
+console.log('   4. 检查分析结果是否反映新内容');
+console.log('');
+console.log('方法3: 日志监控');
+console.log('   1. 打开VS Code输出面板');
+console.log('   2. 选择"AI Explorer"通道');
+console.log('   3. 查找"🚀 发送AI请求"日志');
+console.log('   4. 查找"✅ 请求返回"日志');
+console.log('');
+
+console.log('🎯 预期的正常AI调用流程:');
+console.log('   📤 [SmartAnalyzer] ⏳ 开始AI分析: {filePath}');
+console.log('   📝 [SmartAnalyzer] 📝 已读取文件内容，长度: {length}');
+console.log('   🚀 [SmartAnalyzer] 🚀 发送AI请求...');
+console.log('   ⏱️ [等待2-5秒网络延迟]');
+console.log('   ✅ [SmartAnalyzer] ✅ 请求返回，内容长度: {length}');
+console.log('   ✨ [SmartAnalyzer] ✨ AI分析完成并缓存: {filePath}');
+console.log('');
+
+console.log('🚨 如果是缓存命中，应该看到:');
+console.log('   💾 [SmartAnalyzer] 💾 缓存命中: {filePath}');
+console.log('   (没有网络请求日志)');
+console.log('');
+
+console.log('💡 解决"硬编码内容"问题:');
+console.log('   1. 确认AI真正调用了新的Markdown提示词');
+console.log('   2. 检查返回的JSON是否包含analysis字段');
+console.log('   3. 验证DetailedAnalysisPanel是否正确解析');
+console.log('   4. 如果仍显示硬编码，可能需要重新分析');
+
+console.log('\n🎯 开始诊断吧！先检查AI提供商配置和缓存状态。')

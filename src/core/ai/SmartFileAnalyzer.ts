@@ -34,6 +34,48 @@ export interface SmartAnalysisResult {
     isKeyFile: boolean;
     /** 相关文件建议 */
     relatedFiles?: string[];
+
+    // 🚀 新增：丰富的分析数据
+    /** 非技术用户友好的解释 */
+    userFriendlyExplanation?: string;
+    /** 项目中的角色（核心逻辑、配置、工具等） */
+    projectRole?: string;
+    /** 架构模式识别 */
+    architecturePatterns?: string[];
+    /** 代码统计信息 */
+    codeStats?: {
+        lines: number;
+        functions: number;
+        classes: number;
+        complexity: 'simple' | 'moderate' | 'complex' | 'very-complex';
+    };
+    /** 依赖关系 */
+    dependencies?: {
+        imports: string[];
+        exports: string[];
+        internalDeps: string[];
+        externalDeps: string[];
+    };
+    /** 业务影响分析 */
+    businessImpact?: {
+        riskLevel: 'low' | 'medium' | 'high' | 'critical';
+        affectedAreas: string[];
+        modificationGuidance: string;
+    };
+    /** DetailedAnalysisPanel专用分析数据 */
+    analysis?: {
+        coreFeatures: string[];
+        keyFunctions: string[];
+        businessValue: string;
+        technicalArchitecture: string;
+    };
+    /** AI代理专用信息 */
+    mcpInfo?: {
+        apiSurface?: string[];
+        keyInterfaces?: string[];
+        designPatterns?: string[];
+        qualityMetrics?: Record<string, number>;
+    };
 }
 
 /**
@@ -87,23 +129,35 @@ export class SmartFileAnalyzer {
 
     /**
      * 🧠 分析单个文件/文件夹的用途
+     * @param filePath 文件路径
+     * @param forceAnalyze 是否强制重新分析（跳过缓存）
      */
-    async analyzeFileSmartly(filePath: string): Promise<SmartAnalysisResult> {
+    async analyzeFileSmartly(filePath: string, forceAnalyze: boolean = false): Promise<SmartAnalysisResult> {
         const cacheKey = this.getCacheKey(filePath);
         
-        // 1. 检查缓存
-        const cached = await this.cache.get<SmartAnalysisResult>(cacheKey, this.moduleId);
-        if (cached) {
-            this.logger.info(`[SmartAnalyzer] 💾 缓存命中: ${filePath}`);
-            return { ...cached, source: 'cache' as const };
+        // 1. 检查缓存（如果不是强制分析）
+        if (!forceAnalyze) {
+            const cached = await this.cache.get<SmartAnalysisResult>(cacheKey, this.moduleId);
+            if (cached) {
+                this.logger.info(`[SmartAnalyzer] 💾 缓存命中: ${filePath}`);
+                return { ...cached, source: 'cache' as const };
+            }
+        } else {
+            this.logger.info(`[SmartAnalyzer] 🔄 强制重新分析，跳过缓存: ${filePath}`);
+            // 清除旧缓存
+            await this.cache.delete(cacheKey, this.moduleId);
         }
 
-        // 2. 基于规则的快速分析
-        const ruleBasedResult = this.analyzeByRules(filePath);
-        if (ruleBasedResult) {
-            this.logger.info(`[SmartAnalyzer] 📏 规则分析命中: ${filePath} -> ${ruleBasedResult.purpose}`);
-            await this.cache.set(cacheKey, ruleBasedResult, undefined, this.moduleId);
-            return ruleBasedResult;
+        // 2. 基于规则的快速分析（如果不是强制分析）
+        if (!forceAnalyze) {
+            const ruleBasedResult = this.analyzeByRules(filePath);
+            if (ruleBasedResult) {
+                this.logger.info(`[SmartAnalyzer] 📏 规则分析命中: ${filePath} -> ${ruleBasedResult.purpose}`);
+                await this.cache.set(cacheKey, ruleBasedResult, undefined, this.moduleId);
+                return ruleBasedResult;
+            }
+        } else {
+            this.logger.info(`[SmartAnalyzer] 🔄 强制分析模式，跳过规则分析: ${filePath}`);
         }
 
         // 3. AI深度分析（后台执行）
@@ -131,6 +185,23 @@ export class SmartFileAnalyzer {
         const fileName = path.basename(filePath).toLowerCase();
         const dirName = path.dirname(filePath).toLowerCase();
         const ext = path.extname(fileName);
+        
+        // 🚨 重要文件强制AI分析 - 跳过规则分析
+        const forceAIFiles = [
+            /client\.ts$/i,           // *Client.ts 文件
+            /ai.*\.ts$/i,             // AI相关文件
+            /.*ai.*client.*\.ts$/i,   // AI客户端文件
+            /provider.*\.ts$/i,       // Provider相关文件
+            /analyzer.*\.ts$/i,       // 分析器文件
+            /manager.*\.ts$/i         // 管理器文件
+        ];
+        
+        for (const pattern of forceAIFiles) {
+            if (pattern.test(fileName)) {
+                this.logger.info(`[SmartAnalyzer] 🎯 检测到重要文件，强制AI分析: ${filePath}`);
+                return null; // 返回null强制进行AI分析
+            }
+        }
         
         // 高优先级关键文件
         const keyFilePatterns = [
@@ -295,14 +366,18 @@ export class SmartFileAnalyzer {
 ${content}
 \`\`\`
 
-请以JSON格式回答：
+请以JSON格式回答，包含详细的功能分析。注意：businessValue和technicalArchitecture字段请使用Markdown格式，支持**粗体**、*斜体*、\`代码\`、列表等：
 {
     "purpose": "简洁的用途描述（1-2句话）",
     "description": "详细描述（可选）", 
     "tags": ["技术标签数组"],
     "importance": 评分1-10,
     "isKeyFile": true/false,
-    "relatedFiles": ["相关文件建议"]
+    "relatedFiles": ["相关文件建议"],
+    "coreFeatures": ["核心特性列表，描述这个文件的主要能力"],
+    "keyFunctions": ["关键功能列表，具体说明文件提供的功能"],
+    "businessValue": "## 业务价值\\n\\n- **核心优势**: 具体说明\\n- *技术特色*: 详细描述\\n- \`关键功能\`: 功能说明",
+    "technicalArchitecture": "## 技术架构\\n\\n### 设计模式\\n- **模式类型**: 具体模式\\n\\n### 关键组件\\n- \`组件名\`: 组件功能\\n\\n### 依赖关系\\n- *依赖项*: 依赖说明"
 }`;
 
             const aiRequest: AIRequest = {
@@ -331,6 +406,100 @@ ${content}
 
         } catch (error) {
             this.logger.error(`[SmartAnalyzer] ❌ AI分析失败: ${filePath}`, error);
+        }
+    }
+
+    /**
+     * 🔄 强制AI分析（同步等待结果）- 用于重新分析按钮
+     */
+    async forceAnalyzeFile(filePath: string): Promise<SmartAnalysisResult> {
+        const cacheKey = this.getCacheKey(filePath);
+        
+        try {
+            this.logger.info(`[SmartAnalyzer] 🔄 强制重新分析开始: ${filePath}`);
+            
+            // 1. 清除旧缓存
+            await this.cache.delete(cacheKey, this.moduleId);
+            
+            // 2. 读取文件内容
+            const content = await this.readFileContent(filePath, 2000);
+            this.logger.info(`[SmartAnalyzer] 📝 已读取文件内容，长度: ${content.length}`);
+            
+            const fileName = path.basename(filePath);
+            const dirStructure = await this.getDirectoryContext(path.dirname(filePath));
+
+            // 3. 构建AI提示词（使用最新的Markdown增强版本）
+            const prompt = `
+请分析这个文件的用途和重要性：
+
+文件路径: ${filePath}
+文件名: ${fileName}
+目录结构: ${dirStructure}
+文件内容预览:
+\`\`\`
+${content}
+\`\`\`
+
+请以JSON格式回答，包含详细的功能分析。注意：businessValue和technicalArchitecture字段请使用Markdown格式，支持**粗体**、*斜体*、\`代码\`、列表等：
+{
+    "purpose": "简洁的用途描述（1-2句话）",
+    "description": "详细描述（可选）", 
+    "tags": ["技术标签数组"],
+    "importance": 评分1-10,
+    "isKeyFile": true/false,
+    "relatedFiles": ["相关文件建议"],
+    "coreFeatures": ["核心特性列表，描述这个文件的主要能力"],
+    "keyFunctions": ["关键功能列表，具体说明文件提供的功能"],
+    "businessValue": "## 业务价值\\n\\n- **核心优势**: 具体说明\\n- *技术特色*: 详细描述\\n- \`关键功能\`: 功能说明",
+    "technicalArchitecture": "## 技术架构\\n\\n### 设计模式\\n- **模式类型**: 具体模式\\n\\n### 关键组件\\n- \`组件名\`: 组件功能\\n\\n### 依赖关系\\n- *依赖项*: 依赖说明"
+}`;
+
+            // 4. 发送AI请求
+            const aiRequest: AIRequest = {
+                prompt: prompt,
+                maxTokens: 600, // 增加Token数量以获得更完整的分析
+                temperature: 0.3
+            };
+            
+            this.logger.info(`[SmartAnalyzer] 🚀 强制分析 - 发送AI请求...`);
+            const response = await this.aiClient.sendRequest(aiRequest);
+            this.logger.info(`[SmartAnalyzer] ✅ 强制分析 - 请求返回，内容长度: ${response.content?.length || 0}`);
+
+            // 5. 解析AI响应
+            const aiResult = this.parseAIResponse(response.content, filePath);
+            if (aiResult) {
+                aiResult.source = 'ai-analysis';
+                aiResult.analyzedAt = Date.now();
+                
+                // 6. 保存到缓存
+                await this.cache.set(cacheKey, aiResult, undefined, this.moduleId);
+                
+                this.logger.info(`[SmartAnalyzer] ✨ 强制分析完成并缓存: ${filePath} -> ${aiResult.purpose}`);
+                
+                // 7. 触发分析完成事件
+                this._onAnalysisComplete.fire(filePath);
+                
+                return aiResult;
+            } else {
+                this.logger.warn(`[SmartAnalyzer] ⚠️ 强制分析 - AI响应解析失败: ${filePath}`);
+                throw new Error('AI响应解析失败');
+            }
+
+        } catch (error) {
+            this.logger.error(`[SmartAnalyzer] ❌ 强制分析失败: ${filePath}`, error);
+            
+            // 返回基础分析结果作为后备
+            const fallbackResult: SmartAnalysisResult = {
+                purpose: `${this.getBasicPurpose(filePath)} (AI分析失败，使用基础分析)`,
+                tags: [...this.getBasicTags(filePath), 'ai-failed'],
+                importance: 5,
+                source: 'rule-based',
+                analyzedAt: Date.now(),
+                isKeyFile: false,
+                description: `强制AI分析失败: ${error instanceof Error ? error.message : '未知错误'}`
+            };
+            
+            return fallbackResult;
         }
     }
 
@@ -512,7 +681,14 @@ ${content}
                 source: 'ai-analysis',
                 analyzedAt: Date.now(),
                 isKeyFile: Boolean(parsed.isKeyFile),
-                relatedFiles: Array.isArray(parsed.relatedFiles) ? parsed.relatedFiles : undefined
+                relatedFiles: Array.isArray(parsed.relatedFiles) ? parsed.relatedFiles : undefined,
+                // 新增：DetailedAnalysisPanel需要的字段
+                analysis: {
+                    coreFeatures: Array.isArray(parsed.coreFeatures) ? parsed.coreFeatures : [],
+                    keyFunctions: Array.isArray(parsed.keyFunctions) ? parsed.keyFunctions : [],
+                    businessValue: parsed.businessValue || '',
+                    technicalArchitecture: parsed.technicalArchitecture || ''
+                }
             };
         } catch {
             return null;

@@ -15,6 +15,7 @@ import { DictionaryManager } from './core/DictionaryManager';
 import { AIExplorerProvider } from './ui/AIExplorerProvider';
 import { EnhancedTranslateBatchUseCase } from './app/usecases/EnhancedTranslateBatchUseCase';
 import { APIKeyCommands } from './app/commands/APIKeyCommands';
+import { DetailedAnalysisPanel } from './panel/DetailedAnalysisPanel';
 import { FileNode } from '../../shared/types';
 
 export class ExplorerAliasModule extends BaseModule {
@@ -270,6 +271,11 @@ export class ExplorerAliasModule extends BaseModule {
             await this.handleBatchAnalyzeFolderCommand(item);
         });
 
+        // 🔍 详细分析面板命令 - 为非技术用户提供丰富的文件分析
+        this.registerCommand(context, 'aiExplorer.showDetailedAnalysis', async (item) => {
+            await this.handleShowDetailedAnalysis(item, context);
+        });
+
         // API Key 管理命令
         this.registerCommand(context, 'aiExplorer.setOpenAIKey', async () => {
             await this.apiKeyCommands!.setOpenAIKey();
@@ -281,6 +287,11 @@ export class ExplorerAliasModule extends BaseModule {
 
         this.registerCommand(context, 'aiExplorer.chooseProvider', async () => {
             await this.apiKeyCommands!.chooseProvider();
+        });
+
+        // 🔧 临时调试命令：检查缓存内容
+        this.registerCommand(context, 'aiExplorer.debugCache', async () => {
+            await this.debugCacheContent();
         });
 
         this.logger.debug('Explorer-Alias 命令注册完成');
@@ -1176,7 +1187,55 @@ export class ExplorerAliasModule extends BaseModule {
     }
 
     /**
-     * 📝 标记分析结果为过期状态
+     * � 显示详细分析面板 - 为非技术用户提供丰富的文件分析信息
+     */
+    private async handleShowDetailedAnalysis(item?: any, context?: vscode.ExtensionContext): Promise<void> {
+        try {
+            const path = this.getPathFromItem(item);
+            if (!path) {
+                vscode.window.showErrorMessage('无法获取文件路径');
+                return;
+            }
+
+            // 确保文件已经分析过（如果没有则先分析）
+            await this.ensureFileAnalyzed(path);
+
+            // 打开详细分析面板
+            if (context) {
+                DetailedAnalysisPanel.createOrShow(context.extensionUri, path);
+            } else {
+                vscode.window.showErrorMessage('无法创建分析面板：缺少扩展上下文');
+            }
+
+        } catch (error) {
+            this.logger.error('显示详细分析失败', error);
+            vscode.window.showErrorMessage(`显示详细分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 🎯 确保文件已分析（如果没有则先执行分析）
+     */
+    private async ensureFileAnalyzed(path: string): Promise<void> {
+        try {
+            const { HoverInfoService } = await import('./ui/HoverInfoService');
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) return;
+
+            const hoverService = HoverInfoService.getInstance(workspaceRoot, this.extensionContext);
+            const existing = await hoverService.getExistingTooltip(path);
+            
+            if (!existing) {
+                this.logger.info(`文件未分析，先执行分析: ${path}`);
+                await this.performManualRefresh(path);
+            }
+        } catch (error) {
+            this.logger.warn(`确保文件分析失败: ${path}`, error);
+        }
+    }
+
+    /**
+     * �📝 标记分析结果为过期状态
      */
     private async markAnalysisAsStale(filePath: string): Promise<void> {
         try {
@@ -1233,14 +1292,24 @@ export class ExplorerAliasModule extends BaseModule {
      */
     private async performManualRefresh(filePath: string): Promise<void> {
         try {
-            // 🆕 使用新的 SmartFileAnalyzer 而不是旧的 HoverInfoService
+            // 🆕 使用新的 SmartFileAnalyzer 进行强制重新分析
             if (this.smartAnalyzer) {
-                this.logger.info(`🔄 使用 SmartFileAnalyzer 刷新分析: ${filePath}`);
-                await this.smartAnalyzer.analyzeFileSmartly(filePath);
+                this.logger.info(`🔄 强制重新分析: ${filePath}`);
+                
+                // 使用forceAnalyzeFile方法强制重新分析（跳过缓存）
+                const result = await this.smartAnalyzer.forceAnalyzeFile(filePath);
+                
                 this.treeProvider?.refresh();
                 
                 const fileName = require('path').basename(filePath);
-                vscode.window.showInformationMessage(`✅ ${fileName} 分析已更新`);
+                vscode.window.showInformationMessage(
+                    `✅ ${fileName} 重新分析完成 (${result.source === 'ai-analysis' ? 'AI分析' : '基础分析'})`
+                );
+                
+                // 如果AI分析成功，显示详细信息
+                if (result.source === 'ai-analysis' && result.analysis?.businessValue) {
+                    this.logger.info(`🎯 强制分析结果: ${result.purpose}, 重要性: ${result.importance}`);
+                }
             } else {
                 // Fallback 到旧系统（但这不应该发生）
                 this.logger.warn('SmartFileAnalyzer 未初始化，使用旧系统');
@@ -1258,6 +1327,86 @@ export class ExplorerAliasModule extends BaseModule {
 
         } catch (error) {
             throw error; // 重新抛出，由上层处理
+        }
+    }
+
+    /**
+     * 🔧 调试缓存内容 - 临时方法
+     */
+    private async debugCacheContent(): Promise<void> {
+        try {
+            const crypto = require('crypto');
+            
+            // 计算两个文件的缓存键
+            const hashPath = (filePath: string) => {
+                return crypto.createHash('md5').update(filePath).digest('hex');
+            };
+            
+            const openaiFile = 'd:\\rust\\active-projects\\ai-explorer\\src\\core\\ai\\OpenAIClient.ts';
+            const multiproviderFile = 'd:\\rust\\active-projects\\ai-explorer\\src\\core\\ai\\MultiProviderAIClient.ts';
+            
+            const openaiCacheKey = `file-analysis-${hashPath(openaiFile)}`;
+            const multiproviderCacheKey = `file-analysis-${hashPath(multiproviderFile)}`;
+            
+            // 从VS Code globalState检查缓存
+            const openaiStorageKey = `cache:${openaiCacheKey}`;
+            const multiproviderStorageKey = `cache:${multiproviderCacheKey}`;
+            
+            const openaiCache = this.extensionContext?.globalState.get(openaiStorageKey);
+            const multiproviderCache = this.extensionContext?.globalState.get(multiproviderStorageKey);
+            
+            // 显示结果
+            let message = '🔍 缓存调试结果:\n\n';
+            
+            message += '📁 OpenAIClient.ts:\n';
+            message += `   缓存键: ${openaiCacheKey}\n`;
+            message += `   存储键: ${openaiStorageKey}\n`;
+            message += `   缓存状态: ${openaiCache ? 'EXISTS' : 'NOT FOUND'}\n`;
+            if (openaiCache) {
+                const cache = openaiCache as any;
+                message += `   数据源: ${cache.value?.source || 'unknown'}\n`;
+                message += `   创建时间: ${new Date(cache.createdAt).toLocaleString()}\n`;
+                message += `   过期时间: ${new Date(cache.expiry).toLocaleString()}\n`;
+            }
+            
+            message += '\n📁 MultiProviderAIClient.ts:\n';
+            message += `   缓存键: ${multiproviderCacheKey}\n`;
+            message += `   存储键: ${multiproviderStorageKey}\n`;
+            message += `   缓存状态: ${multiproviderCache ? 'EXISTS' : 'NOT FOUND'}\n`;
+            if (multiproviderCache) {
+                const cache = multiproviderCache as any;
+                message += `   数据源: ${cache.value?.source || 'unknown'}\n`;
+                message += `   创建时间: ${new Date(cache.createdAt).toLocaleString()}\n`;
+                message += `   过期时间: ${new Date(cache.expiry).toLocaleString()}\n`;
+            }
+            
+            this.logger.info('缓存调试信息', { openaiCache, multiproviderCache });
+            
+            // 在输出频道显示详细信息
+            const outputChannel = vscode.window.createOutputChannel('AI Explorer Cache Debug');
+            outputChannel.clear();
+            outputChannel.appendLine(message);
+            outputChannel.appendLine('\n=== 详细缓存内容 ===\n');
+            
+            if (openaiCache) {
+                outputChannel.appendLine('OpenAIClient.ts 缓存内容:');
+                outputChannel.appendLine(JSON.stringify(openaiCache, null, 2));
+                outputChannel.appendLine('\n');
+            }
+            
+            if (multiproviderCache) {
+                outputChannel.appendLine('MultiProviderAIClient.ts 缓存内容:');
+                outputChannel.appendLine(JSON.stringify(multiproviderCache, null, 2));
+                outputChannel.appendLine('\n');
+            }
+            
+            outputChannel.show();
+            
+            vscode.window.showInformationMessage('🔍 缓存调试完成，查看输出面板获取详细信息');
+            
+        } catch (error) {
+            this.logger.error('缓存调试失败', error);
+            vscode.window.showErrorMessage(`缓存调试失败: ${error}`);
         }
     }
 }

@@ -402,43 +402,426 @@ export class HoverInfoService {
   /**
    * 🎨 格式化智能分析工具提示
    */
+  /**
+   * 📝 格式化智能分析结果为tooltip（面向非技术用户的丰富展示）
+   */
   private formatSmartTooltip(result: SmartAnalysisResult, path: string): string {
     const parts: string[] = [];
+    const fileName = path.split(/[/\\]/).pop() || 'unknown';
 
-    // 主要用途
-    parts.push(`🎯 ${result.purpose}`);
+    // 🎯 白话解释 - 使用专门的用户友好说明
+    const explanation = result.userFriendlyExplanation || result.purpose;
+    parts.push(`**🎯 这个文件是做什么的？**\n${explanation}`);
 
-    // 详细描述
-    if (result.description) {
-      parts.push(`📝 ${result.description}`);
+    // � 核心功能清单 - "这个文件能干什么"
+    const coreFunctions = this.buildCoreFunctionsSection(result, fileName);
+    if (coreFunctions) {
+      parts.push(coreFunctions);
     }
 
-    // 技术标签
-    if (result.tags?.length) {
-      const tags = result.tags.slice(0, 3).join(' • ');
-      const more = result.tags.length > 3 ? ` 等${result.tags.length}项` : '';
-      parts.push(`🏷️ 标签: ${tags}${more}`);
+    // �📝 详细说明（技术实现细节）
+    if (result.description && result.description !== explanation) {
+      parts.push(`**📖 技术实现**\n${result.description}`);
     }
 
-    // 重要性评分
-    const stars = '⭐'.repeat(Math.min(result.importance, 5));
-    parts.push(`${stars} 重要性: ${result.importance}/10`);
+    // 🔥 增强的信息卡片
+    const infoCard = this.buildEnhancedInfoCard(result, fileName);
+    parts.push(infoCard);
 
-    // 分析状态
+    // 💡 给非技术用户的提示
+    const userTips = this.buildUserFriendlyTips(result);
+    if (userTips) {
+      parts.push(userTips);
+    }
+
+    // 🔗 相关文件推荐
+    if (result.relatedFiles?.length) {
+      const related = result.relatedFiles.slice(0, 3).map(f => `• ${f.split(/[/\\]/).pop()}`).join('\n');
+      parts.push(`**🔗 相关文件**\n${related}`);
+    }
+
+    // 📊 技术信息（放在最后，给AI代理使用）
+    const techInfo = this.buildTechInfo(result, path);
+    parts.push(`---\n${techInfo}`);
+
+    return parts.join('\n\n');
+  }
+
+  /**
+   * 🔥 构建增强的信息卡片
+   */
+  private buildEnhancedInfoCard(result: SmartAnalysisResult, fileName: string): string {
+    const importance = '⭐'.repeat(Math.min(result.importance, 5));
+    const isKey = result.isKeyFile ? '🔑 核心文件' : '📄 普通文件';
+    const complexity = result.codeStats?.complexity || this.getComplexityFromTags(result.tags);
+    const projectRole = result.projectRole || this.getProjectRole(result.tags, result.purpose);
+    
+    let cardContent = `**📊 文件信息卡片**\n` +
+           `┌─ 📁 ${fileName}\n` +
+           `├─ ${importance} 重要程度: ${result.importance}/10\n` +
+           `├─ ${isKey}\n` +
+           `├─ 🧩 复杂度: ${this.getComplexityEmoji(complexity)}\n` +
+           `├─ 🎭 项目角色: ${projectRole}\n`;
+
+    // 添加代码统计（如果有）
+    if (result.codeStats) {
+      cardContent += `├─ 📏 代码规模: ${result.codeStats.lines}行/${result.codeStats.functions}函数\n`;
+    }
+
+    cardContent += `└─ 🏷️ 技术栈: ${result.tags.slice(0, 2).join(' • ')}`;
+    
+    return cardContent;
+  }
+
+  /**
+   * 🔥 构建信息卡片（兼容旧版本）
+   */
+  private buildInfoCard(result: SmartAnalysisResult, fileName: string): string {
+    return this.buildEnhancedInfoCard(result, fileName);
+  }
+
+  /**
+   * 💡 构建用户友好提示
+   */
+  private buildUserFriendlyTips(result: SmartAnalysisResult): string | null {
+    const tips = [];
+    
+    // 重要性提示
+    if (result.importance >= 8) {
+      tips.push('🚨 **高风险修改** - 这是项目核心文件，改动可能影响整个系统');
+    } else if (result.importance >= 6) {
+      tips.push('⚠️ **谨慎修改** - 重要文件，建议先了解其作用和影响范围');
+    } else if (result.importance <= 3) {
+      tips.push('ℹ️ **相对安全** - 辅助文件，修改影响范围通常较小');
+    }
+
+    // 功能类型提示  
+    if (result.tags.includes('config')) {
+      tips.push('⚙️ **配置控制** - 修改会影响整个项目的行为和设置');
+    }
+
+    if (result.tags.includes('api') || result.tags.includes('client')) {
+      tips.push('🔌 **外部接口** - 负责与其他系统或服务的通信');
+    }
+
+    if (result.tags.includes('core') || result.tags.includes('engine')) {
+      tips.push('🎯 **核心引擎** - 包含项目的主要业务逻辑');
+    }
+
+    if (result.tags.includes('test')) {
+      tips.push('🧪 **质量保障** - 测试文件，确保代码功能正确性');
+    }
+
+    // 业务影响提示
+    if (result.isKeyFile) {
+      tips.push('📢 **业务影响** - 修改可能影响用户体验或系统稳定性');
+    }
+
+    return tips.length ? `**💡 实用提示**\n${tips.map(tip => `• ${tip}`).join('\n')}` : null;
+  }
+
+  /**
+   * 🧩 获取复杂度标签
+   */
+  private getComplexityLabel(tags: string[]): string {
+    if (tags.includes('complex') || tags.includes('algorithm')) return '🔴 复杂';
+    if (tags.includes('simple') || tags.includes('config')) return '🟢 简单';
+    if (tags.includes('interface') || tags.includes('api')) return '🟡 中等';
+    return '🟦 标准';
+  }
+
+  /**
+   * 从标签获取复杂度
+   */
+  private getComplexityFromTags(tags: string[]): string {
+    if (tags.includes('complex') || tags.includes('algorithm')) return 'high';
+    if (tags.includes('simple') || tags.includes('config')) return 'low';
+    if (tags.includes('interface') || tags.includes('api')) return 'medium';
+    return 'medium';
+  }
+
+  /**
+   * 获取复杂度表情符号
+   */
+  private getComplexityEmoji(complexity: string): string {
+    const level = complexity?.toLowerCase();
+    switch (level) {
+      case 'high': return '🔴 高';
+      case 'medium': return '🟡 中';
+      case 'low': return '🟢 低';
+      default: return '🟦 标准';
+    }
+  }
+
+  /**
+   * 🎭 获取项目中的角色
+   */
+  private getProjectRole(tags: string[], purpose: string): string {
+    // 基于标签和用途判断项目角色
+    if (tags.includes('config') || purpose.includes('配置')) return '⚙️ 配置管理';
+    if (tags.includes('api') || tags.includes('client') || purpose.includes('客户端')) return '🔌 接口服务';
+    if (tags.includes('core') || tags.includes('engine') || purpose.includes('核心')) return '🎯 核心逻辑';
+    if (tags.includes('ui') || tags.includes('view') || purpose.includes('界面')) return '🎨 用户界面';
+    if (tags.includes('util') || tags.includes('helper') || purpose.includes('工具')) return '🔧 辅助工具';
+    if (tags.includes('test') || purpose.includes('测试')) return '🧪 质量保证';
+    if (tags.includes('model') || tags.includes('data') || purpose.includes('数据')) return '📊 数据处理';
+    if (tags.includes('service') || purpose.includes('服务')) return '⚡ 业务服务';
+    return '📋 通用模块';
+  }
+
+  /**
+   * 🤗 构建用户友好说明
+   */
+  private buildUserFriendlySection(result: SmartAnalysisResult): string {
+    if (result.userFriendlyExplanation) {
+      return `\n**🤗 通俗解释**\n${result.userFriendlyExplanation}`;
+    }
+    
+    // 如果没有专门的用户友好说明，尝试从purpose生成
+    if (result.purpose) {
+      return `\n**🤗 通俗解释**\n${this.makeUserFriendly(result.purpose)}`;
+    }
+    
+    return '';
+  }
+
+  /**
+   * 将技术术语转换为通俗语言
+   */
+  private makeUserFriendly(text: string): string {
+    return text
+      .replace(/API/g, '应用程序接口')
+      .replace(/client/g, '客户端')
+      .replace(/service/g, '服务')
+      .replace(/manager/g, '管理器')
+      .replace(/controller/g, '控制器')
+      .replace(/handler/g, '处理器')
+      .replace(/provider/g, '提供器')
+      .replace(/interface/g, '接口')
+      .replace(/factory/g, '工厂')
+      .replace(/utils?/g, '工具')
+      .replace(/helper/g, '辅助工具');
+  }
+
+  /**
+   * 📊 构建技术信息（给AI代理使用）
+   */
+  private buildTechInfo(result: SmartAnalysisResult, path: string): string {
     const sourceEmoji = result.source === 'ai-analysis' ? '🤖' : 
                        result.source === 'rule-based' ? '⚡' : '💾';
     const sourceText = result.source === 'ai-analysis' ? 'AI智能分析' : 
-                      result.source === 'rule-based' ? '规则分析' : '缓存';
-    parts.push(`${sourceEmoji} ${sourceText}`);
+                      result.source === 'rule-based' ? '规则分析' : '缓存分析';
+    
+    const analyzedDate = new Date(result.analyzedAt).toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
 
-    // 分析时间
-    const analyzedDate = new Date(result.analyzedAt).toLocaleString('zh-CN');
-    parts.push(`🕐 分析时间: ${analyzedDate}`);
+    // 构建结构化信息供AI代理使用
+    const structuredInfo = [
+      `${sourceEmoji} ${sourceText} | 🕐 ${analyzedDate}`,
+      `📁 \`${path}\``,
+      `🎯 重要性评分: ${result.importance}/10 ${result.isKeyFile ? '(关键文件)' : ''}`,
+      `🏷️ 技术标签: ${result.tags.join(', ')}`,
+    ];
 
-    // 路径信息
-    parts.push(`📁 ${path}`);
+    // 添加MCP服务相关信息
+    if (result.relatedFiles?.length) {
+      structuredInfo.push(`� 关联文件: ${result.relatedFiles.length}个`);
+    }
 
-    return parts.join('\n');
+    return `**🤖 AI代理信息**\n${structuredInfo.join('\n')}`;
+  }
+
+  /**
+   * 💼 构建业务影响信息
+   */
+  private buildBusinessImpactSection(result: SmartAnalysisResult): string {
+    if (result.businessImpact) {
+      let impactSection = '\n**💼 业务影响**\n';
+      
+      // 风险等级
+      const riskEmoji = {
+        'low': '🟢',
+        'medium': '🟡', 
+        'high': '🟠',
+        'critical': '🔴'
+      };
+      
+      impactSection += `${riskEmoji[result.businessImpact.riskLevel] || '🔶'} 风险等级: ${result.businessImpact.riskLevel}\n`;
+      
+      // 影响区域
+      if (result.businessImpact.affectedAreas && result.businessImpact.affectedAreas.length > 0) {
+        impactSection += `🎯 影响区域: ${result.businessImpact.affectedAreas.slice(0, 3).join(', ')}\n`;
+      }
+      
+      // 修改建议
+      if (result.businessImpact.modificationGuidance) {
+        impactSection += `💡 修改建议: ${result.businessImpact.modificationGuidance}`;
+      }
+      
+      return impactSection;
+    }
+    return '';
+  }
+
+  /**
+   * 🔌 构建MCP信息
+   */
+  private buildMCPInfoSection(result: SmartAnalysisResult): string {
+    if (result.mcpInfo) {
+      let mcpSection = '\n**🔌 MCP代理信息**\n';
+      
+      if (result.mcpInfo.apiSurface && result.mcpInfo.apiSurface.length > 0) {
+        mcpSection += `📍 API接口: ${result.mcpInfo.apiSurface.slice(0, 3).join(', ')}\n`;
+      }
+      
+      if (result.mcpInfo.keyInterfaces && result.mcpInfo.keyInterfaces.length > 0) {
+        mcpSection += `� 关键接口: ${result.mcpInfo.keyInterfaces.slice(0, 2).join(', ')}\n`;
+      }
+      
+      if (result.mcpInfo.designPatterns && result.mcpInfo.designPatterns.length > 0) {
+        mcpSection += `🏗️ 设计模式: ${result.mcpInfo.designPatterns.join(', ')}\n`;
+      }
+      
+      if (result.mcpInfo.qualityMetrics) {
+        const metrics = Object.entries(result.mcpInfo.qualityMetrics).slice(0, 2);
+        if (metrics.length > 0) {
+          mcpSection += `📊 质量指标: ${metrics.map(([k, v]) => `${k}=${v}`).join(', ')}\n`;
+        }
+      }
+      
+      return mcpSection;
+    }
+    return '';
+  }
+
+  /**
+   * 🔧 构建核心功能清单 - "这个文件能干什么"
+   */
+  private buildCoreFunctionsSection(result: SmartAnalysisResult, fileName: string): string {
+    const functions = this.extractCoreFunctions(result, fileName);
+    
+    if (functions.length === 0) {
+      return '';
+    }
+    
+    const functionList = functions.map((func, index) => `${index + 1}. **${func}**`).join('\n');
+    return `\n**🔧 核心功能清单**\n${functionList}`;
+  }
+
+  /**
+   * 🎯 提取文件的核心功能
+   */
+  private extractCoreFunctions(result: SmartAnalysisResult, fileName: string): string[] {
+    const functions: string[] = [];
+    
+    // 基于文件名和标签推断功能
+    const lowerFileName = fileName.toLowerCase();
+    const tags = result.tags.map(t => t.toLowerCase());
+    const purpose = result.purpose.toLowerCase();
+    
+    // AI客户端相关功能  
+    if (lowerFileName.includes('aiclient') || lowerFileName.includes('ai-client') || 
+        lowerFileName.includes('openaiclient') || lowerFileName.includes('multiprovideraiclient') ||
+        (lowerFileName.includes('openai') && lowerFileName.includes('client')) ||
+        tags.some(t => t.includes('ai')) || purpose.includes('ai')) {
+      functions.push('🤖 调用AI服务（ChatGPT、混元等）');
+      functions.push('🔄 自动故障转移和备用服务商切换');
+      functions.push('📝 批量文本翻译和内容生成');
+      functions.push('⚡ 智能速率限制和请求管理');
+      functions.push('🩺 AI服务健康检查和状态监控');
+      functions.push('⚙️ 多提供商配置管理');
+    }
+    
+    // 翻译相关功能
+    else if (lowerFileName.includes('translate') || tags.some(t => t.includes('translate')) ||
+             purpose.includes('翻译') || purpose.includes('translate')) {
+      functions.push('🌐 英文到中文智能翻译');
+      functions.push('📦 批量文本翻译处理');
+      functions.push('🎯 专业术语精准转换');
+      functions.push('🔧 翻译质量优化和校验');
+    }
+    
+    // 分析器相关功能
+    else if (lowerFileName.includes('analyzer') || tags.some(t => t.includes('analy')) ||
+             purpose.includes('分析') || purpose.includes('analyzer')) {
+      functions.push('🔍 智能代码文件分析');
+      functions.push('📊 文件复杂度和重要性评估');
+      functions.push('🏷️ 自动技术标签生成');
+      functions.push('💡 用户友好的代码解释');
+      functions.push('🔗 相关文件智能推荐');
+    }
+    
+    // 缓存相关功能
+    else if (lowerFileName.includes('cache') || tags.some(t => t.includes('cache')) ||
+             purpose.includes('缓存') || purpose.includes('cache')) {
+      functions.push('💾 高效数据缓存存储');
+      functions.push('⚡ 快速数据检索和访问');
+      functions.push('🧹 自动缓存过期和清理');
+      functions.push('📊 缓存性能监控和统计');
+    }
+    
+    // 服务相关功能
+    else if (lowerFileName.includes('service') || tags.some(t => t.includes('service')) ||
+             purpose.includes('服务') || purpose.includes('service')) {
+      functions.push('⚙️ 核心业务服务提供');
+      functions.push('🔄 服务状态管理');
+      functions.push('📡 外部API集成');
+      functions.push('🛡️ 错误处理和恢复');
+    }
+    
+    // UI/界面相关功能
+    else if (tags.some(t => t.includes('ui') || t.includes('view')) || 
+             purpose.includes('界面') || purpose.includes('ui') || purpose.includes('view')) {
+      functions.push('🎨 用户界面展示');
+      functions.push('🖱️ 用户交互处理');
+      functions.push('📱 界面状态管理');
+      functions.push('🔄 数据绑定和更新');
+    }
+    
+    // 配置相关功能
+    else if (lowerFileName.includes('config') || tags.some(t => t.includes('config')) ||
+             purpose.includes('配置') || purpose.includes('config')) {
+      functions.push('⚙️ 系统配置管理');
+      functions.push('🔧 参数设置和调整');
+      functions.push('💾 配置数据持久化');
+      functions.push('🔄 配置热重载');
+    }
+    
+    // 工具类功能
+    else if (lowerFileName.includes('util') || lowerFileName.includes('helper') ||
+             tags.some(t => t.includes('util') || t.includes('helper')) ||
+             purpose.includes('工具') || purpose.includes('辅助')) {
+      functions.push('🔧 通用工具函数提供');
+      functions.push('⚡ 高效算法实现');
+      functions.push('🛡️ 数据验证和处理');
+      functions.push('🔄 格式转换和标准化');
+    }
+    
+    // 如果没有匹配到特定类型，基于通用模式生成
+    if (functions.length === 0) {
+      // 尝试从purpose中提取动词
+      if (purpose.includes('管理')) {
+        functions.push('⚙️ 数据和状态管理');
+      }
+      if (purpose.includes('处理')) {
+        functions.push('🔄 数据处理和转换');
+      }
+      if (purpose.includes('提供')) {
+        functions.push('📡 服务和功能提供');
+      }
+      if (purpose.includes('监控')) {
+        functions.push('📊 系统监控和统计');
+      }
+      
+      // 如果还是没有，使用通用描述
+      if (functions.length === 0) {
+        functions.push(`🔧 ${result.purpose}`);
+      }
+    }
+    
+    return functions.slice(0, 6); // 最多显示6个核心功能
   }
 }
 

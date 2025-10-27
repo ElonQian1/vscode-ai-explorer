@@ -81,6 +81,10 @@
         "title": "选择 AI 提供商"
       },
       {
+        "command": "aiExplorer.debugCache",
+        "title": "🔧 调试缓存内容"
+      },
+      {
         "command": "aiExplorer.translateAll",
         "title": "翻译整个工作区"
       },
@@ -172,7 +176,7 @@
         "icon": "$(search)"
       },
       {
-        "command": "aiExplorer.reanalyzePath",  
+        "command": "aiExplorer.reanalyzePath",
         "title": "🔄 AI 分析：重新分析",
         "icon": "$(refresh)"
       },
@@ -185,6 +189,11 @@
         "command": "aiExplorer.showAnalysisSummary",
         "title": "📋 AI 分析：查看详细摘要",
         "icon": "$(note)"
+      },
+      {
+        "command": "aiExplorer.showDetailedAnalysis",
+        "title": "🔍 查看详细分析",
+        "icon": "$(search-details)"
       },
       {
         "command": "aiExplorer.batchAnalyzeFolder",
@@ -262,9 +271,14 @@
           "group": "analysis@21.5"
         },
         {
-          "command": "aiExplorer.showAnalysisSummary", 
+          "command": "aiExplorer.showAnalysisSummary",
           "when": "view == aiExplorer",
           "group": "analysis@22"
+        },
+        {
+          "command": "aiExplorer.showDetailedAnalysis",
+          "when": "view == aiExplorer && viewItem != folder && viewItem != folderHasAlias",
+          "group": "analysis@22.5"
         },
         {
           "command": "aiExplorer.batchAnalyzeFolder",
@@ -301,7 +315,7 @@
         {
           "command": "aiExplorer.reanalyzePath",
           "when": "resourceScheme == file",
-          "group": "analysis@901"  
+          "group": "analysis@901"
         },
         {
           "command": "aiExplorer.showAnalysisSummary",
@@ -380,7 +394,7 @@
           ],
           "enumDescriptions": [
             "手动模式：hover时显示'点击分析'按钮，需要用户主动触发",
-            "自动模式：hover时自动触发AI分析（可能消耗大量API）", 
+            "自动模式：hover时自动触发AI分析（可能消耗大量API）",
             "禁用模式：hover时不显示AI分析选项"
           ],
           "description": "悬停时的AI分析行为"
@@ -717,8 +731,12 @@
     "zod": "^3.25.76"
   },
   "dependencies": {
+    "@types/marked": "^5.0.2",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^16.4.1",
+    "marked-highlight": "^2.2.2",
     "openai": "^4.20.1",
     "vis-network": "^9.1.6"
   }

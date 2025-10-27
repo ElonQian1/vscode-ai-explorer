@@ -1,0 +1,762 @@
+// src/features/explorer-alias/panel/DetailedAnalysisPanel.ts
+/**
+ * 🔍 详细分析面板
+ * 为非技术用户和AI代理提供丰富的文件分析信息
+ */
+
+import * as vscode from 'vscode';
+import { HoverInfoService } from '../ui/HoverInfoService';
+
+export class DetailedAnalysisPanel {
+    public static currentPanel: DetailedAnalysisPanel | undefined;
+    private readonly _panel: vscode.WebviewPanel;
+    private readonly _extensionUri: vscode.Uri;
+    private _disposables: vscode.Disposable[] = [];
+
+    public static createOrShow(extensionUri: vscode.Uri, filePath: string) {
+        const column = vscode.window.activeTextEditor
+            ? vscode.window.activeTextEditor.viewColumn
+            : undefined;
+
+        // 如果面板已存在，显示它
+        if (DetailedAnalysisPanel.currentPanel) {
+            DetailedAnalysisPanel.currentPanel._panel.reveal(column);
+            DetailedAnalysisPanel.currentPanel._updateForFile(filePath);
+            return;
+        }
+
+        // 创建新面板
+        const panel = vscode.window.createWebviewPanel(
+            'aiExplorerDetailedAnalysis',
+            '🔍 AI Explorer - 详细分析',
+            column || vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true,
+                localResourceRoots: [
+                    vscode.Uri.joinPath(extensionUri, 'media')
+                ]
+            }
+        );
+
+        DetailedAnalysisPanel.currentPanel = new DetailedAnalysisPanel(panel, extensionUri);
+        DetailedAnalysisPanel.currentPanel._updateForFile(filePath);
+    }
+
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+        this._panel = panel;
+        this._extensionUri = extensionUri;
+
+        // 设置初始内容
+        this._update();
+
+        // 监听面板关闭事件
+        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // 处理来自webview的消息
+        this._panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'openFile':
+                        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path));
+                        return;
+                    case 'analyzeRelated':
+                        this._analyzeRelatedFile(message.path);
+                        return;
+                }
+            },
+            null,
+            this._disposables
+        );
+    }
+
+    private async _updateForFile(filePath: string) {
+        try {
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) return;
+
+            const hoverService = HoverInfoService.getInstance(workspaceRoot);
+            const analysis = await hoverService.getExistingTooltip(filePath);
+            
+            this._panel.webview.html = this._getHtmlForWebview(filePath, analysis);
+        } catch (error) {
+            console.error('更新分析面板失败:', error);
+        }
+    }
+
+    private async _analyzeRelatedFile(filePath: string) {
+        // 分析相关文件并更新面板
+        this._updateForFile(filePath);
+    }
+
+    private _update() {
+        this._panel.webview.html = this._getHtmlForWebview();
+    }
+
+    private _getHtmlForWebview(filePath?: string, analysis?: string | null): string {
+        const webview = this._panel.webview;
+
+        return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Explorer - 详细分析</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            padding: 20px;
+            color: var(--vscode-foreground);
+            background: var(--vscode-editor-background);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--vscode-editor-inlayHint-background);
+            border-radius: 8px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--vscode-input-background);
+            border-radius: 6px;
+            border-left: 4px solid var(--vscode-button-background);
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .info-card {
+            padding: 12px;
+            background: var(--vscode-badge-background);
+            border-radius: 4px;
+        }
+        .file-path {
+            font-family: var(--vscode-editor-font-family);
+            background: var(--vscode-textCodeBlock-background);
+            padding: 8px 12px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .tips {
+            background: var(--vscode-inputValidation-infoBackground);
+            border-left: 4px solid var(--vscode-inputValidation-infoBorder);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .loading {
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            padding: 40px;
+        }
+        button {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+        .related-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .related-file {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .related-file:hover {
+            opacity: 0.8;
+        }
+        
+        /* Tab 样式 */
+        .tab-container {
+            margin: 20px 0;
+        }
+        .tab-buttons {
+            display: flex;
+            background: var(--vscode-tab-inactiveBackground);
+            border-radius: 6px 6px 0 0;
+            overflow: hidden;
+        }
+        .tab-button {
+            background: var(--vscode-tab-inactiveBackground);
+            color: var(--vscode-tab-inactiveForeground);
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            flex: 1;
+            text-align: center;
+        }
+        .tab-button:hover {
+            background: var(--vscode-tab-hoverBackground);
+        }
+        .tab-button.active {
+            background: var(--vscode-tab-activeBackground);
+            color: var(--vscode-tab-activeForeground);
+            border-bottom-color: var(--vscode-button-background);
+        }
+        .tab-content {
+            display: none;
+            background: var(--vscode-input-background);
+            padding: 20px;
+            border-radius: 0 0 6px 6px;
+            border-top: 1px solid var(--vscode-widget-border);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 核心功能样式 */
+        .core-function {
+            margin: 15px 0;
+            padding: 15px;
+            background: var(--vscode-editor-inlayHint-background);
+            border-radius: 6px;
+            border-left: 4px solid var(--vscode-button-background);
+        }
+        .core-function h4 {
+            margin: 0 0 10px 0;
+            color: var(--vscode-button-background);
+        }
+        .core-function ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .core-function li {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+        .scenario-list {
+            background: var(--vscode-badge-background);
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        ${filePath ? this._generateAnalysisHtml(filePath, analysis || null) : this._generateWelcomeHtml()}
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        function openFile(path) {
+            vscode.postMessage({
+                command: 'openFile',
+                path: path
+            });
+        }
+        
+        function analyzeRelated(path) {
+            vscode.postMessage({
+                command: 'analyzeRelated',
+                path: path
+            });
+        }
+        
+        // Tab 切换功能
+        function showTab(tabName) {
+            // 隐藏所有tab内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // 移除所有tab按钮的active类
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => button.classList.remove('active'));
+            
+            // 显示选中的tab内容
+            const activeContent = document.getElementById(tabName + '-content');
+            if (activeContent) {
+                activeContent.classList.add('active');
+            }
+            
+            // 激活选中的tab按钮
+            const activeButton = document.querySelector(\`[onclick="showTab('\${tabName}')"]\`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+        }
+        
+        // 页面加载完成后激活第一个tab
+        document.addEventListener('DOMContentLoaded', function() {
+            showTab('overview');
+        });
+    </script>
+</body>
+</html>`;
+    }
+
+    private _generateWelcomeHtml(): string {
+        return `
+        <div class="header">
+            <h1>🔍 AI Explorer - 详细分析</h1>
+            <p>为您提供文件的深度分析和通俗解释</p>
+        </div>
+        <div class="section">
+            <h2>🚀 如何使用</h2>
+            <p>在 AI Explorer 树视图中右键点击任何文件，选择 <strong>"查看详细分析"</strong> 即可查看该文件的详细信息。</p>
+        </div>
+        <div class="tips">
+            <p><strong>💡 提示：</strong>这个面板专为非技术用户设计，用通俗易懂的语言解释代码文件的作用。</p>
+        </div>`;
+    }
+
+    private _generateAnalysisHtml(filePath: string, analysis: string | null): string {
+        const fileName = filePath.split(/[/\\]/).pop() || 'unknown';
+        
+        if (!analysis) {
+            return `
+            <div class="header">
+                <h1>📁 ${fileName}</h1>
+                <div class="file-path">${filePath}</div>
+            </div>
+            <div class="loading">
+                <p>⏳ 正在分析文件，请稍候...</p>
+                <button onclick="location.reload()">🔄 刷新</button>
+            </div>`;
+        }
+
+        // 生成核心功能内容
+        const coreFunctionsContent = this._generateCoreFunctionsContent(fileName, filePath);
+        
+        return `
+        <div class="header">
+            <h1>📁 ${fileName}</h1>
+            <div class="file-path">${filePath}</div>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('overview')">📊 概览</button>
+                <button class="tab-button" onclick="showTab('core-functions')">🔧 核心功能</button>
+                <button class="tab-button" onclick="showTab('technical')">⚙️ 技术详情</button>
+            </div>
+            
+            <div id="overview-content" class="tab-content active">
+                <div class="section">
+                    <h2>🎯 文件分析结果</h2>
+                    <div style="white-space: pre-line;">${analysis}</div>
+                </div>
+                <div class="section">
+                    <h2>🛠️ 操作选项</h2>
+                    <button onclick="openFile('${filePath}')">📝 打开文件</button>
+                    <button onclick="location.reload()">🔄 重新分析</button>
+                </div>
+                <div class="tips">
+                    <p><strong>💡 专业提示：</strong>如果您是开发者，可以通过右键菜单进行更深入的代码分析。</p>
+                </div>
+            </div>
+            
+            <div id="core-functions-content" class="tab-content">
+                ${coreFunctionsContent}
+            </div>
+            
+            <div id="technical-content" class="tab-content">
+                <div class="section">
+                    <h2>⚙️ 技术详情</h2>
+                    <p>这里显示技术实现细节、API文档、代码结构等信息。</p>
+                    <div style="white-space: pre-line;">${analysis}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    /**
+     * 🔧 生成核心功能内容 - 从AI分析结果获取
+     */
+    private _generateCoreFunctionsContent(fileName: string, filePath: string): string {
+        // 🚀 显示AI分析进行中的状态，真正的内容将通过tooltip显示
+        return this._generateAIAnalysisCoreFunctions(fileName, filePath);
+    }
+
+    /**
+     * 🤖 生成AI分析的核心功能内容
+     */
+    private _generateAIAnalysisCoreFunctions(fileName: string, filePath: string): string {
+        return `
+        <h2>🎯 ${fileName} 核心功能</h2>
+        
+        <div class="core-function">
+            <h4>🤖 AI智能分析</h4>
+            <p>此页面的核心功能内容由AI智能分析生成，为您提供：</p>
+            <ul>
+                <li>🎯 <strong>功能概述</strong> - 文件的主要用途和价值</li>
+                <li>🔧 <strong>核心能力</strong> - 具体的功能清单和特性</li>
+                <li>💼 <strong>业务影响</strong> - 对项目的重要性和影响</li>
+                <li>🔌 <strong>技术架构</strong> - API接口和设计模式</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>⚡ 智能分析特色</h4>
+            <p>与硬编码内容不同，AI分析能够：</p>
+            <ul>
+                <li>📚 <strong>深度理解代码</strong> - 分析实际的代码逻辑和结构</li>
+                <li>🔍 <strong>自动识别模式</strong> - 检测设计模式和架构风格</li>
+                <li>🎨 <strong>生成通俗解释</strong> - 为非技术用户提供易懂的描述</li>
+                <li>🚀 <strong>实时更新</strong> - 随代码变化自动更新分析结果</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>🔬 当前分析状态</h4>
+            <p>正在对 <code>${fileName}</code> 进行深度分析...</p>
+            <p>AI分析完成后，您将在以下位置看到详细的核心功能描述：</p>
+            <ul>
+                <li>🔍 <strong>文件悬停提示</strong> - 在AI Explorer树视图中悬停查看</li>
+                <li>📊 <strong>概览Tab页</strong> - 包含完整的分析结果</li>
+                <li>⚙️ <strong>技术详情Tab页</strong> - 技术实现细节</li>
+            </ul>
+            
+            <p style="margin-top: 20px;">
+                <button onclick="location.reload()">🔄 刷新查看最新分析</button>
+                <button onclick="vscode.postMessage({command: 'analyzeFile', path: '${filePath}'})">🤖 重新AI分析</button>
+            </p>
+        </div>
+
+        <div class="tips">
+            <p><strong>💡 提示：</strong>AI分析需要调用OpenAI API，请确保已在设置中配置了API Key。分析结果会自动缓存，避免重复调用。</p>
+        </div>`;
+    }
+
+    /**
+     * 🤖 从AI分析结果构建核心功能内容
+     */
+    private _buildCoreFunctionsFromAI(result: any, fileName: string): string {
+        let content = `<h2>🎯 ${fileName} 核心功能</h2>`;
+        
+        // 用户友好的解释
+        if (result.userFriendlyExplanation) {
+            content += `<div class="core-function">
+                <h4>📝 功能概述</h4>
+                <p>${result.userFriendlyExplanation}</p>
+            </div>`;
+        }
+        
+        // 项目角色
+        if (result.projectRole) {
+            content += `<div class="core-function">
+                <h4>🎭 项目角色</h4>
+                <p>${result.projectRole}</p>
+            </div>`;
+        }
+        
+        // 核心功能清单（从tooltip的buildCoreFunctionsSection获取）
+        if (result.purpose) {
+            const functions = this._extractCoreFunctionsFromPurpose(result.purpose, fileName);
+            if (functions.length > 0) {
+                content += `<div class="core-function">
+                    <h4>🔧 主要功能</h4>
+                    <ul>`;
+                functions.forEach(func => {
+                    content += `<li>${func}</li>`;
+                });
+                content += `</ul>
+                </div>`;
+            }
+        }
+        
+        // 业务影响
+        if (result.businessImpact) {
+            const impact = result.businessImpact;
+            content += `<div class="core-function">
+                <h4>💼 业务影响</h4>
+                <p><strong>风险等级:</strong> ${impact.riskLevel}</p>`;
+            if (impact.affectedAreas && impact.affectedAreas.length > 0) {
+                content += `<p><strong>影响区域:</strong> ${impact.affectedAreas.join(', ')}</p>`;
+            }
+            if (impact.modificationGuidance) {
+                content += `<p><strong>修改建议:</strong> ${impact.modificationGuidance}</p>`;
+            }
+            content += `</div>`;
+        }
+        
+        // MCP信息
+        if (result.mcpInfo) {
+            const mcp = result.mcpInfo;
+            content += `<div class="core-function">
+                <h4>🔌 MCP代理信息</h4>`;
+            if (mcp.apiSurface && mcp.apiSurface.length > 0) {
+                content += `<p><strong>API接口:</strong> ${mcp.apiSurface.slice(0, 3).join(', ')}</p>`;
+            }
+            if (mcp.keyInterfaces && mcp.keyInterfaces.length > 0) {
+                content += `<p><strong>关键接口:</strong> ${mcp.keyInterfaces.slice(0, 2).join(', ')}</p>`;
+            }
+            content += `</div>`;
+        }
+        
+        // 如果没有详细信息，显示基础信息
+        if (!result.userFriendlyExplanation && !result.projectRole) {
+            content += `<div class="core-function">
+                <h4>📋 基本信息</h4>
+                <p>${result.purpose || '文件功能分析中...'}</p>
+                <p><strong>重要程度:</strong> ${result.importance || 5}/10</p>
+                <p><strong>技术标签:</strong> ${(result.tags || []).join(', ')}</p>
+            </div>`;
+        }
+        
+        return content;
+    }
+
+    /**
+     * ⏳ 生成加载中的核心功能内容
+     */
+    private _generateLoadingCoreFunctions(fileName: string): string {
+        return `
+        <h2>🎯 ${fileName} 核心功能</h2>
+        <div class="core-function">
+            <h4>⏳ AI分析中...</h4>
+            <p>正在使用AI深度分析此文件的核心功能，请稍候片刻。</p>
+            <p>AI将分析文件的:</p>
+            <ul>
+                <li>🎯 主要功能和用途</li>
+                <li>🔧 核心能力清单</li>
+                <li>💼 业务价值和影响</li>
+                <li>🔌 技术架构信息</li>
+            </ul>
+            <p><button onclick="location.reload()">🔄 刷新获取分析结果</button></p>
+        </div>`;
+    }
+
+    /**
+     * 🔍 从用途描述中提取核心功能
+     */
+    private _extractCoreFunctionsFromPurpose(purpose: string, fileName: string): string[] {
+        // 这里复用HoverInfoService中的逻辑
+        const functions: string[] = [];
+        const lowerPurpose = purpose.toLowerCase();
+        const lowerFileName = fileName.toLowerCase();
+        
+        // 基于关键词提取功能
+        if (lowerPurpose.includes('ai') || lowerPurpose.includes('client')) {
+            functions.push('🤖 AI服务调用和管理');
+            functions.push('🔄 请求处理和响应管理');
+            if (lowerPurpose.includes('multi') || lowerPurpose.includes('provider')) {
+                functions.push('🔀 多提供商支持和故障转移');
+            }
+        }
+        
+        if (lowerPurpose.includes('translate')) {
+            functions.push('🌐 文本翻译服务');
+            functions.push('📦 批量翻译处理');
+        }
+        
+        if (lowerPurpose.includes('analyze') || lowerPurpose.includes('analysis')) {
+            functions.push('🔍 智能文件分析');
+            functions.push('📊 复杂度和重要性评估');
+        }
+        
+        if (lowerPurpose.includes('cache')) {
+            functions.push('💾 数据缓存和存储');
+            functions.push('⚡ 快速数据检索');
+        }
+        
+        return functions;
+    }
+
+    /**
+     * 📊 获取AI分析结果 (预留接口)
+     */
+    public dispose() {
+        DetailedAnalysisPanel.currentPanel = undefined;
+
+        // 清理资源
+        this._panel.dispose();
+
+        while (this._disposables.length) {
+            const x = this._disposables.pop();
+            if (x) {
+                x.dispose();
+            }
+        }
+    }
+}
+
+        <div class="core-function">
+            <h4>1. 多提供商支持和切换</h4>
+            <ul>
+                <li>支持 OpenAI 和腾讯云混元（Hunyuan）作为 AI 服务提供商，使用兼容的 OpenAI 接口（通过切换 baseURL 和 apiKey）</li>
+                <li>自动加载配置：从 VS Code 配置中读取 API Key 和 Base URL，如果主提供商未配置或不可用，会智能切换到另一个已配置的提供商，并更新配置</li>
+                <li>故障转移：如果主提供商请求失败，会尝试备用提供商；如果都失败，会抛出详细错误信息并提示解决方案</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>2. 发送 AI 请求</h4>
+            <ul>
+                <li>通过 <code>sendRequest</code> 方法发送 AI 请求（例如翻译或生成文本），支持提示词（prompt）、最大 token 数和温度参数</li>
+                <li>内置重试机制：最多重试 3 次，处理如速率限制（429 错误）等问题，使用指数退避延迟</li>
+                <li>返回响应包括内容、模型信息和 token 使用统计</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>3. 批量翻译</h4>
+            <ul>
+                <li><code>translateBatch</code> 方法用于批量处理多个文本（例如英文词汇翻译成中文）</li>
+                <li>分批处理（每批 10 个），生成批量提示词，解析响应结果</li>
+                <li>如果批量失败，会 fallback 到单个翻译，并添加延迟以避免速率限制</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>4. 健康检查和监控</h4>
+            <ul>
+                <li>定期（每 5 分钟）检查提供商可用性，通过发送测试请求验证</li>
+                <li>记录提供商状态，包括可用性和最后错误信息</li>
+                <li>通过 <code>getProviderStatus</code> 方法获取所有提供商的状态</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>5. 速率限制</h4>
+            <ul>
+                <li>为每个提供商创建独立的 RateLimiter，限制请求频率（例如 Hunyuan 3 次/分钟，OpenAI 5 次/分钟）</li>
+                <li>强制等待以避免 API 被封禁</li>
+            </ul>
+        </div>
+
+        <div class="core-function">
+            <h4>6. 辅助功能</h4>
+            <ul>
+                <li>日志记录：使用 Logger 记录调试、警告和错误信息</li>
+                <li>用户交互：通过 VS Code API 显示提示消息、打开设置面板等</li>
+                <li>模型选择：根据提供商自动选择模型（如 OpenAI 默认 gpt-3.5-turbo，Hunyuan 默认 hunyuan-turbo）</li>
+            </ul>
+        </div>
+
+        <div class="scenario-list">
+            <h4>🎯 适用场景</h4>
+            <ul>
+                <li>这个类主要用于 AI 驱动的 VS Code 扩展（如翻译插件），例如在代码探索或文档处理中调用 AI 服务</li>
+                <li>它强调鲁棒性：处理配置缺失、网络问题、API 限流等，确保服务可用性</li>
+                <li>架构设计支持扩展更多提供商（只需添加配置和客户端）</li>
+            </ul>
+        </div>
+
+        <div class="tips">
+            <p><strong>💡 总结：</strong>这个文件实现了可靠的 AI 服务集成，专注于翻译和文本生成任务，适合开发者在 VS Code 中构建 AI 增强工具。</p>
+        </div>`;
+    }
+
+    /**
+     * 🌐 生成翻译器核心功能描述
+     */
+    private _generateTranslateCoreFunctions(): string {
+        return `
+        <h2>🎯 翻译功能核心</h2>
+        <div class="core-function">
+            <h4>1. 智能翻译处理</h4>
+            <ul>
+                <li>英文到中文的专业术语翻译</li>
+                <li>上下文感知的翻译优化</li>
+                <li>技术文档和代码注释翻译</li>
+            </ul>
+        </div>
+        
+        <div class="core-function">
+            <h4>2. 批量处理能力</h4>
+            <ul>
+                <li>支持大量文本的批量翻译</li>
+                <li>智能分批处理，避免API限制</li>
+                <li>失败重试和错误恢复机制</li>
+            </ul>
+        </div>`;
+    }
+
+    /**
+     * 🔍 生成分析器核心功能描述
+     */
+    private _generateAnalyzerCoreFunctions(): string {
+        return `
+        <h2>🎯 代码分析核心</h2>
+        <div class="core-function">
+            <h4>1. 智能文件分析</h4>
+            <ul>
+                <li>自动识别文件类型和用途</li>
+                <li>生成通俗易懂的功能描述</li>
+                <li>评估代码复杂度和重要性</li>
+            </ul>
+        </div>
+        
+        <div class="core-function">
+            <h4>2. 结构化信息提取</h4>
+            <ul>
+                <li>提取类、方法、接口等代码元素</li>
+                <li>分析依赖关系和调用链</li>
+                <li>生成技术标签和分类</li>
+            </ul>
+        </div>`;
+    }
+
+    /**
+     * 💾 生成缓存功能描述
+     */
+    private _generateCacheCoreFunctions(): string {
+        return `
+        <h2>🎯 缓存管理核心</h2>
+        <div class="core-function">
+            <h4>1. 高效数据缓存</h4>
+            <ul>
+                <li>键值对数据存储和检索</li>
+                <li>自动过期和清理机制</li>
+                <li>内存优化和性能监控</li>
+            </ul>
+        </div>`;
+    }
+
+    /**
+     * 📋 生成通用功能描述
+     */
+    private _generateGenericCoreFunctions(fileName: string): string {
+        return `
+        <h2>🎯 ${fileName} 核心功能</h2>
+        <div class="core-function">
+            <h4>主要功能</h4>
+            <p>这个文件提供了项目中的重要功能模块。具体功能需要根据代码内容进行分析。</p>
+        </div>
+        
+        <div class="tips">
+            <p><strong>💡 提示：</strong>如需了解详细功能，请查看技术详情或直接阅读源代码。</p>
+        </div>`;
+    }
+
+    public dispose() {
+        DetailedAnalysisPanel.currentPanel = undefined;
+
+        // 清理资源
+        this._panel.dispose();
+
+        while (this._disposables.length) {
+            const x = this._disposables.pop();
+            if (x) {
+                x.dispose();
+            }
+        }
+    }
+}
