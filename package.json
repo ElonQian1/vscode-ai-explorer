@@ -738,6 +738,6 @@
     "marked": "^16.4.1",
     "marked-highlight": "^2.2.2",
     "openai": "^4.20.1",
-    "vis-network": "^9.1.6"
+    "vis-network": "^10.0.2"
   }
 }
