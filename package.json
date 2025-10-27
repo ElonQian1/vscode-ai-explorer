@@ -737,7 +737,7 @@
     "highlight.js": "^11.11.1",
     "marked": "^16.4.1",
     "marked-highlight": "^2.2.2",
-    "openai": "^4.20.1",
+    "openai": "^6.7.0",
     "vis-network": "^9.1.6"
   }
 }
